@@ -78,7 +78,7 @@
             </div>
             <div class="tab-pane fade" id="python" role="tabpanel" aria-labelledby="python-tab"><code>{{python_code}}<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></code>
             </div>
-            {% if nodes[0].processor == 'info_file' %}
+            {% if nodes[0].processor == 'info_file' or  %}
             <div class="tab-pane fade" id="upload-files" role="tabpanel" aria-labelledby="upload-files-tab">
                 <p></p>
                 <p>You may upload single files to this pipeline. To upload multiple files, please use the code examples.</p>
@@ -414,20 +414,20 @@ $(document).ready(function() {
     });
 
     // copy things
-	$('span.command-copy').click(function(e) {
-		var preElement = $(this).closest('code');
-		var text = preElement.text().trim();
-		var copyTextarea = document.createElement('textarea');
-		copyTextarea.value = text;
-		document.body.appendChild(copyTextarea);
-		copyTextarea.select();
-		document.execCommand('copy');
-		document.body.removeChild(copyTextarea);
-		$(this).addClass('flash');
-		setTimeout(function() {
-			$('span.command-copy').removeClass('flash');
-		}, 500);
-	});
+    $('span.command-copy').click(function(e) {
+        var preElement = $(this).closest('code');
+        var text = preElement.text().trim();
+        var copyTextarea = document.createElement('textarea');
+        copyTextarea.value = text;
+        document.body.appendChild(copyTextarea);
+        copyTextarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(copyTextarea);
+        $(this).addClass('flash');
+        setTimeout(function() {
+            $('span.command-copy').removeClass('flash');
+        }, 500);
+    });
 
     // Trigger the file input when the "Load" button is clicked
     $('#loadButton').click(function() {
