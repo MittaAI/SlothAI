@@ -1,0 +1,21 @@
+{# comment about input fields #}
+input_fields = [
+    {"name": "key", "type": "string"}
+]
+{# comment about output fields #}
+output_fields = [
+    {"name": "outkey", "type": "string"}
+]
+{# comment about extras fields #}
+extras = {
+    'openai_token': None,
+    'model': 'gpt-3.5-turbo',
+    'token': "[user_token]",
+    'username': "[user_name]",
+    'callback_uri': 'http://localhost:8080/{{ extras.get('username') }}/callback?token={{ user.token }}'
+}
+
+{# comment about jinja2 stuff #}
+{
+    "outkey": {{ random_word() }}
+}

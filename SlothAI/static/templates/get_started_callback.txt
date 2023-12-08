@@ -1,0 +1,14 @@
+{# Welcome to the SlothAI Templating System. #}
+
+{# This template will be used to create a callback node. #}
+
+{# Next Tasks #}
+{# 1. Review this callback template then click on the 'Save' button. #}
+{# 2. Create a new template, then click the `Choose Template` pulldown and select `Generate random words'. #}
+
+{# Extras that have [callback_uri] or [callback_token] will be auto populated with local callback info. #}
+extras = {'processor': "callback", 'callback_uri': "[callback_uri]", 'callback_token': "[callback_token]"}
+
+{# Any output fields we define will be passed to the callback endpoint. #}
+{# If output fields is empty, all data will be sent to the callback endpoint. #}
+output_fields = []

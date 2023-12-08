@@ -1,0 +1,22 @@
+{# Use this template to drive an OpenAI sentiment processor! #}
+
+{# Define the input_fields used in this template: #}
+input_fields = [{'name': "chunks", 'type': "strings"}]
+
+{# The output_fields expected from the node processor using this template: #}
+output_fields = [{'name': "sentiment", 'type': "strings"}]
+
+{# Extras #}
+extras = {'openai_token': None, 'model': 'gpt-3.5-turbo-1106', 'processor': 'aidict', 'iterate_field': "chunks"}
+
+{# Process the input string: #}
+{# outer_index is provided by the templating system to iterate over arrays of strings #}
+# complete dict task by following step by step
+1. Inspect the following text:
+"""
+{{ chunks[outer_index] }}
+"""
+2. The required key for the dictionary is: 'sentiment'
+3. The required value for 'sentiment' is a string.
+4. Decide the sentiment from the text in step 1 and then follow step 2 and 3 to build the dictionary:
+ai_dict = 

@@ -1,0 +1,11 @@
+{# Use this template to read a file from a URI #}
+
+{# Input Fields #}
+{# If the URI isn't working, try using filename and content_type + the uri #}
+input_fields = [{'name': 'uri', 'type': 'url'}]
+
+{# Output Fields must contain filename and content_type #}
+output_fields = [{'name': 'filename', 'type': 'string'},{'name': 'content_type', 'type': 'string'}]
+
+{# Extras 'page_chunk_size' is used for .txt files only, to set page size #}
+extras = {"processor": "read_uri", "method": "GET"}

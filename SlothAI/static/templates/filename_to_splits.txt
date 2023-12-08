@@ -1,0 +1,27 @@
+{# Use this template to build a PDF document splitter for file_read to process asynchronously. #}
+{# Put this template at the head of the pipeline to upload files to it for processing. #}
+
+{# Be sure to always use double quotes for keys and strings! #}
+
+{# Input Fields #}
+input_fields = [{"name": "filename", "type": "strings"}, {"name": "content_type", "type": "strings"}]
+
+{# Output Fields #}
+output_fields = [{"name": "filename", "type": "strings"}, {"name": "content_type", "type": "strings"}, {"name": "page_number", "type": "ints"}]
+
+{# Extras #}
+{# Use 'upload': True to allow uploads to this processor. #}
+{# Only process the first 5 pages of the PDF #}
+extras = {"processor": "jinja2", "num_pages": 5, "upload": True}
+
+{# Build three lists of equal size to use for deserialization in the pipeline #}
+{% set result = {"filename": [], "content_type": [], "page_number": []} %}
+
+{% for page_number in range(1, num_pages + 1) %}
+  {% set _ = result.filename.append(filename) %}
+  {% set _ = result.content_type.append(content_type) %}
+  {% set _ = result.page_number.append(page_number) %}
+{% endfor %}
+
+{# Enforce proper quoting by running it through the tojson filter #}
+{{ result|tojson }}

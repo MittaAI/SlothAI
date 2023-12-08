@@ -1,0 +1,25 @@
+{# Use this template to build lists of data to submit to the database. #}
+
+{# Be sure to always use double quotes for keys and strings! #}
+
+{# Input Fields #}
+input_fields = [{"name": "texts", "type": "strings"}, {"name": "keyterms", "type": "stringset"}]
+
+{# Output Fields #}
+output_fields = [{"name": "texts", "type": "strings"}, {"name": "keyterms", "type": "stringset"}]
+
+{# Extras #}
+extras = {"processor": "jinja2"}
+
+{# Build two lists of equal size to use for serialization in the pipeline #}
+{% set result = {"texts": [], "keyterms": []} %}
+
+{% for i in range(texts|length) %}
+  {% for j in range(texts[i]|length) %}
+    {% set _ = result.texts.append(texts[i][j]) %}
+    {% set _ = result.keyterms.append(keyterms[i][j]) %}
+  {% endfor %}
+{% endfor %}
+
+{# Enforce proper quoting by running it through the tojson filter #}
+{{ result|tojson }}

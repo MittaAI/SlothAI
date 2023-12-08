@@ -1,0 +1,7 @@
+{# Use this template to callback to a URI #}
+
+{# Specify which keys you want to written to the callback. All fields will be written if this is empty. #}
+output_fields = []
+
+{# Define the callback URI and any tokens or extra parameters #}
+extras = {'callback_uri': "https://yoursite.com/callback?token={{custom_callback_token}}", 'custom_callback_token': None}

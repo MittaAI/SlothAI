@@ -1,0 +1,213 @@
+{% extends "pages/page_base.html" %}
+
+{% block title %}
+<title>Templates | {{brand.get('name')}}</title>
+<meta property="og:title' content='Templates | {{brand.get('name')}}"/>
+{% endblock %}
+
+{% block content %}
+<!-- Main Content -->
+<div class="content container mt-5 pt-4">
+    <h2 class="page_heading">Templates</h2>
+
+    <div class="rounded-lg border p-3 table-responsive">
+        <h4 class="mb-3">Your Templates</h4>
+        <p>The following templates are available to create nodes.</p>
+        <div class="text-left">
+            <a href="/templates/new" class="btn btn-success"><i class="fas fa-plus"></i> Create Template</a>
+        </div>
+        <p></p>
+        <table id="templatesTable" class="stripe hover">
+            <thead>
+                <tr>
+                    <th>Template</th>
+                    <th>Extras</th>
+                    <th>Inputs</th>
+                    <th>Outputs</th>
+                    <th>Processor</th>
+                    <th>Remove</th>
+                </tr>
+            </thead>
+            <tbody id="templateTable">
+                {% for template in templates %}
+                <tr id="tr_{{template.template_id}}">
+                    <td><button class="btn btn-secondary min-button" onclick="location.href='/templates/{{ template.template_id }}'"><i class="fas fa-file"></i><br/>{{ template.name }}</button></td>
+                    <td>
+                        {% if template.extras %}
+                            {% for key, value in template.extras.items() %}
+                                <span>
+                                    {{ generate_extra_badge(key, value) }}
+                                </span>
+                                <br>
+                            {% endfor %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if template is not none and template.get('input_fields') is not none %}
+                            {% for input_field in template['input_fields'] %}
+                                {{ generate_regular_badge(input_field.name, input_field.type) }}
+                            {% endfor %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if template is not none and template.get('output_fields') is not none %}
+                            {% for output_field in template.get('output_fields') %}
+                                {{ generate_regular_badge(output_field.name, output_field.type) }}
+                            {% endfor %}
+                        {% endif %}
+                    </td>
+                    <td><a tabindex="1" role="button" data-placement="left" class="btn btn-secondary min-button processors" title="{{ template.name }}" data-content="{{ processors | selectattr('value', 'equalto', template.processor) | map(attribute='label') | first }}" disabled data-trigger="focus"><i class="fas fa-microchip"></i><br/>{{ template.processor }}</a></td>
+                    <td>
+                        <button class="delete-button btn btn-danger btn-sm" data-template-id="{{ template.template_id }}"><i class="fas fa-trash-alt"></i></button>
+                        <div class="spinner-border spinner-border-sm text-danger" role="status" style="display: none; margin-left: 10px;">
+                            <span class="sr-only"></span>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script type="text/javascript">
+$(document).ready(function() {
+    // Attach a click event handler to the delete buttons
+    $(".delete-button").on("click", function () {
+        console.log(table.rows().count())
+        var template_id = $(this).data("template-id");
+        var spinner = $(this).siblings(".spinner-border");
+
+        spinner.show();
+        $(this).hide();
+
+        $.ajax({
+            url: '/templates/' + template_id,
+            type: 'DELETE',
+            success: function (response) {
+                table.row($('#tr_'+template_id)).remove().draw();
+                toastr.success('Template deleted.');
+            }.bind(this), // Maintain the reference to the button
+            error: function (error) {
+                toastr.error(error.responseJSON.error);
+            },
+            complete: function () {
+                $(this).show();
+                spinner.hide();
+                if (table.rows().count() === 0) {
+                    window.location.href = '/templates/new';
+                }
+            }.bind(this)
+        });
+    });
+
+    // popovers
+    $('.extras').popover({
+      trigger: 'focus'
+    })
+    $('.processors').popover({
+      trigger: 'focus'
+    });
+
+    function processString(inputString) {
+      if (inputString.includes(':')) {
+        const parts = inputString.split(':');
+        part = parts[1].trim();
+        return part;
+      } else {
+        return inputString;
+      }
+    }
+
+    // Function to change button colors
+    function changeButtonColors() {
+        const buttons = document.querySelectorAll("#templateTable .btn");
+
+        buttons.forEach(button => {
+            const name = button.innerText;
+            const color = getColorFromName(name);
+            button.style.backgroundColor = color;
+            button.style.borderColor = color;
+        });
+    }
+
+    // Function to change badge colors
+    function changeBadgeColors() {
+        const badges = document.querySelectorAll("#templateTable .badge");
+
+        badges.forEach(badge => {
+            const name = processString(badge.innerText);
+            const color = getColorFromName(name);
+            badge.style.backgroundColor = color;
+            badge.style.borderColor = color;
+        });
+    }
+
+
+    // Run changeButtonColors and changeBadgeColors functions using Promises
+    const buttonColorsPromise = new Promise((resolve) => {
+        changeButtonColors();
+        resolve();
+    });
+
+    const badgeColorsPromise = new Promise((resolve) => {
+        changeBadgeColors();
+        resolve();
+    });
+
+    // Wait for both promises to resolve, and then execute anotherFunction
+    Promise.all([buttonColorsPromise, badgeColorsPromise]).then(() => {
+        $("th").css("border-bottom-color","white")
+        sortTable();
+    });
+
+    $('.btn').on('mouseleave', function () {
+        const that = this;
+        // Delay hiding the popover to allow time for the mouse to enter the popover
+        setTimeout(function () {
+            if (!$('.popover:hover').length) {
+                $(that).popover('hide'); // Hide the popover if the mouse is not over it
+                $(that).blur();
+            }
+        }, 100);
+    });
+    
+    // tooltip activate
+    $(function () {
+      $('[data-toggle="tooltip"]').tooltip()
+    })
+
+    var getUrlParameter = function getUrlParameter(sParam) {
+        var sPageURL = window.location.search.substring(1),
+            sURLVariables = sPageURL.split('&'),
+            sParameterName,
+            i;
+
+        for (i = 0; i < sURLVariables.length; i++) {
+            sParameterName = sURLVariables[i].split('=');
+
+            if (sParameterName[0] === sParam) {
+                return sParameterName[1] === undefined ? true : decodeURIComponent(sParameterName[1]);
+            }
+        }
+        return false;
+    };
+    
+    // Function to run after both changeButtonColors and changeBadgeColors are done
+    var table = {};
+    function sortTable() {
+        // sort table
+        table = $('#templatesTable').DataTable({
+            "columnDefs": [{ "orderable": false, "targets": [2,3,5] }],
+            "order": [[0, "asc"]],
+            "pageLength": 25
+        });
+        if (getUrlParameter('q')) {
+            table.search(getUrlParameter('q')).draw();
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,127 @@
+{% extends "pages/page_base.html" %}
+
+{% block title %}
+<title> Tasks | {{brand.get('name')}}</title>
+<meta property='og:title' content="Tasks | {{brand.get('name')}}"/>
+{% endblock %}
+
+{% block content %}
+<!-- Main Content -->
+<div class="content container mt-5 pt-4">
+    <h2 class="page_heading">Tasks</h2>
+
+    <div class="rounded-lg border p-3 table-responsive">
+        <h4 class="mb-3">Your Tasks</h4>
+        <p>Task are started by sending data to a pipeline's ingestion endpoint. Tasks are cleared after an hour.</p><p>If there is an error in a node, the last node that ran is listed.</p>
+        <div class="text-left">
+            <button onclick="location.reload()" type="button" class="reload-button btn btn-success">
+                <i class="fas fa-sync-alt"></i> Reload
+            </button>
+            {% if tasks %}
+            <button id="clearCompleted" type="button" data-toggle="tooltip" data-placement="top" title="Clear completed tasks." class="btn btn-secondary">
+                <i class="fas fa-ban"></i> Completed
+            </button>
+            <button id="clearErrors" type="button" data-toggle="tooltip" data-placement="top" title="Clear failed tasks." class="btn btn-secondary">
+                <i class="fas fa-ban"></i> Errors
+            </button>
+            {% endif %}
+        </div>
+        <p></p>     
+        {% if tasks %}
+        <table id="tasksTable" class="stripe hover">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Pipeline</th>
+                    <th>Node</th>
+                    <th>Created</th>
+                    <th>State</th>
+                    <th>Error</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for task in tasks %}
+                    <tr>
+                        <td>{{ task.task_id }}</td>
+                        <td>{{ task.pipeline_name }}</td>
+                        <td>{{ task.node_name }}</td>
+                        <td>{{ task.created }}</td>
+                        <td>{{ task.state }}</td>
+                        <td>{{ task.error }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>There are no active tasks. Start ingestion to see tasks here.</p>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script type="text/javascript">
+$(document).ready(function() {
+
+    function storeSortingOrder(order) {
+        document.cookie = "sortingOrder=" + JSON.stringify(order) + "; expires=Fri, 31 Dec 9999 23:59:59 GMT";
+    }
+
+    function loadSortingOrder() {
+        var cookieValue = document.cookie.split('; ').find(row => row.startsWith('sortingOrder='));
+        if (cookieValue) {
+            var order = JSON.parse(cookieValue.split('=')[1]);
+            if (order) {
+                table.order(order).draw();
+            }
+        }
+    }
+
+    var table = $('#tasksTable').DataTable({});
+    var headers = table.columns().header().toArray();
+
+    $(headers).on('click', function () {
+        var order = table.order();
+        storeSortingOrder(order);
+    });
+
+    loadSortingOrder();
+
+    $(function () {
+        $("button").tooltip();
+    });
+
+    function clearTasks(state, successMessage) {
+      $.ajax({
+        url: '/tasks?state=' + state,
+        type: 'DELETE',
+        success: function (response) {
+          toastr.success(successMessage);
+          window.location.reload();
+        },
+        error: function (xhr, status, error) {
+          toastr.error("Error clearing tasks.");
+        }
+      });
+    }
+
+    $('#clearCompleted').click(function () {
+      clearTasks('completed', "Completed tasks cleared.");
+    });
+
+    $('#clearErrors').click(function () {
+      clearTasks('failed', "Failed tasks cleared.");
+    });
+
+    let t;
+    const r = () => location.reload();
+    const s = () => { clearTimeout(t); t = setTimeout(r, 3e4); };
+    
+    $(document).on('mousemove keydown scroll', s);
+    s();
+
+});
+</script>
+{% endblock %}
+

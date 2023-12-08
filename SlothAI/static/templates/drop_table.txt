@@ -1,0 +1,7 @@
+{# Use this template to drop a table from FeatureBase with SQL #}
+
+{# Output Fields #}
+output_fields = []
+
+{# Extras Fields #}
+extras = {"table": None, "processor": "read_fb", "sql": "DROP TABLE {{table}}"}

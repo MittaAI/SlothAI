@@ -1,0 +1,21 @@
+# POST document file to $pipe_name running $head_processor
+import requests
+import json
+
+# URL
+url = "$protocol://$hostname/pipeline/$pipe_id/task?token=$token"
+
+# Define the file data (.txt or .pdf)
+files = {
+    'document': ('animate.pdf', open('animate.pdf', 'rb'), 'application/pdf'),
+    'data': (None, json.dumps({'filename': ["animate.pdf"]}), 'application/json')
+}
+
+# Send the request with both file and JSON data
+response = requests.post(url, files=files)
+
+if response.status_code == 200:
+    print(response.text)
+else:
+    print(response.text)
+    print(response.status_code)

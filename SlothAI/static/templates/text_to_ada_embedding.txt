@@ -1,0 +1,10 @@
+{# Use this template to drive an OpenAI embedding node processor! #}
+
+{# Input Fields #}
+input_fields = [{'name': "chunks", 'type': "strings"}]
+
+{# Output Fields #}
+output_fields = [{'name': "chunks_embedding", 'type': "vectors"}]
+
+{# Extras for Ada embeddings #}
+extras = {'vector_size': 1536, 'model': 'text-embedding-ada-002', 'processor': 'embedding', 'openai_token': None}

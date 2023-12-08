@@ -1,0 +1,17 @@
+{# Use this template to query FeatureBase Cloud for data #}
+
+{# NOTE: You may remove any template commented lines, such as this one. #}
+
+{# Define the input_fields used in this template: #}
+input_fields = [{'name': "keyterms", 'type': "stringset"}]
+
+{# Hints for the output_fields expected from the node processor using this template: #}
+output_fields = [{'name': "_id", 'type': "id"},{'name': "text", 'type': "string"},{'name': "keyterms", 'type': "stringset"}]
+
+{# 1. Define the 'extras' for the table name and the SQL template for querying #}
+extras = [{'table': "steve"}, {'sql': "SELECT * FROM {{task.document.extras[0]['table']}} WHERE SETCONTAINS('{{task.document.input_fields[0]['name']}}', {{task.document.keyterms}} ) LIMIT 2000" }]
+
+{# Process the inputted array of strings: #}
+{{fb_query(task.document.extras[1]['sql'])}}
+
+{# Output from the table is handled by next node in the pipeline... #}

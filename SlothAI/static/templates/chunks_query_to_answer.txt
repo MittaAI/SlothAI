@@ -1,0 +1,27 @@
+{# Use this template to drive an OpenAI answer node! #}
+
+{# Define the input_fields used in this template: #}
+input_fields = [{'name': "chunks",'type': "strings"},{'name': "query", 'type': "strings"}]
+
+{# The output_fields expected from the node processor using this template: #}
+output_fields = [{'name': "answer", 'type': "strings"}]
+
+{# Define the 'extras' for number of keyterms desired  #}
+extras = {'openai_token': None, 'model': 'gpt-3.5-turbo', 'iterate_field': "query"}
+
+{# Process the answer #}
+# complete dict task by following step by step
+1. The user is asking about a document, relevant portions of which are provided here:
+"""
+{% for chunk in chunks %}
+  {{ chunk }}
+{% endfor %}
+"""
+2. This is the user's query:
+"""
+{{query[outer_index]}}
+"""
+3. The required key for the dictionary is: 'answer'
+4. The required value for answer is a string, which should be correctly capitalized.
+5. Answer the user query from step 2, using the text from step 1 to build the dictionary:
+ai_dict = 

@@ -1,0 +1,34 @@
+{# This template creates chunks from lists of page texts w/ a loop #}
+
+{# Extras #}
+extras = {"processor": "jinja2"}
+
+{# Input Fields #}
+input_fields = [{'name': 'texts', 'type': 'strings'}, {'name': 'filename', 'type': 'strings'}]
+
+{# Output Fields #}
+output_fields = [{'name': 'chunks', 'type': 'strings'}, {'name': 'page_nums', 'type': 'ints'}, {'name': 'chunk_nums', 'type': 'ints'}, {'name': 'filenames', 'type': 'strings'}]
+
+{# The sub-processor `chunk_with_page_filename` returns chunks, page_nums, chunk_nums and filenames #}
+{# The optional length and overlap parameters limit length of strings and sets overlap size. #}
+{# Default values are length=512 and overlap=0 #}
+{# Call it with the all texts and filename sent in the task POST, with a loop #}
+{% set chunks = [] %}
+{% set page_nums = [] %}
+{% set chunk_nums = [] %}
+{% set filenames = [] %}
+
+{% for i in range(texts|length) %}
+    {% set data = chunk_with_page_filename(texts[i], filename[i], overlap=0) %}
+    {% set _ = chunks.append(data.get('chunks')) %}
+    {% set _ = page_nums.append(data.get('page_nums')) %}
+    {% set _ = chunk_nums.append(data.get('chunk_nums')) %}
+    {% set _ = filenames.append(data.get('filenames')) %}
+{% endfor %}
+
+{
+    "chunks": {{ chunks|tojson|safe }},
+    "page_nums": {{ page_nums|tojson|safe }},
+    "chunk_nums": {{ chunk_nums|tojson|safe }},
+    "filenames": {{ filenames|tojson|safe }}
+}

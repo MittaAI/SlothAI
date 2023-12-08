@@ -1,0 +1,136 @@
+# config.py
+
+class DevConfig:
+    # google cloud project
+    PROJECT_ID = "<your_project_id>"
+
+    # branding
+    BRAND = "SlothAI"
+    BRAND_COLOR = "#333333"
+    BRAND_SERVICE = "SlothAI"
+    BRAND_SERVICE_URL = "https://mitta.ai/"
+    BRAND_X_HANDLE = "@mittacorp"
+    BRAND_GITHUB_URL = "https://github.com/kordless/SlothAI"
+    BRAND_DISCORD_URL = "https://discord.gg/TUm82b4m"
+    BRAND_YOUTUBE_URL = "https://www.youtube.com/@slothaitv"
+    BRAND_FAVICON = "favicon_gt.ico"
+
+    DEV = "True"
+
+    # sloth queue
+    SLOTH_QUEUE = "<create_queue_put_name_here>"
+    SLOTH_QUEUE_REGION = "us-central1"
+
+    # sloth controller (laminoid)
+    SLOTH_TOKEN = ""
+    SLOTH_CONTROLLER_IP = ""
+    SLOTH_CONTROLLER_USERNAME = "controller"
+
+    # storage
+    CLOUD_STORAGE_BUCKET = "slothai-user-storage"
+
+    # task processing
+    NGROK_URL = "https://<ngrok_subdomain>.ngrok-free.app"
+
+    # cron key
+    CRON_KEY = ""
+
+    # secret key for the app
+    SECRET_KEY = ""
+
+    # featurebase endpoint URL
+    FEATUREBASE_ENDPOINT = "query.featurebase.com/v2"
+
+    # OpenAI
+    OPENAI_TOKEN = ""
+    COMPLETION_MODEL = "gpt-4-0613"
+
+class ProdConfig:
+    # google cloud project
+    PROJECT_ID = "<your_project_id>"
+
+    # branding
+    BRAND = "SlothAI"
+    BRAND_COLOR = "#333333"
+    BRAND_SERVICE = "SlothAI"
+    BRAND_SERVICE_URL = "https://mitta.ai/"
+    BRAND_X_HANDLE = "@mittacorp"
+    BRAND_GITHUB_URL = "https://github.com/kordless/SlothAI"
+    BRAND_DISCORD_URL = "https://discord.gg/TUm82b4m"
+    BRAND_YOUTUBE_URL = "https://www.youtube.com/@slothaitv"
+    BRAND_FAVICON = "favicon_gt.ico"
+
+    DEV = "False"
+
+    # sloth queue
+    SLOTH_QUEUE = "<create_queue_put_name_here>"
+    SLOTH_QUEUE_REGION = "us-central1"
+
+    # sloth controller (laminoid)
+    SLOTH_TOKEN = ""
+    SLOTH_CONTROLLER_IP = ""
+    SLOTH_CONTROLLER_USERNAME = "controller"
+
+    # storage
+    CLOUD_STORAGE_BUCKET = "slothai-user-storage"
+
+    # task processing
+    NGROK_URL = "https://<ngrok_subdomain>.ngrok-free.app"
+
+    # cron key
+    CRON_KEY = ""
+
+    # secret key for the app
+    SECRET_KEY = ""
+
+    # featurebase endpoint URL
+    FEATUREBASE_ENDPOINT = "query.featurebase.com/v2"
+
+    # OpenAI
+    OPENAI_TOKEN = ""
+    COMPLETION_MODEL = "gpt-4-0613"
+
+class TestingConfig:
+    # google cloud project
+    PROJECT_ID = "<your_project_id>"
+
+    # branding
+    BRAND = "SlothAI"
+    BRAND_COLOR = "#333333"
+    BRAND_SERVICE = "SlothAI"
+    BRAND_SERVICE_URL = "https://mitta.ai/"
+    BRAND_X_HANDLE = "@mittacorp"
+    BRAND_GITHUB_URL = "https://github.com/kordless/SlothAI"
+    BRAND_DISCORD_URL = "https://discord.gg/TUm82b4m"
+    BRAND_YOUTUBE_URL = "https://www.youtube.com/@slothaitv"
+    BRAND_FAVICON = "favicon_gt.ico"
+
+    DEV = "True"
+
+    # sloth queue
+    SLOTH_QUEUE = "<create_queue_put_name_here>"
+    SLOTH_QUEUE_REGION = "us-central1"
+
+    # sloth controller (laminoid)
+    SLOTH_TOKEN = ""
+    SLOTH_CONTROLLER_IP = ""
+    SLOTH_CONTROLLER_USERNAME = "controller"
+
+    # storage
+    CLOUD_STORAGE_BUCKET = "slothai-user-storage"
+
+    # task processing
+    NGROK_URL = "https://<ngrok_subdomain>.ngrok-free.app"
+
+    # cron key
+    CRON_KEY = ""
+
+    # secret key for the app
+    SECRET_KEY = ""
+
+    # featurebase endpoint URL
+    FEATUREBASE_ENDPOINT = "query.featurebase.com/v2"
+
+    # OpenAI
+    OPENAI_TOKEN = ""
+    COMPLETION_MODEL = "gpt-4-0613"

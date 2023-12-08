@@ -1,0 +1,30 @@
+{% extends "pages/base.html" %}
+
+{% block title %}
+<title>{{ app_name }} - About</title>
+<meta property='og:title' content='About Mitta'/>
+{% endblock %}
+
+{% block content %}
+<div id="#top" class="container container_api container_legal">
+	<h1 class="header">Welcome</h1>
+	<p class="lead">I'm really glad you are here and I want to assure you that this site <a href="/legal">never shares user's information</a>.</p>
+
+	<p class="lead"><img src="/images/crazyhair.png"/></p>
+
+	<p class="lead">21 years ago, I started a search engine I called <a href="https://en.wikipedia.org/wiki/Grub_(search_engine)">Grub</a>. Grub's crawler was Open Source and intended to be distributed and somewhat aware about what was changing on the Web, such as fluctuations in the stock market, trends in news or the a price of an item for sale online. <strong>Now we have machine learning to help with document evaluation and transformation, I decided to reboot the big dream and build something new from scratch.</strong></p>
+
+	<p class="lead">The first part of this journey was researching and developing <a href="https://mitta.us">Mitta.us</a>, a service I built that allows you to save and search for documents, including websites. Mitta crawls pages VISUALLY and uses LLMs to transform and expand upon data it collects from you and the Internet. One of the things left to do for Mitta.us was to build out a service for user configurable pipelines. This is that service.</p>
+
+	<p class="lead">MittaAI is a pipeline management system for document and data processing. MittaAI currently allows for building complex AI pipelines using Python-based templates, which makes it easy to write and run code in the template itself. The system is designed to run calls to AI models (or anything really) asynchronously, which means some types of workloads may be built and run in parallel, lowering inference times considerably for complex workflows.</p>
+
+	<p class="lead">I borrowed a lot of ideas about how to build both of Mitta's UIs from <a href="https://loggly.com">Loggly</a>, which I founded after leaving Splunk back in 2009. At that time, we were intensely focused on making it easier to deal with logs in a powerfully simple UI. Here, I've applied those ideas to building fast pipelines for transforming data and saving documents and webpages you find interesting.</p>
+
+	<p class="lead">Mitta is a bootstrapped, sole founder startup. I couldn't have done any this without the support of my family and friends. Be sure to follow or check on the latest status updates <a href="https://twitter.com/mittacorp">@mittacorp</a> or <a href="https://twitter.com/campbellkord">@campbellkord</a>.</p>
+
+	<h2 class="header">Kord Campbell</h2>
+	<!-- end search -->
+</div>
+<!-- end docs container -->
+
+{% endblock %}

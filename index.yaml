@@ -1,0 +1,11 @@
+indexes:
+- kind: Jobs
+  properties:
+  - name: status
+  - name: expires
+
+- kind: Log
+  properties:
+  - name: user_id
+  - name: created
+    direction: desc

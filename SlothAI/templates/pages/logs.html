@@ -1,0 +1,134 @@
+{% extends "pages/page_base.html" %}
+
+{% block title %}
+<title> Logs | {{ brand.get('name') }}</title>
+<meta property='og:title' content="Tasks | {{ brand.get('name') }}"/>
+{% endblock %}
+
+{% block content %}
+<div class="content container mt-5 pt-4">
+    <h2 class="page_heading">Callback Logs</h2>
+
+    <div class="rounded-lg border p-3 table-responsive">
+        <h4 class="mb-3">Your Logs</h4>
+        <p>Use of the default callback will log the document here at that point in the pipeline. Logs clear after 1 hour.</p>
+        <div class="text-left">
+            <button onclick="location.reload()" type="button" class="reload-button btn btn-success">
+                <i class="fas fa-sync-alt"></i> Reload
+            </button>
+            {% if logs %}
+            <button id="clearCompleted" type="button" data-toggle="tooltip" data-placement="top" title="Clear logs." class="btn btn-secondary">
+                <i class="fas fa-ban"></i> Logs
+            </button>
+            {% endif %}
+        </div>
+        <p></p>  
+
+        {% if logs %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Log</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                    <tr>
+                        <td>{{ log.created }} 
+                        <span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></td>
+                        <td data-log="{{ log.line }}"></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script type="text/javascript">
+$(document).ready(function() {
+    $('.reload-button').on('click', function() {
+      window.location.reload();
+    });
+
+    $("table tbody tr").each(function() {
+        var tdLog = $(this).find("td[data-log");
+        var rawData = tdLog.data('log');
+
+        // brute force
+        var cleanedData = rawData.slice(2, -1)
+          .replace(/\\n/g, " ")
+          .replace(/\\\'|\\\"|\\'/g, "'")
+          .replace(/\\/g, "");
+
+        var jsonDataObj;
+
+        try {
+            jsonDataObj = JSON.parse(cleanedData);
+            for (var key in jsonDataObj) {
+                if (key.toLowerCase().includes('token')) {
+                    delete jsonDataObj[key];
+                }
+            }
+        } catch (error) {
+            toastr.error("Error parsing JSON. Showing in plain format.")
+            jsonDataObj = { "ParsingError": "Error parsing JSON" };
+        }
+
+        var preContent = JSON.stringify(jsonDataObj, null, 2);
+
+        tdLog.html('<div><pre class="logEntry" style="font-size: 10px;">' + preContent + '</pre><span class="log-expand"><i class="fa fa-ellipsis-h" aria-hidden="true"></i> </span></div>');
+
+        if (!jsonDataObj || jsonDataObj.ParsingError) {
+            tdLog.find('pre').text(cleanedData);
+        }
+
+        // Loop through all <pre> elements
+        $('pre.logEntry').each(function() {
+            var pre = $(this);
+            var currentHeight = pre.height();
+            
+            if (currentHeight > 360) {
+                pre.css('height', '360px');
+            }
+        });
+
+
+    });
+
+    // Handle click on the expand icon
+    $('.log-expand').on('click', function() {
+        var pre = $(this).siblings('pre.logEntry');
+        if (pre.css('height') != '360px') {
+            pre.css('height', '360px');
+        } else {
+            pre.css('height', '100%');
+        }
+    });
+
+    $('#clearCompleted').click(function() {
+        // Send the DELETE request to the server.
+        $.ajax({
+            url: '/logs',
+            type: 'DELETE',
+            success: function(response) {
+                toastr.success("Logs cleared.");
+                window.location.reload();
+            },
+            error: function(xhr, status, error) {
+                toastr.error("Error clearing logs.");
+            }
+        });
+    });
+
+    // reload when not in use
+    let t;const r = () => location.reload();const s = () => { clearTimeout(t); t = setTimeout(r, 3e4); };$(document).on('mousemove keydown scroll', s);s();
+
+});
+</script>
+{% endblock %}
+
+

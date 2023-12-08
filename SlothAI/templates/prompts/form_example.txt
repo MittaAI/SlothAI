@@ -1,0 +1,10 @@
+# form an example
+1. We have a pipeline with the following input_fields which use the `$head_processor` processor:
+"""
+$head_field_names
+"""
+2. Consider the 'type' of each 'name' input_field. ints are arrays of integers, strings are arrays of strings and so on.
+3. If it is an array, you do not "" quote it. You put the array by itself using [], with strings in it, or ints, etc.
+4. You do not put "" double quotes in strings.
+5. Using the input fields from step 1, form a JSON dictionary that has each input_field a a key in a dict called ai_dict, then build an example 'value' for each key that makes sense based on the key name and keeping in mind this is for an example python or curl call for the user.
+ai_dict =

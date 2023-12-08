@@ -1,0 +1,7 @@
+{# Use this template to read from FeatureBase with SQL #}
+
+{# Output Fields #}
+output_fields = [{"name": "chunks", "type": "strings"}]
+
+{# Extras Fields #}
+extras = {"table": None, "processor": "read_fb", "sql": "SELECT chunks FROM {{table}}"}

@@ -1,0 +1,12 @@
+{# Use this template to convert text to speech/spoken audio #}
+
+{# Input Fields #}
+{# Specify a filename if you want it saved with a particular name. #}
+input_fields = [{'name': 'filename', 'type': 'string'},{'name': 'texts', 'type': 'strings'}]
+
+{# Output Fields #}
+{# Output the URL for the download. Access will require MittaAI token. #}
+output_fields = [{'name': 'uri', 'type': 'urls'}]
+
+{# Extras 'page_chunk_size' is used for .txt files only, to set page size #}
+extras = {"openai_token": None, "model": "tts-1", "processor": "aispeech", "voice": "shimmer"}

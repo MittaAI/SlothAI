@@ -1,0 +1,9 @@
+{# Use this template to write a PDF's chunks, page numbers, and filename to FeatureBase #}
+
+{# Input Fields #}
+{# We're looking for keys to save to the database. #}
+input_fields = [{"name": "chunks_embedding", "type": "vectors"},{'name': 'chunks', 'type': 'strings'}, {'name': 'page_nums', 'type': 'ints'}, {'name': 'chunk_nums', 'type': 'ints'}, {'name': 'filenames', 'type': 'strings'}]
+
+{# Extras Fields #}
+{# Leave table as None so that it will populate during node creation. #}
+extras = {"table": None, "processor": "write_fb"}

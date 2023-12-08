@@ -1,0 +1,7 @@
+queue:
+- name: sloth-spittle
+  rate: 500/s
+  retry_parameters:
+    min_backoff_seconds: 4
+    max_backoff_seconds: 3600
+    max_doublings: 16

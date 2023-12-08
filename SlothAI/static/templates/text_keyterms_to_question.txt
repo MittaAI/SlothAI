@@ -1,0 +1,26 @@
+{# Use this template to drive an OpenAI question forming node! #}
+
+{# Define the input_fields used in this template: #}
+input_fields = [{'name': "chunks", 'type': "strings"},{'name': "keyterms", 'type': "strings"}]
+
+{# Output Fields #}
+output_fields = [{'name': "questions", 'type': "strings"}]
+
+{# Extras #}
+extras = {'openai_token': None, 'model': 'gpt-3.5-turbo-1106', 'processor': 'aidict', 'iterate_field': "chunks"}
+
+{# Process the input string: #}
+{# outer_index is provided by the templating system to iterate over arrays of strings #}
+# complete dict task by following step by step
+1. Inspect the following text:
+"""
+{{ chunks[outer_index] }}
+"""
+2. Consider the following keyterms:
+"""
+{{ keyterms[outer_index] }}
+"""
+3. The required key for the dictionary is: 'questions'
+4. The required value for 'questions' is a string.
+5. Create a concise question from the text in step 1 and then follow step 2 and 3 to build the dictionary:
+ai_dict = 

@@ -1,0 +1,27 @@
+{# Use this template to drive an OpenAI dall-e prompt generator. #}
+
+{# Define the input_fields #}
+input_fields = [{'name': "chunks", 'type': "strings"},{'name': "query", 'type': "string"}]
+
+{# The output_fields expected from the node processor using this template: #}
+output_fields = [{'name': "prompts", 'type': "strings"}]
+
+{# Extras - we set the iterate_key to 'query' to allow all chunks into the prompt #}
+extras = {'openai_token': None, 'model': 'gpt-3.5-turbo-1106', 'processor': 'aidict', 'iterate_field': "query"}
+
+{# Process the input string: #}
+# complete dict task by following step by step
+1. The user has provided the following query:
+"""
+{{query[outer_index]}}
+"""
+2. A search was run against this query and the following document chunks were returned:
+"""
+{% for chunk in chunks %}
+  {{ chunk }}
+{% endfor %}
+"""
+3. The required key for the dictionary is: 'prompt'
+4. The required value for the 'prompt' is a string.
+5. Create a concise prompt for dall-e based on the user query from step 1. and use the information in step 3 and 4 to return a python dictionary:
+ai_dict = 

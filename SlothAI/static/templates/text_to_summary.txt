@@ -1,0 +1,23 @@
+{# Use this template to drive an OpenAI summary processor! #}
+
+{# Define the input_fields used in this template: #}
+input_fields = [{'name': "chunks", 'type': "strings"}]
+
+{# The output_fields expected from the node processor using this template: #}
+output_fields = [{'name': "summary" ,'type': "strings"}]
+
+{# Define the 'extras' for number of keyterms desired  #}
+{# If multiple input fields are defined for this processor, an iterate_key with a field in input_fields must exist #}
+extras = {'openai_token': None, 'processor': "aidict", 'model': "gpt-3.5-turbo-1106", 'iterate_key': "chunks"}
+
+{# Process the input string: #}
+{# outer_index is provided by the templating system to iterate over arrays of strings #}
+# complete dict task
+1. Look at this text:
+"""
+{{ chunks[outer_index] }}
+"""
+2. The required key for the dictionary is: 'summary'.
+3. The required value for 'summary' is a string.
+4. Create a concise summary of the text from step 1 and then follow step 2 and 3 to build the dictionary:
+ai_dict = 

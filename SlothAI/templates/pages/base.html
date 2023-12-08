@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% block description %}
+    <meta name="description" content='Blazing Fast AI Pipelines' />
+    {% endblock %}
+
+    {% block title %}
+    <title>{{ brand.get('name') }}</title>
+    <meta property='og:title' content="{{ brand.get('name') }}" />
+    {% endblock %}
+
+    <meta property="og:image" content="/images/sloth.png" />
+    <meta property="og:description" content="Blazing Fast AI Pipelines" />
+    <meta property="og:url" content="{{ brand.get('service_url') }}" />
+    <meta property="og:title" content="{{ brand.get('name') }}" />
+    <meta property="og:site_name" content="{{ brand.get('name') }}">
+
+    <meta name="twitter:card" content="summary_large_image" /> <!-- This specifies a large image card -->
+    <meta name="twitter:site" content="{{ brand.get('twitter_handle') }}" /> <!-- Replace with your Twitter handle -->
+    <meta name="twitter:title" content="{{ brand.get('name') }}" />
+    <meta name="twitter:description" content="Blazing Fast AI Pipelines" />
+    <meta name="twitter:image" content="/images/sloth.png" />
+
+    <link rel="shortcut icon" href="/images/favicon.ico">
+
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/fontawesome.css">
+    <link rel="stylesheet" href="/css/brands.css">
+    <link rel="stylesheet" href="/css/solid.css">
+    <link rel="stylesheet" href="/css/toastr.min.css">
+    <link rel="stylesheet" href="/css/jquery-ui.css">
+    <link rel="stylesheet" href="/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+
+    {% block style %}
+    {% endblock %}
+</head>
+
+<body>
+<nav class="navbar navbar-expand-lg fixed-top" style="opacity: 90%;">
+    <h2 style="font-family: Roboto,sans-serif; color: #ffffff; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); margin: 0;">
+        <i class="fas fa-chevron-right"></i> <!-- Nice ">" Icon -->
+        <a id="site" href="/">{{brand.get('name')}}</a>
+        <a href="{{brand.get('github_url')}}" target="_blank" style="text-decoration: none; color: white; margin-left: 12px;">
+            <i class="fab fa-github"></i>
+        </a>
+        </a>
+        <a href="{{brand.get('discord_url')}}" target="_blank" style="text-decoration: none; color: white; margin-left: 4px;">
+            <i class="fab fa-discord"></i>
+        </a>
+        <a href="{{brand.get('youtube_url')}}" target="_blank" style="text-decoration: none; color: white; margin-left: 4px;">
+            <i class="fab fa-youtube"></i>
+        </a>
+    </h2>
+
+    <div class="collapse navbar-collapse" id="navbarNav">
+        <div style="z-index: 10000;" class="dropdown ml-auto">
+            {% if username != "anonymous" %}
+            <button class="btn btn-outline-light dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{username}}</button>
+            <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton">
+                <a class="dropdown-item" href="/settings">Settings</a>
+                <a class="dropdown-item" href="/logout">Logout</a>
+            </div>
+            {% else %}
+            <a href="/pipelines" class="btn btn-outline-light" type="button" >Login</a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+{% block content %}
+{% endblock %}
+
+<footer class="col-lg-12">
+  <div class="row justify-content-md-center">
+    <div class="col col-lg-3">
+      <h5 style="font-size: 1.5rem; font-weight: 300; line-height: 1.0; font-variant-caps: all-small-caps;">&gt;Mitta.AI</h5>
+      <small class="rights">&copy; 2023. All rights reserved.</small>
+    </div>
+    <div class="col col-lg-2">
+      <h5 style="font-size: 1.5rem; font-weight: 300; line-height: 1.0; font-variant-caps: all-small-caps;">Company</h5>
+      <ul class="list-unstyled text-small">
+        <li><a class="text-muted" href="/about">About</a></li>
+        <li><a class="text-muted" href="/legal">Legal</a></li>
+        <li><a class="text-muted" href="https://twitter.com/mittacorp">Twitter</a></li>
+      </ul>
+    </div>
+    <div class="col col-lg-2">
+      <h5 style="font-size: 1.5rem; font-weight: 300; line-height: 1.0; font-variant-caps: all-small-caps;">Support</h5>
+      <ul class="list-unstyled text-small">
+        <li><a class="text-muted" href="/cookbooks">Cookbooks</a></li>
+        <li><a class="text-muted" href="{{brand.get('discord_url')}}">Discord</a></li>
+        <li><a class="text-muted" href="{{brand.get('github_url')}}">Github</a></li>
+        <li><a class="text-muted" href="{{brand.get('youtube_url')}}">YouTube</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<script type="text/javascript" charset="utf8" src="/js/jquery-3.6.0.min.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/bootstrap.min.js"></script>
+
+{% block javascript %}
+  <script type="text/javascript">
+    $(document).ready(function(){
+      // redirect to https
+      if ("{{dev}}"=="True") {
+        console.log("developer logs");
+      } else {
+        if (location.protocol!=='https:') {
+          location.replace(`https:${location.href.substring(location.protocol.length)}`);
+        }
+      }
+    });
+  </script>
+{% endblock %}
+</body>
+</html>

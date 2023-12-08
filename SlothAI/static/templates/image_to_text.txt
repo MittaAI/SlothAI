@@ -1,0 +1,9 @@
+{# Use this template to drive a vision processor. #}
+
+{# Define the input_fields used in this template; user_history alternates user,assistant,user,assistant.. #}
+input_fields = [{'name': "filename", 'type': "string"},{'name': "content_type", 'type': "string"}]
+
+{# The output_fields expected from the node processor using this template %}
+output_fields = [{'name': "texts", 'type': "strings"}]
+
+extras = {"model": "gv-ocr"}

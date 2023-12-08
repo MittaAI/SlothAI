@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% block description %}
+    <meta name="description" content='Blazing Fast AI Pipelines' />
+    {% endblock %}
+    {% block title %}
+    <title>{{ brand.get('name') }}</title>
+    <meta property='og:title' content="{{brand.get('name')}}"/>
+    {% endblock %}
+    <link rel="shortcut icon" href="/images/favicon.ico">
+
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/fontawesome.css">
+    <link rel="stylesheet" href="/css/brands.css">
+    <link rel="stylesheet" href="/css/solid.css">
+    <link rel="stylesheet" href="/css/toastr.min.css">
+    <link rel="stylesheet" href="/css/jquery-ui.css">
+    <link rel="stylesheet" href="/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+    
+    {% block style %}
+    {% endblock %}
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg fixed-top" style="opacity: 90%;">
+    <h2 style="font-family: Roboto,sans-serif; color: #ffffff; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); margin: 0;">
+        <i class="fas fa-chevron-right"></i> <!-- Nice ">" Icon -->
+        <a href="/">{{brand.get('name')}}</a>
+        <a href="{{brand.get('github_url')}}" target="_blank" style="text-decoration: none; color: white; margin-left: 12px;">
+            <i class="fab fa-github"></i>
+        </a>
+        </a>
+        <a href="{{brand.get('discord_url')}}" target="_blank" style="text-decoration: none; color: white; margin-left: 4px;">
+            <i class="fab fa-discord"></i>
+        </a>
+        <a href="{{brand.get('youtube_url')}}" target="_blank" style="text-decoration: none; color: white; margin-left: 4px;">
+            <i class="fab fa-youtube"></i>
+        </a>
+    </h2>
+
+    <div class="collapse navbar-collapse" id="navbarNav">
+        <div style="z-index: 10000;" class="dropdown ml-auto">
+            <button style="color: white;" class="btn btn-outline-dark dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{username}}</button>
+            <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton">
+                <a class="dropdown-item" href="/settings">Settings</a>
+                <a class="dropdown-item" href="/logout">Logout</a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Left Sidebar Navigation -->
+<div class="sidebar">
+    <a href="/pipelines" {% if 'pipeline' in request.endpoint %}class="highlighted-link"{% endif %}>
+        <i class="fas fa-code-branch"></i> <span>Pipelines</span>
+    </a>
+    <a href="/nodes" {% if 'node' in request.endpoint %}class="highlighted-link"{% endif %}>
+        <i class="fas fa-cube"></i> <span>Nodes</span>
+    </a>
+    <a href="/templates" {% if 'template' in request.endpoint %}class="highlighted-link"{% endif %}>
+        <i class="fas fa-file"></i> <span>Templates</span>
+    </a>
+    <a href="/tasks" {% if 'task' in request.endpoint %}class="highlighted-link"{% endif %}>
+        <i class="fas fa-tasks"></i> <span>Tasks</span>
+    </a>
+    <a href="/logs" {% if 'log' in request.endpoint %}class="highlighted-link"{% endif %}>
+        <i class="fas fa-bug"></i> <span>Logs</span>
+    </a>
+    <a href="/settings" {% if 'setting' in request.endpoint %}class="highlighted-link"{% endif %}>
+        <i class="fas fa-cog"></i> <span>Settings</span>
+    </a>
+    <a href="/cookbooks">
+        <i class="fas fa-book-open"></i> <span>Cookbooks</span>
+    </a>
+</div>
+
+{% macro generate_regular_badge(field_name, field_type) %}
+    <span class="badge badge-dark">
+        {{ field_name }}: {{ field_type }}
+    </span><br/>
+{% endmacro %}
+
+{% macro generate_extra_badge(extra_name, extra_value) %}
+    {% if extra_value is defined %}
+        {% set badge_text = extra_name ~ ': ' ~ extra_value %}
+    {% else %}
+        {% set badge_text = extra_name %}
+    {% endif %}
+ 
+    <a tabindex="1" data-toggle="popover" role="button" data-placement="left" data-trigger="focus" data-content="{% if extra_value != '[user_extra]' %}{{ extra_value }}{% else %}[user_extra]{% endif %}" class="badge badge-dark extras">
+        {{ extra_name }}
+    </a> 
+{% endmacro %}
+
+
+{% block content %}
+{% endblock %}
+
+
+
+<!-- Bootstrap JS, Popper.js, and jQuery -->
+<script type="text/javascript" charset="utf8" src="/js/jquery-3.6.0.min.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/popper.min.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/bootstrap.min.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/toastr.min.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/jquery-ui.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/utils.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function() {
+    toastr.options = {
+      "positionClass": "toast-bottom-right",
+    }
+    {% for message in get_flashed_messages() %}
+    toastr.info("{{message}}");
+    {% endfor %}
+});
+</script>
+
+{% block javascript %}
+{% endblock %}
+
+</body>
+</html>

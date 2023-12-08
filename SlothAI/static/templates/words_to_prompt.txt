@@ -1,0 +1,22 @@
+{# This template takes in a set of words and outputs an image prompt. Use this for random image generation! #}
+
+{# Input Fields #}
+input_fields = [{'name': 'words', 'type': 'strings'}]
+
+{# Output Fields #}
+output_fields = [{'name': 'prompt', 'type': 'string'}]
+
+{# Extras #}
+extras = {'model': 'gpt-3.5-turbo-1106', 'processor': 'aidict', 'openai_token': None}
+
+# AI bot will complete a python dictionary task
+{# if words is a list of lists, this still works #}
+1. The user has provided the following from an input_field named 'words':
+"""
+{{words}}
+"""
+2. You will build a python dictionary for the user. You will not do anything else.
+3. The required output field/key for the dictionary mentioned in 2. is: 'prompt'
+4. The required value for 'prompt' from 3. is a single string.
+5. Build a short but interesting dall-e image generation 'prompt' value from 4. using the words in step 1.:
+ai_dict =

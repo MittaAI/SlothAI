@@ -1,0 +1,11 @@
+{# Use this template to drive an OpenAI GPT vision processor that outputs a scene description. #}
+
+{# Define the input_fields used in this template #}
+input_fields = [{'name': "filename", 'type': "string"},{'name': "content_type", 'type': "string"}]
+
+{# The output_fields expected from the node processor using this template %}
+output_fields = [{'name': "scene", 'type': "strings"}]
+
+{# Define the gpt-scene model to extract the scene description #}
+{# To emulate the gv-objects model, pass the scene into a keyterms extractor #}
+extras = {"model": "gpt-4-vision-preview", "openai_token": None, "processor": "aivision", "system_prompt": "What is in the image?"}

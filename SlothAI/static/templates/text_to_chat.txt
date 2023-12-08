@@ -1,0 +1,22 @@
+{# Use this template to drive a generative chat processor. #}
+
+{# Define the input_fields used in this template; user_history alternates user,assistant,user,assistant.. #}
+{# Remove user_history if you don't want to use a history #}
+input_fields = [{'name': "objects", 'type': "stringset"},{'name': "words", 'type': "strings"}]
+
+{# The output_fields expected from the node processor using this template #}
+output_fields = [{'name': "assistant_content", 'type': "strings"}]
+
+{# Define the 'extras' for system_prompt  #}
+extras = {'system_prompt': "You are a pirate in a pirate game, with a user. You are standing on an island with the user.", 'processor': "aichat", 'openai_token': None, 'model': "gpt-3.5-turbo"}
+
+{# We assume objects is a stringset, or a list of a list of strings, and grab the first one #}
+{% set selected_objects = objects[0]|shuffle %}
+
+Director: The following things are visible here, along with a beach, coconut trees and sand. Lots of sand.
+{{ selected_objects[:2] }}
+
+The pirates mind is currently pondering:
+{{ words }}
+
+The user blinks, and asks "Why are you on my island?"

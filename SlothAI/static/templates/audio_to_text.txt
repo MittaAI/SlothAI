@@ -1,0 +1,11 @@
+{# Use this template to transcribe audio and convert it to text pages #}
+
+{# Input Fields #}
+{# These should not be changed, as they are provided by the task ingestion endpoint for file uploads. #}
+input_fields = [{'name': 'filename', 'type': 'string'},{'name': 'content_type', 'type': 'string'}]
+
+{# Output Fields #}
+output_fields = [{'name': 'texts', 'type': 'strings'}]
+
+{# Extras 'page_chunk_size' is used to set page size #}
+extras = {"openai_token": None, "model": "whisper-1", "processor": "aiaudio", "page_chunk_size": 1536}

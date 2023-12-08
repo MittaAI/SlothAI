@@ -1,0 +1,12 @@
+{# Use this template with the split_task processor. #}
+
+{# The split_task processor spawns parallel tasks for a given set of keys with equal lengths. #}
+{# When used properly with an AI processor, it allows rapid inferencing of large amounts of data. #}
+
+{# The split_task processor requires input_fields and output_fields to be the same. #}
+input_fields = [{'name': 'chunks', 'type': 'strings'}, {'name': 'page_nums', 'type': 'ints'}, {'name': 'chunk_nums', 'type': 'ints'}, {'name': 'filenames', 'type': 'strings'}]
+
+output_fields = [{'name': 'chunks', 'type': 'strings'}, {'name': 'page_nums', 'type': 'ints'}, {'name': 'chunk_nums', 'type': 'ints'}, {'name': 'filenames', 'type': 'strings'}]
+
+{# The batch_size must be defined (or entered during node creation) and the recommended size is 20. }
+extras = {"batch_size": None, "processor": "split_task"}

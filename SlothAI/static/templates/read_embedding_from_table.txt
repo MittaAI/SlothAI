@@ -1,0 +1,11 @@
+{# Use this template to read from FeatureBase with SQL #}
+
+{# Input Fields #}
+input_fields = [{"name": "query_embedding", "type": "vectors"}]
+
+{# Output Fields #}
+output_fields = [{"name": "chunks", "type": "strings"}]
+
+{# Extras Fields #}
+{# SQL takes query_embedding and runs it against chunks_embeddings in the DB #}
+extras = {"table": None, "processor": "read_fb", "sql": "SELECT TOP(10) chunks, cosine_distance({{query_embedding[0]}}, chunks_embedding) AS distance FROM {{table}} ORDER BY distance ASC;"}

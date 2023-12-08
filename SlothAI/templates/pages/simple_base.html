@@ -1,0 +1,66 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  {% block description %}
+  <meta name="description" content='Fast AI Pipelines.' />
+  {% endblock %}
+  
+  <meta property='og:image' content="/images/sloth.png" />
+  <meta property='og:description' content='Blazing Fast AI Pipelines' />
+  <meta property='og:url' content="{{ brand.get('service_url') }}" />
+
+  {% block title %}
+  <title>{{ brand.get('name') }}</title>
+  <meta property='og:title' content="{{brand.get('name')}}" />
+  {% endblock %}
+
+  <meta property="og:image" content="/images/sloth.png" />
+  <meta property="og:description" content="Blazing Fast AI Pipelines" />
+  <meta property="og:url" content="{{brand.get('service_url')}}" />
+  <meta property="og:title" content="{{brand.get('name')}}" />
+  
+  <meta name="twitter:card" content="summary_large_image" /> <!-- This specifies a large image card -->
+  <meta name="twitter:site" content="{{ brand.get('twitter_handle') }}" /> <!-- Replace with your Twitter handle -->
+  <meta name="twitter:title" content="{{ brand.get('name') }}" />
+  <meta name="twitter:description" content="Blazing Fast AI Pipelines" />
+  <meta name="twitter:image" content="/images/sloth.png" />
+
+  <link rel="shortcut icon" href="/images/favicon.ico">
+  <link rel="stylesheet" href="/css/style.css">
+
+  <link rel="stylesheet" href="/css/bootstrap.min.css">
+  
+  {% block style %}
+  {% endblock %}
+  
+  <script src="/js/jquery.min.js"></script>
+
+</head>
+
+<body>
+  <div id="body">
+    {% block content %}
+    {% endblock %}
+    {% block footer %}
+    {% endblock %}
+  </div>
+
+{% block javascript %}
+  <script type="text/javascript">
+    $(document).ready(function(){
+      // redirect to https
+      if ("{{dev}}"=="True") {
+        console.log("developer logs");
+      } else {
+        if (location.protocol!=='https:') {
+          location.replace(`https:${location.href.substring(location.protocol.length)}`);
+        }
+      }
+    });
+  </script>
+{% endblock %}
+</body>
+</html>

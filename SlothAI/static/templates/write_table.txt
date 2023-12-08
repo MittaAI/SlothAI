@@ -1,0 +1,9 @@
+{# Use this template to write to FeatureBase #}
+
+{# Input Fields #}
+{# We're looking for keys to save to the database. #}
+input_fields = [{"name": "texts", "type": "strings"}]
+
+{# Extras Fields #}
+{# Leave table as None so that it will populate during node creation. #}
+extras = {"table": None, "processor": "write_fb"}
