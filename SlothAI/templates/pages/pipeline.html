@@ -95,8 +95,8 @@
             {% elif nodes[0].processor == 'read_file' %}
             <div class="tab-pane fade" id="upload" role="tabpanel" aria-labelledby="upload-tab">
                 <p></p>
-                <p>You may upload single PDFs or text files (<strong>.pdf or .txt</strong>) to this pipeline. To upload multiple files, please use the code examples.</p>
-                <input type="file" id="fileInput" style="display: none;" accept=".pdf, .txt">
+                <p>You may upload single PDFs or text files (<strong>.pdf, .txt, .csv</strong>) to this pipeline. To upload multiple files, please use the code examples.</p>
+                <input type="file" id="fileInput" style="display: none;" accept=".pdf, .txt, .csv">
                 <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
             </div>
             {% elif nodes[0].processor == 'aivision' %}

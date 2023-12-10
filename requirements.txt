@@ -33,3 +33,4 @@ slackclient==2.9.4
 Pillow==10.1.0
 pydub==0.25.1
 ffmpeg-python==0.2.0
+pandas==1.16.0

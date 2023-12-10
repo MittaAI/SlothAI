@@ -490,7 +490,11 @@ def template_detail(template_id="new"):
     if templates:
         has_templates = True
 
-    hostname = request.host
+    # get nodes, if any
+    if template_id:
+        nodes = Node.fetch(template_id=template_id)
+    else:
+        nodes = []
 
     # get short name
     for x in range(20):
@@ -501,7 +505,7 @@ def template_detail(template_id="new"):
     empty_template = '{# This is a reference jinja2 processor template #}\n\n{# Input Fields #}\ninput_fields = [{"name": "input_key", "type": "strings"}]\n\n{# Output Fields #}\noutput_fields = [{"name": "output_key", "type": "strings"}]\n\n{# Extras are required. #}\nextras = {"processor": "jinja2", "static_value": "String for static value.", "dynamic_value": None, "referenced_value": "{{static_value}}"}\n\n{"dict_key": "{{dynamic_value}}"}'
 
     return render_template(
-        'pages/template.html', username=username, brand=get_brand(app), dev=app.config['DEV'], api_token=api_token, dbid=dbid, template=template, has_templates=has_templates, hostname=hostname, name_random=name_random, template_examples=template_examples, empty_template=empty_template
+        'pages/template.html', username=username, brand=get_brand(app), dev=app.config['DEV'], api_token=api_token, dbid=dbid, template=template, has_templates=has_templates, name_random=name_random, template_examples=template_examples, empty_template=empty_template, nodes=nodes
     )
 
 

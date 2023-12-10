@@ -11,6 +11,9 @@ import json
 
 import openai
 
+import pandas as pd
+import numpy as np
+
 from itertools import groupby
 
 from google.cloud import vision, storage, documentai
@@ -1021,6 +1024,39 @@ def aiimage(node: Dict[str, any], task: Task) -> Task:
 
     return task
 
+# complete dictionaries
+def ai_csv_headers(model="gpt-3.5-turbo-1106", prompt="", retries=3):
+    # negotiate the format
+    if model == "gpt-3.5-turbo-1106" and "JSON" in prompt:
+        system_content = "Looking at an example, output a JSON list of header strings for the rows in a CSV."
+        response_format = {'type': "json_object"}
+    else:
+        system_content = "Looking at an example, output a JSON list of header strings for the rows in a CSV. Only output a JSON list, nothing more."
+        response_format = None
+
+    # try a few times
+    for _try in range(retries):
+        completion = openai.chat.completions.create(
+            model = model,
+            response_format = response_format,
+            messages = [
+                {"role": "system", "content": system_content},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        ai_array_str = completion.choices[0].message.content.replace("\n", "").replace("\t", "")
+        ai_array_str = re.sub(r'\s+', ' ', ai_array_str).strip()
+
+        try:
+            ai_array = eval(ai_array_str)
+            err = None
+            break
+        except (ValueError, SyntaxError, NameError, AttributeError, TypeError) as ex:
+            ai_array = []
+            err = f"AI returned a un-evaluatable, non-array object on try {_try} of {retries}: {ex}"
+            time.sleep(2) # give it a few seconds
+
+    return err, ai_array
 
 @processer
 def read_file(node: Dict[str, any], task: Task) -> Task:
@@ -1061,7 +1097,7 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
         raise NonRetriableError("Both filename and content_type must either be equal size lists or strings.")
 
     # Check if the mime type is supported
-    supported_content_types = ['application/pdf', 'text/plain']
+    supported_content_types = ['application/pdf', 'text/plain', 'text/csv']
 
     for index, file_name in enumerate(filename):
         content_parts = content_type[index].split(';')[0]
@@ -1177,8 +1213,94 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
 
             texts = chunks
 
+        elif "text/csv" in content_type[index]:
+            # check for prepend string
+
+            # Check for model and token
+            if not task.document.get('openai_token'):
+                raise NonRetriableError("The read_file processor requires an OpenAI token for reading CSV formats.")
+            task.document.setdefault('model', 'gpt-3.5-turbo-1106')
+
+            # Get the document
+            gcs = storage.Client()
+            bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
+            blob = bucket.blob(f"{uid}/{file_name}")
+            file_content = blob.download_as_bytes()
+
+            # Read the CSV content into DataFrame
+            df = pd.read_csv(BytesIO(file_content), header=None)
+
+            # Find first row with data
+            first_data_row_index = df.apply(lambda row: row.notna().any(), axis=1).idxmax()
+
+            # Extract sample data and predict headers
+            sample_data = df.iloc[first_data_row_index:first_data_row_index + 4]
+            err, predicted_headers = ai_csv_headers(prompt=sample_data.to_string(index=False, header=False))
+            if err:
+                raise NonRetriableError("The AI returned an error during evaluation of the array of headers.")
+
+            # Compare headers and update DataFrame columns
+            if predicted_headers == list(sample_data.iloc[0]):
+                df.columns = predicted_headers
+                df.drop(index=range(first_data_row_index + 1), inplace=True)
+            else:
+                df.columns = predicted_headers if len(predicted_headers) == len(sample_data.columns) \
+                             else ['column_' + str(i) for i in range(1, len(sample_data.columns) + 1)]
+
+            # Replace spaces with underscores in column names and handle empty rows
+            df.columns = ['csv-' + col.replace(' ', '_') for col in df.columns]
+            df.dropna(how='all', inplace=True)
+            df = df.reset_index(drop=True)
+            
+            # process empty items for string, int and floats - open a ticket for more types
+            data_dict = {}
+
+            for index, row in df.to_dict(orient='list').items():
+                row_data = []
+                row_type = None  # Reset row_type for each row
+
+                for col_index, item in enumerate(row):
+                    # Determine the type based on the first non-null, non-NaN item
+                    if row_type is None and not pd.isna(item) and item is not None:
+                        if isinstance(item, str):
+                            row_type = 'string'
+                        elif isinstance(item, int):
+                            row_type = 'int'
+                        elif isinstance(item, float):
+                            row_type = 'float'
+
+                    if isinstance(item, str):
+                        try:
+                            converted_item = int(item)
+                            row_type = 'int'
+                        except ValueError:
+                            try:
+                                converted_item = float(item)
+                                row_type = 'float'
+                            except ValueError:
+                                converted_item = item
+                        row_data.append(converted_item)
+                    elif pd.isna(item) or item is None:
+                        # Replace None based on the determined type
+                        if row_type == 'int':
+                            row_data.append(0)
+                        elif row_type == 'float':
+                            row_data.append(0.0)
+                        elif row_type == 'string':
+                            row_data.append("")
+                        else:
+                            row_data.append(None)
+                    else:
+                        row_data.append(item)
+
+                data_dict[index] = row_data
+
+            # add the values to the document
+            for key, value in data_dict.items():
+                task.document[key] = value
+            texts = []
         else:
-            raise NonRetriableError("Processor read_file supports text/plain and application/pdf content types only.")
+            raise NonRetriableError("Processor read_file supports text/plain, application/pdf, and text/csv content types only.")
 
         # update the document
         task.document[output_field].extend(texts)
@@ -1513,6 +1635,9 @@ def read_fb(node: Dict[str, any], task: Task) -> Task:
         if "exception" in err:
             raise RetriableError(err)
         else:
+            # if dropping and doesn't exist
+            if "DROP" in err and "not found" in err:
+                return task
             # good response from the server but query error
             raise NonRetriableError(err)
 

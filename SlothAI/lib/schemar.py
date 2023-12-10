@@ -106,6 +106,8 @@ class Schemar:
 
     def infer_create_table_schema(self):
         schema = self.infer_schema()
+        if not schema:
+            raise UnhandledDataType("Couldn't find matching keys to the fields expected. Check the document contains all fields specified in input_fields.")
         if "_id" not in schema.keys():
             schema['_id'] = "id"
         return "(" + ", ".join([f"{fld} {typ}" for fld, typ in schema.items()]) + ")"
