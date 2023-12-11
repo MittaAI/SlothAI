@@ -1763,6 +1763,7 @@ def write_fb(node: Dict[str, any], task: Task) -> Task:
     if err:
         raise NonRetriableError("Can't connect to database. Check your FeatureBase connection.")
     
+    
     # if it doesn't exists, create it
     if not tbl_exists:
         create_schema = Schemar(data=data).infer_create_table_schema() # check data.. must be lists
