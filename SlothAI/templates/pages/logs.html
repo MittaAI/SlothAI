@@ -100,11 +100,11 @@ $(document).ready(function() {
         tdLog.empty(); 
         var jsonViewer = $('<pre>').appendTo(tdLog);
         jsonViewer.jsonViewer(jsonDataObj, {collapsed: true, withQuotes: true});
+    });
 
-        $('td pre.json-document > a.json-toggle').each(function() {
-            $(this).click();
-        });
 
+    $('td pre.json-document > a.json-toggle').each(function() {
+        $(this).click();
     });
 
     $('#clearCompleted').click(function() {
