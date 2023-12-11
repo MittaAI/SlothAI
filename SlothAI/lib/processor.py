@@ -43,7 +43,7 @@ warnings.filterwarnings("ignore")
 from SlothAI.web.custom_commands import random_word, random_sentence, chunk_with_page_filename, filter_shuffle
 from SlothAI.web.models import User, Node, Pipeline
 
-from SlothAI.lib.tasks import Task, process_data_dict_for_insert, transform_data, get_values_by_json_paths, box_required, validate_dict_structure, TaskState, NonRetriableError, RetriableError, MissingInputFieldError, MissingOutputFieldError, UserNotFoundError, PipelineNotFoundError, NodeNotFoundError, TemplateNotFoundError
+from SlothAI.lib.tasks import Task, process_data_dict_for_insert, auto_field_data, transform_data, get_values_by_json_paths, box_required, validate_dict_structure, TaskState, NonRetriableError, RetriableError, MissingInputFieldError, MissingOutputFieldError, UserNotFoundError, PipelineNotFoundError, NodeNotFoundError, TemplateNotFoundError
 from SlothAI.lib.database import table_exists, add_column, create_table, get_columns, featurebase_query
 from SlothAI.lib.util import strip_secure_fields, filter_document, random_string
 
@@ -135,6 +135,7 @@ def process(task: Task) -> Task:
 
     # strip out the sensitive extras
     clean_extras(_extras, task)
+
     missing_field = validate_document(node, task, DocumentValidator.OUTPUT_FIELDS)
     if missing_field:
         raise MissingOutputFieldError(missing_field, node.get('name'))
@@ -198,9 +199,16 @@ def callback(node: Dict[str, any], task: Task) -> Task:
         if len(keys_to_keep) == 0:
             data = document
         else:
+            # we don't filter the requested documents, so tokens will or can be shown
             data = filter_document(document, keys_to_keep)
     else:
         data = document
+
+        # filter the callback_uri
+        callback_uri = document.get('callback_uri')
+        if callback_uri:
+            modified_uri = re.sub(r'token=([^\s&]+)', lambda match: 'token=' + '*' * len(match.group(1)), callback_uri)
+            data['callback_uri'] = modified_uri    
 
     # must add node_id and pipe_id
     data['node_id'] = node.get('node_id')
@@ -287,15 +295,20 @@ def info_file(node: Dict[str, any], task: Task) -> Task:
         except:
             raise NonRetriableError("Can't get the size or content_type from the file in storage.")
 
-        if content_type == "application/pdf":
+        if "application/pdf" in content_type:
             # Create a BytesIO object for the PDF content
             pdf_content_stream = BytesIO(file_content)
             pdf_reader = PyPDF2.PdfReader(pdf_content_stream)
             pdf_num_pages = len(pdf_reader.pages)
             task.document['pdf_num_pages'].append(pdf_num_pages)
+        elif "text/plain" or "text/csv" in content_type:
+            with io.BytesIO(file_content) as file:
+                txt_num_lines = sum(1 for line in file)
+            task.document['txt_num_lines'].append(line_count)
         else:
-            # we must add something even if it's not a PDF
+            # we must add something even if it's not a PDF or text file
             task.document['pdf_num_pages'].append(-1)
+            task.document['txt_num_lines'].append(-1)
 
         storage_content_types.append(content_type)
         task.document['file_size_bytes'].append(file_size_bytes)
@@ -642,6 +655,7 @@ def ai_prompt_to_dict(model="gpt-3.5-turbo-1106", prompt="", retries=3):
             ]
         )
         ai_dict_str = completion.choices[0].message.content.replace("\n", "").replace("\t", "")
+        ai_dict_str = ai_dict_str.replace("null", "None") # fix null issue
         ai_dict_str = re.sub(r'\s+', ' ', ai_dict_str).strip()
         ai_dict_str = re.sub(r'^ai_dict\s*=\s*', '', ai_dict_str)
 
@@ -652,7 +666,7 @@ def ai_prompt_to_dict(model="gpt-3.5-turbo-1106", prompt="", retries=3):
             err = None
             break
         except (ValueError, SyntaxError, NameError, AttributeError, TypeError) as ex:
-            ai_dict = {}
+            ai_dict = {"ai_dict": ai_dict_str}
             err = f"AI returned a un-evaluatable, non-dictionary object on try {_try} of {retries}: {ex}"
             time.sleep(2) # give it a few seconds
 
@@ -735,7 +749,8 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
                 ai_dicts.append(ai_dict)
 
                 if err:
-                    raise NonRetriableError(err)
+                    print(ai_dict)
+                    raise NonRetriableError(f"{err}: {ai_dict}")
 
             if is_list_of_lists:
                 # Process as list of lists
@@ -1209,11 +1224,6 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
             else:
                 prepend_string = ""
 
-            # Check for model and token
-            if not task.document.get('openai_token'):
-                raise NonRetriableError("The read_file processor requires an OpenAI token for reading CSV formats.")
-            task.document.setdefault('model', 'gpt-3.5-turbo-1106')
-
             # Get the document
             gcs = storage.Client()
             bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
@@ -1272,7 +1282,9 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
 
             # process empty items for string, int and floats - open a ticket for more types
             data_dict = {}
+            texts = []
 
+            # patch all the None fields
             for index, row in df.to_dict(orient='list').items():
                 row_data = []
                 row_type = None  # Reset row_type for each row
@@ -1335,15 +1347,15 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
 
                 # push the data into the return values
                 data_dict[index] = row_data
-
+                
             # Add the values to the document
+            texts = []
             for key, value in data_dict.items():
                 task.document[key] = value
-
-            texts = []
+                texts.append(f"{key}:{','.join(map(str, value))}")
         else:
             raise NonRetriableError("Processor read_file supports text/plain, application/pdf, and text/csv content types only.")
-        print(task.document)
+
         # update the document
         task.document[output_field].extend(texts)
     
@@ -1737,9 +1749,14 @@ def write_fb(node: Dict[str, any], task: Task) -> Task:
     # create template service
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
-    _keys = template.get('input_fields') # must be input fields but not enforced
-    keys = [n['name'] for n in _keys]
-    data = get_values_by_json_paths(keys, task.document)
+
+    # check for auto detect
+    if task.document.get('auto_fields'):
+        data = auto_field_data(task.document)
+    else:
+        _keys = template.get('input_fields') # must be input fields but not enforced
+        keys = [n['name'] for n in _keys]
+        data = get_values_by_json_paths(keys, task.document)
 
     # check table
     tbl_exists, err = table_exists(table, auth)

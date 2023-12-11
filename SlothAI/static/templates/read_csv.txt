@@ -5,12 +5,12 @@
 input_fields = [{'name': 'filename', 'type': 'string'},{'name': 'content_type', 'type': 'string'}]
 
 {# Output Fields #}
-{# The 'texts' key will contain the complete text of the CSV file read #}
+{# The 'texts' key will contain the completed pivoted texts of the CSV file read by column #}
 {# Other keys will be created in the document as matched from the headers in the CSV file #}
 output_fields = [{'name': 'texts', 'type': 'strings'}]
 
 {# Extras #}
 {# 'header_prepend' is optional and prepends the defined string to each column header name #}
-{# 'split_rows' in extras or input_fields sets the number of rows to process #}
+{# 'split_rows' in extras or input_fields sets the number of rows to process, otherwise processes all rows #}
 {# 'split_start' in extras or input_fields sets the starting row to process and defaults to 0 #}
-extras = {"processor": "read_file", "header_prepend": "csv-", "batch_size": 100, "openai_token": None}
+extras = {"processor": "read_file", "header_prepend": "csv-", "split_num": 10, "split_start": 10}

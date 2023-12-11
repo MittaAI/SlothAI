@@ -219,6 +219,28 @@ def get_values_by_json_paths(json_paths, document):
     
     return results
 
+
+def auto_field_data(document):
+    # This will store the maximum length found
+    max_length = 0
+
+    # This will store the key-value pairs with the max length
+    results = {}
+
+    # Iterate over the dictionary to find the max length and collect the key-value pairs
+    for key, value in document.items():
+        if isinstance(value, list):  # Ensure the value is a list
+            length = len(value)
+            if length > max_length:
+                max_length = length
+                results = {key: value}  # Start a new dict with this key-value pair
+            elif length == max_length:
+                results[key] = value  # Add the key-value pair to the existing dict
+
+    # Now results contains all key-value pairs with the longest list lengths
+    return results
+
+
 def process_data_dict_for_insert(data, column_type_map, table):
 	"""
 	Process data from a dictionary for insertion into a database table.

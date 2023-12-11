@@ -1,7 +1,8 @@
 {# Use this template to write to FeatureBase #}
 
 {# Input Fields #}
-{# We're looking for keys to save to the database. #}
+{# Enter keys to save to the database. #}
+{# Alternately, remove all input fields and set an extra for 'auto_fields' to auto detect. #}
 input_fields = [{"name": "texts", "type": "strings"}]
 
 {# Extras Fields #}
