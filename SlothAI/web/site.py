@@ -54,6 +54,7 @@ template_examples = [
     {"name": "Read embedding distance from a table", "template_name": "read_embedding_from_table", "processor_type": "read_fb"},
     {"name": "Drop a table", "template_name": "drop_table", "processor_type": "read_fb"},
     {"name": "Read PDF or text file and convert to text", "template_name": "pdf_to_text", "processor_type": "read_file"},
+    {"name": "Read a CSV and serialize to arrays", "template_name": "read_csv", "processor_type": "read_file"},
     {"name": "Serialize arrays from read file output", "template_name": "serialize_arrays", "processor_type": "jinja2"},
     {"name": "Read file content_type, size, num_pages, ttl", "template_name": "info_file", "processor_type": "info_file"},
     {"name": "Deserialize a PDF to pages and convert to text", "template_name": "deserialized_pdf_to_text", "processor_type": "read_file"},
@@ -142,50 +143,58 @@ def serve_webfonts(filename):
 def logs():
     # get the user and their tables
     username = current_user.name
+    email = current_user.email
     hostname = request.host
 
     logs = Log.fetch(uid=current_user.uid)
 
-    return render_template('pages/logs.html', brand=get_brand(app), username=username, hostname=hostname, logs=logs)
+    return render_template('pages/logs.html', brand=get_brand(app), username=username, email=email, hostname=hostname, logs=logs)
 
 
 @site.route('/', methods=['GET'])
 def home():
     try:
         username = current_user.name
+        email = current_user.email
     except:
         username = "anonymous"
-
-    return render_template('pages/index.html', username=username, brand=get_brand(app))
+        email = "anonymous"
+    return render_template('pages/index.html', username=username, email=email, brand=get_brand(app))
 
 
 @site.route('/legal', methods=['GET'])
 def legal():
     try:
         username = current_user.name
+        email = current_user.email
     except:
         username = "anonymous"
+        email = "anonymous"
 
-    return render_template('pages/privacy.html', username=username, dev=app.config['DEV'], brand=get_brand(app))
+    return render_template('pages/privacy.html', username=username, email=email, dev=app.config['DEV'], brand=get_brand(app))
 
 
 @site.route('/about', methods=['GET'])
 def about():
     try:
         username = current_user.name
+        email = current_user.email
     except:
         username = "anonymous"
+        email = "anonymous"
 
-    return render_template('pages/about.html', username=username, dev=app.config['DEV'], brand=get_brand(app))
+    return render_template('pages/about.html', username=username, email=email, dev=app.config['DEV'], brand=get_brand(app))
 
 @site.route('/cookbooks', methods=['GET'])
 def cookbooks():
     try:
         username = current_user.name
+        email = current_user.email
     except:
         username = "anonymous"
+        email = "anonymous"
 
-    return render_template('pages/cookbooks.html', username=username, dev=app.config['DEV'], brand=get_brand(app))
+    return render_template('pages/cookbooks.html', username=username, email=email, dev=app.config['DEV'], brand=get_brand(app))
 
 
 @site.route('/pipelines', methods=['GET'])
@@ -193,6 +202,7 @@ def cookbooks():
 def pipelines():
     # get the user and their tables
     username = current_user.name
+    email = current_user.email
     hostname = request.host
     pipelines = Pipeline.fetch(uid=current_user.uid)
     nodes = Node.fetch(uid=current_user.uid)
@@ -217,7 +227,7 @@ def pipelines():
     
     _nodes_sorted_by_processor = sorted(_nodes, key=lambda x: x.get('processor'))
 
-    return render_template('pages/pipelines.html', brand=get_brand(app), username=username, hostname=hostname, pipelines=pipelines, nodes=_nodes_sorted_by_processor, processors=processors)
+    return render_template('pages/pipelines.html', brand=get_brand(app), username=username, email=email, hostname=hostname, pipelines=pipelines, nodes=_nodes_sorted_by_processor, processors=processors)
 
 
 @site.route('/pipelines/<pipe_id>', methods=['GET'])
@@ -225,6 +235,7 @@ def pipelines():
 def pipeline_view(pipe_id):
     # get the user and their tables
     username = current_user.name
+    email = current_user.email
     token = current_user.api_token
     template_service = app.config['template_service']
     templates = template_service.fetch_template(user_id=current_user.uid)
@@ -323,7 +334,7 @@ def pipeline_view(pipe_id):
     _nodes_sorted_by_processor = sorted(nodes, key=lambda x: x.get('processor'))
 
     # render the page
-    return render_template('pages/pipeline.html', brand=get_brand(app), username=username, pipeline=pipeline, nodes=_nodes, all_nodes=_nodes_sorted_by_processor,  curl_code=curl_code, python_code=python_code, mermaid_string=mermaid_string, processors=processors)
+    return render_template('pages/pipeline.html', brand=get_brand(app), username=username, email=email, pipeline=pipeline, nodes=_nodes, all_nodes=_nodes_sorted_by_processor,  curl_code=curl_code, python_code=python_code, mermaid_string=mermaid_string, processors=processors)
 
 
 @site.route('/nodes', methods=['GET'])
@@ -331,6 +342,8 @@ def pipeline_view(pipe_id):
 def nodes():
     # get the user and their tables
     username = current_user.name
+    email = current_user.email
+
     nodes = Node.fetch(uid=current_user.uid)
 
     template_service = app.config['template_service']
@@ -364,7 +377,7 @@ def nodes():
         _nodes.append(node)
 
     return render_template(
-        'pages/nodes.html', username=username, brand=get_brand(app), dev=app.config['DEV'], nodes=_nodes, name_random=name_random, templates=templates, processors=processors
+        'pages/nodes.html', username=username, email=email, brand=get_brand(app), dev=app.config['DEV'], nodes=_nodes, name_random=name_random, templates=templates, processors=processors
     )
 
 
@@ -374,6 +387,8 @@ def nodes():
 def node_detail(node_id=None, template_id=None):
     # get the user
     username = current_user.name
+    email = current_user.email
+
     uid = current_user.uid
 
     # get the template service
@@ -453,7 +468,7 @@ def node_detail(node_id=None, template_id=None):
     template = template_service.get_template(template_id=node.get('template_id'), user_id=current_user.uid)
 
     return render_template(
-        'pages/node.html', username=username, brand=get_brand(app), dev=app.config['DEV'], node=node, template=template, processors=processors, pipelines=pipelines, filtered_pipelines=filtered_pipelines
+        'pages/node.html', username=username, email=email, brand=get_brand(app), dev=app.config['DEV'], node=node, template=template, processors=processors, pipelines=pipelines, filtered_pipelines=filtered_pipelines
     )
 
 
@@ -461,6 +476,7 @@ def node_detail(node_id=None, template_id=None):
 @flask_login.login_required
 def templates():
     username = current_user.name
+    email = current_user.email
     template_service = app.config['template_service']
     templates = template_service.fetch_template(user_id=current_user.uid)
 
@@ -468,7 +484,7 @@ def templates():
         return redirect(url_for('site.template_detail'))  # Adjust 'template_detail' to your route name
 
     return render_template(
-        'pages/templates.html', username=username, brand=get_brand(app), templates=templates, processors=processors
+        'pages/templates.html', username=username, email=email, brand=get_brand(app), templates=templates, processors=processors
     )
 
 
@@ -478,6 +494,8 @@ def templates():
 def template_detail(template_id="new"):
     # get the user and their tables
     username = current_user.name
+    email = current_user.email
+
     api_token = current_user.api_token
     dbid = current_user.dbid
     template_service = app.config['template_service']
@@ -505,7 +523,7 @@ def template_detail(template_id="new"):
     empty_template = '{# This is a reference jinja2 processor template #}\n\n{# Input Fields #}\ninput_fields = [{"name": "input_key", "type": "strings"}]\n\n{# Output Fields #}\noutput_fields = [{"name": "output_key", "type": "strings"}]\n\n{# Extras are required. #}\nextras = {"processor": "jinja2", "static_value": "String for static value.", "dynamic_value": None, "referenced_value": "{{static_value}}"}\n\n{"dict_key": "{{dynamic_value}}"}'
 
     return render_template(
-        'pages/template.html', username=username, brand=get_brand(app), dev=app.config['DEV'], api_token=api_token, dbid=dbid, template=template, has_templates=has_templates, name_random=name_random, template_examples=template_examples, empty_template=empty_template, nodes=nodes
+        'pages/template.html', username=username, email=email, brand=get_brand(app), dev=app.config['DEV'], api_token=api_token, dbid=dbid, template=template, has_templates=has_templates, name_random=name_random, template_examples=template_examples, empty_template=empty_template, nodes=nodes
     )
 
 
@@ -542,8 +560,10 @@ def tasks():
         tasks[index]['created'] = timestamp
 
     username = current_user.name
+    email = current_user.email
+
     return render_template(
-        'pages/tasks.html', tasks=tasks, username=username, brand=get_brand(app)
+        'pages/tasks.html', tasks=tasks, username=username, email=email, brand=get_brand(app)
     )
 
 
@@ -553,13 +573,15 @@ def tasks():
 def settings():
     # get the user and their tables
     username = current_user.name
+    email = current_user.email
+
     api_token = current_user.api_token
     dbid = current_user.dbid
 
     tokens = Token.get_all_by_uid(current_user.uid)
 
     return render_template(
-        'pages/settings.html', username=username, brand=get_brand(app), api_token=api_token, dbid=dbid, tokens=tokens
+        'pages/settings.html', username=username, email=email, brand=get_brand(app), api_token=api_token, dbid=dbid, tokens=tokens
     )
 
 # image serving

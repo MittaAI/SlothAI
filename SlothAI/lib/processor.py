@@ -319,8 +319,30 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
     if not output_fields:
         raise NonRetriableError("split_task processor: output fields required")
 
-    inputs  = [n['name'] for n in input_fields]
-    outputs = [n['name'] for n in output_fields] 
+    if not task.document.get('split_auto'):
+        inputs  = [n['name'] for n in input_fields]
+        outputs = [n['name'] for n in output_fields] 
+    else:
+        # auto deal with max list size groups
+        max_length = 0  # Initialize maximum list length
+        keys_with_max_length = []  # Initialize list to store keys with maximum length
+
+        for key, value in task.document.items():
+            if isinstance(value, list):
+                current_length = len(value)
+                if current_length > max_length:
+                    max_length = current_length
+                    keys_with_max_length = [key]
+                elif current_length == max_length:
+                    keys_with_max_length.append(key)
+
+        result_dict = {
+            'keys': keys_with_max_length,
+            'array_length': max_length
+        }
+
+        # set both to auto value
+        inputs = outputs = result_dict.get('keys')
 
     batch_size = node.get('extras', {}).get('batch_size', None)
 
@@ -1024,39 +1046,6 @@ def aiimage(node: Dict[str, any], task: Task) -> Task:
 
     return task
 
-# complete dictionaries
-def ai_csv_headers(model="gpt-3.5-turbo-1106", prompt="", retries=3):
-    # negotiate the format
-    if model == "gpt-3.5-turbo-1106" and "JSON" in prompt:
-        system_content = "Looking at an example, output a JSON list of header strings for the rows in a CSV."
-        response_format = {'type': "json_object"}
-    else:
-        system_content = "Looking at an example, output a JSON list of header strings for the rows in a CSV. Only output a JSON list, nothing more."
-        response_format = None
-
-    # try a few times
-    for _try in range(retries):
-        completion = openai.chat.completions.create(
-            model = model,
-            response_format = response_format,
-            messages = [
-                {"role": "system", "content": system_content},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        ai_array_str = completion.choices[0].message.content.replace("\n", "").replace("\t", "")
-        ai_array_str = re.sub(r'\s+', ' ', ai_array_str).strip()
-
-        try:
-            ai_array = eval(ai_array_str)
-            err = None
-            break
-        except (ValueError, SyntaxError, NameError, AttributeError, TypeError) as ex:
-            ai_array = []
-            err = f"AI returned a un-evaluatable, non-array object on try {_try} of {retries}: {ex}"
-            time.sleep(2) # give it a few seconds
-
-    return err, ai_array
 
 @processer
 def read_file(node: Dict[str, any], task: Task) -> Task:
@@ -1215,6 +1204,10 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
 
         elif "text/csv" in content_type[index]:
             # check for prepend string
+            if task.document.get('prepend_string'):
+                prepend_string = task.document.get('prepend_string')
+            else:
+                prepend_string = ""
 
             # Check for model and token
             if not task.document.get('openai_token'):
@@ -1227,31 +1220,56 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
             blob = bucket.blob(f"{uid}/{file_name}")
             file_content = blob.download_as_bytes()
 
-            # Read the CSV content into DataFrame
+            if task.document.get('split_num'):
+                split_num = int(task.document.get('split_num'))
+                if task.document.get('split_start'):
+                    split_start = int(task.document.get('split_start'))
+                else:
+                    split_start = 0
+            else:
+                split_num = 0
+                split_start = 0
+
+            # put the max threshold in config at some point
+            if not split_num and len(file_content) > 800000:
+                task.document['max_split_size_limit'] = 800000
+                raise NonRetriableError("Maximum task size approached. You may want to use the 'split_num' and 'split_start' keys in the document to address this.")
+
+            # Read the CSV content into DataFrame without headers initially
             df = pd.read_csv(BytesIO(file_content), header=None)
 
-            # Find first row with data
-            first_data_row_index = df.apply(lambda row: row.notna().any(), axis=1).idxmax()
+            # Find the first row with valid data to be used as headers
+            first_valid_header_index = df.apply(lambda row: row.notna().all(), axis=1).idxmax()
+            headers = df.iloc[first_valid_header_index]
 
-            # Extract sample data and predict headers
-            sample_data = df.iloc[first_data_row_index:first_data_row_index + 4]
-            err, predicted_headers = ai_csv_headers(prompt=sample_data.to_string(index=False, header=False))
-            if err:
-                raise NonRetriableError("The AI returned an error during evaluation of the array of headers.")
-
-            # Compare headers and update DataFrame columns
-            if predicted_headers == list(sample_data.iloc[0]):
-                df.columns = predicted_headers
-                df.drop(index=range(first_data_row_index + 1), inplace=True)
+            # Check if the length of headers matches the number of columns
+            if len(headers) == df.shape[1]:
+                # Set the headers
+                df.columns = headers
+                # Drop the header row from the DataFrame
+                df = df.drop(first_valid_header_index)
             else:
-                df.columns = predicted_headers if len(predicted_headers) == len(sample_data.columns) \
-                             else ['column_' + str(i) for i in range(1, len(sample_data.columns) + 1)]
+                # Fallback to default naming if headers don't match
+                df.columns = ['column_' + str(i) for i in range(1, df.shape[1] + 1)]
 
             # Replace spaces with underscores in column names and handle empty rows
-            df.columns = ['csv-' + col.replace(' ', '_') for col in df.columns]
+            df.columns = [prepend_string + col.replace(' ', '_') for col in df.columns]
             df.dropna(how='all', inplace=True)
             df = df.reset_index(drop=True)
-            
+
+            # Process rows based on split_start and split_num
+            if split_start > 0:
+                df = df.iloc[split_start:]
+
+            if split_num > 0:
+                df = df.head(split_num)
+
+            # Replace NaN values with None
+            df = df.where(pd.notna(df), None)
+
+            # Drop rows where all elements are None
+            df.dropna(how='all', inplace=True)
+
             # process empty items for string, int and floats - open a ticket for more types
             data_dict = {}
 
@@ -1259,7 +1277,26 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
                 row_data = []
                 row_type = None  # Reset row_type for each row
 
+                # Determine the row_type by scanning the entire column if needed
                 for col_index, item in enumerate(row):
+                    if row_type is None and (pd.isna(item) or item is None):
+                        # Scan the entire column for a valid data type
+                        for col_item in df.iloc[:, col_index]:
+                            if not pd.isna(col_item) and col_item is not None:
+                                if isinstance(col_item, str):
+                                    row_type = 'string'
+                                elif isinstance(col_item, int):
+                                    row_type = 'int'
+                                elif isinstance(col_item, float):
+                                    row_type = 'float'
+                                break  # Break after finding the valid data type
+
+                row_index = 0
+                for col_index, item in enumerate(row):
+                    # limit to the split_num
+                    if row_index > split_num and split_num > 0:
+                        break
+
                     # Determine the type based on the first non-null, non-NaN item
                     if row_type is None and not pd.isna(item) and item is not None:
                         if isinstance(item, str):
@@ -1279,7 +1316,7 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
                                 row_type = 'float'
                             except ValueError:
                                 converted_item = item
-                        row_data.append(converted_item)
+                        row_data.append(converted_item)  
                     elif pd.isna(item) or item is None:
                         # Replace None based on the determined type
                         if row_type == 'int':
@@ -1293,15 +1330,20 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
                     else:
                         row_data.append(item)
 
+                    # add to the row index
+                    row_index = row_index + 1
+
+                # push the data into the return values
                 data_dict[index] = row_data
 
-            # add the values to the document
+            # Add the values to the document
             for key, value in data_dict.items():
                 task.document[key] = value
+
             texts = []
         else:
             raise NonRetriableError("Processor read_file supports text/plain, application/pdf, and text/csv content types only.")
-
+        print(task.document)
         # update the document
         task.document[output_field].extend(texts)
     

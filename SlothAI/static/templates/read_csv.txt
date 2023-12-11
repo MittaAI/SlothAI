@@ -1,0 +1,16 @@
+{# Use this template to read a CSV and convert it to columnar data #}
+
+{# Input Fields #}
+{# These should not be changed, as they are provided by the task ingestion endpoint for file uploads. #}
+input_fields = [{'name': 'filename', 'type': 'string'},{'name': 'content_type', 'type': 'string'}]
+
+{# Output Fields #}
+{# The 'texts' key will contain the complete text of the CSV file read #}
+{# Other keys will be created in the document as matched from the headers in the CSV file #}
+output_fields = [{'name': 'texts', 'type': 'strings'}]
+
+{# Extras #}
+{# 'header_prepend' is optional and prepends the defined string to each column header name #}
+{# 'split_rows' in extras or input_fields sets the number of rows to process #}
+{# 'split_start' in extras or input_fields sets the starting row to process and defaults to 0 #}
+extras = {"processor": "read_file", "header_prepend": "csv-", "batch_size": 100, "openai_token": None}

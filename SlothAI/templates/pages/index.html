@@ -9,7 +9,7 @@
 {% endblock %}
 
 {% block content %}
-    <div style="padding-top: 125px;"></div>
+    <div style="padding-top: 105px;"></div>
 
     <div class="background">
       <div class="container">
@@ -20,10 +20,10 @@
           </div>
           <div width="420" class="col-md-4 text-left">
             <h1 style="font-family: Roboto; font-weight: 700; font-size: 48px; opacity: 100%;">Build fast AI pipelines and bots, like a beast.</h1>
-            <p class="homelead">Powered by <a href="{{ brand.get('github_url') }}">SlothAI</a>.</p>
+            <p class="homelead">Powered by <a href="https://github.com/MittaAI/SlothAI">SlothAI</a>.</p>
             <div style="padding-bottom: 23px;">
-              <a href="/pipelines" class="btn btn-outline-light btn-bottoms" type="button">Open Beta</a>
-              <a href="https://discord.gg/dZPH8JFxvY" class="btn btn-outline-light btn-bottoms" type="button">Talk to SlothBot</a>
+              <a href="/pipelines" class="btn btn-outline-light btn-bottoms" type="button">{% if username != 'anonymous' %}Dashboard{% else %}Join Open Beta{% endif %}</a>
+              <a href="https://discord.gg/dZPH8JFxvY" class="btn btn-outline-light btn-bottoms" type="button"><i class="fab fa-discord"></i> Sloth Bot</a>
             </div>
           </div>
         </div>
@@ -38,7 +38,14 @@
   	    <div class="row">
   	      <div style="padding-right: 100px;" class="col-lg-12">
   	        <h1 style="font-size: 40px; opacity: 100%;">Build <strong>Strong</strong> AI Applications</h1>
-  	        <p class="lead">{{brand.get('name')}} is a pipeline management system built for large scale document and data processing. It offers developers a quick and easy way to build AI applications using transformational document chains powered by <a href="https://jinja.palletsprojects.com/en/3.1.x/templates/">Jinja2 templates</a>. Documents, and their contents, may be deseralized and transformed by the system in parallel during processing using task queues and containers for scale and speed. {{brand.get('name')}} supports calls to <a href="https://platform.openai.com/docs/api-reference">OpenAI</a> and Google's <a href="https://cloud.google.com/document-ai?hl=en">Document and Vision</a> APIs, in addition to supporting calls to other machine learning models. Document types supported by the system include PDFs, images, audio, text files, webpages, and more.</p>
+  	        <p class="lead">{{brand.get('name')}} is a pipeline management system built for large scale document and data processing. It offers developers a quick and easy way to build AI applications (and bots) using transformational document chains powered by <a href="https://jinja.palletsprojects.com/en/3.1.x/templates/">Jinja2 templates</a>. Documents, and their contents, may be deseralized and transformed by the system in parallel during processing using task queues and containers for scale and speed. {{brand.get('name')}} supports calls to <a href="https://platform.openai.com/docs/api-reference">OpenAI</a> and Google's <a href="https://cloud.google.com/document-ai?hl=en">Document and Vision</a> APIs, in addition to supporting calls to other machine learning models. Document types supported by the system include PDFs, text files, CSVs, images, audio files, webpages, and more.</p>
+
+            <h3 style="padding-top: 30px;">Open Beta</h3>
+            <p class="lead">
+              <strong>MittaAI</strong> is the brainchild of the <a href="/about">innovative mind</a> behind <a href="https://loggly.com">Loggly</a>™. Any accounts set up before the Beta concludes on <strong>2024/02/15</strong>, and which have actively <a href="https://www.youtube.com/watch?v=ntLqz38hC60">created and utilized a pipeline</a>, will be eligible for a complimentary year of our standard account, normally valued at $799*. When you encounter any issues using the system, we encourage you to reach out for support by <a href="https://github.com/MittaAI/SlothAI/issues">opening a ticket</a> or joining the conversation on our <a href="{{brand.get('discord_url')}}">Discord</a> channel.
+            </p>
+            <p>*Limit one account per organization. User must sign up with an organization's domain to be eligible.</p>
+
 
             <img src="/images/screenshot.png" style="border-radius: 10px; max-width: 100%; height: auto; margin: 20px 0 30px 0;" />
 
@@ -49,7 +56,7 @@
             <h3 style="padding-top: 30px;">Integrated Storage</h3>
             <p class="lead">{{brand.get('name')}} currently uses a single managed database, <a href="https://www.featurebase.com/cloud">FeatureBase Cloud</a>, which handles in-memory set operations, vector storage and search, and point lookups for AI workloads. <a href="https://featurebase.com">FeatureBase</a> can execute complex SQL queries against analytical, tabular, or vector data. These queries can also be generated using AI models.  Secure support for file storage is provided by <a href="https://cloud.google.com/">Google Cloud</a>.</p>
 
-            <h3 style="padding-top: 30px;">Retreival Augmented Generation</h3>
+            <h3 style="padding-top: 30px;">Retrieval Augmented Generation</h3>
             <p class="lead">{{brand.get('name')}}'s' framework can be used to build customized <a href="https://research.ibm.com/blog/retrieval-augmented-generation-RAG">RAG</a>-based pipelines. It also provides tools for chunking PDFs, text files, and other types of documents, like images. Use OpenAI's <a href="https://platform.openai.com/docs/guides/embeddings">text-embedding-ada-002</a> embeddings or our free embeddings powered by <a href="https://instructor-embedding.github.io/">Instructor</a> to make your content AI-ready.</p>
             <a href="/cookbooks#pdf-indexing" class="btn btn-outline-dark"><i class="fas fa-code-branch"></i> View RAG Cookbook</a>
         

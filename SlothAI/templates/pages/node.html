@@ -32,10 +32,21 @@
         <p></p>
         <p>Click the <strong>{{ template.name }}</strong> template to edit this node's input and output fields.</p>
         <hr/>
-        <div class="d-flex justify-content-between align-items-center">
-            <h5>Pipelines</h5>
+        <div class="row">
+            <div class="col text-right">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5>Pipelines</h5>
+                </div>
+            </div>
+            <div class="col text-left">
+                <form id="pipelineCreateForm" class="form-inline">
+                    <div class="form-group ml-auto"> <!-- Use ml-auto class to push the button to the right -->
+                        <button type="button" id="createPipelineButton" class="btn btn-primary" data-toggle="modal" data-target="#pipelineName"><i class="fas fa-plus"></i> Add to New Pipeline</button>
+                    </div>
+                </form>
+            </div>
         </div>
-        
+
         {% if pipelines %}
         <p>The 
             {% set ns = namespace(counter=0) %}
@@ -61,11 +72,6 @@
             </button>
         </form>
         {% endif %}
-        <form id="pipelineCreateForm" class="form-inline">
-            <div class="form-group">
-                <button type="button" id="createPipelineButton" class="btn btn-primary"data-toggle="modal" data-target="#pipelineName"><i class="fas fa-plus"></i> Add to New Pipeline</button>
-            </div>
-        </form>
         <hr/>
         <div class="d-flex justify-content-between align-items-center">
             <h5>Extras</h5>

@@ -207,8 +207,9 @@ nav h2 a:hover {
   background-color: #444;
   color: white;
   text-align: center;
-  padding-top: 83px;
+  padding-top: 13px;
   padding-bottom: 83px;
+  background-color: rgba(68, 68, 68, 0.45);
 }
 
 /* Navbar and sidebar */

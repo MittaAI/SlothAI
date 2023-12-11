@@ -1,6 +1,6 @@
 entrypoint: gunicorn -b :8080 "SlothAI:create_app(conf='prod')" -w 4 -t 800
 service_account: sloth-ai@appspot.gserviceaccount.com
-runtime: python38
+runtime: python310
 instance_class: F4_1G
 automatic_scaling:
   min_instances: 2

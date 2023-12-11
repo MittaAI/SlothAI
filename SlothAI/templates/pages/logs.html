@@ -11,7 +11,7 @@
 
     <div class="rounded-lg border p-3 table-responsive">
         <h4 class="mb-3">Your Logs</h4>
-        <p>Use of the default callback will log the document here at that point in the pipeline. Logs clear after 1 hour.</p>
+        <p>Use of the default callback will log the pipeline document here. Click the document date to copy the JSON data. Logs clear after 1 hour.</p>
         <div class="text-left">
             <button onclick="location.reload()" type="button" class="reload-button btn btn-success">
                 <i class="fas fa-sync-alt"></i> Reload
@@ -34,11 +34,12 @@
             </thead>
             <tbody>
                 {% for log in logs %}
-                    <tr>
-                        <td>{{ log.created }} 
-                        <span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></td>
-                        <td data-log="{{ log.line }}"></td>
-                    </tr>
+                <tr>
+                    <td width="140">
+                        <button class="badge">{{ log.created }}</button>
+                    </td>
+                    <td data-log="{{ log.line }}"></td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -48,21 +49,38 @@
 {% endblock %}
 
 {% block javascript %}
+<link href="https://cdn.jsdelivr.net/npm/jquery.json-viewer/json-viewer/jquery.json-viewer.css" rel="stylesheet" type="text/css">
+<script src="https://cdn.jsdelivr.net/npm/jquery.json-viewer/json-viewer/jquery.json-viewer.js"></script>
+
 <script type="text/javascript">
 $(document).ready(function() {
     $('.reload-button').on('click', function() {
       window.location.reload();
     });
 
+    $(document).ready(function() {
+        $('.badge').click(function() {
+            // 'this' refers to the clicked badge element
+            var logData = $(this).closest('td').next('td').data('log');
+
+            // Copy logData to clipboard
+            navigator.clipboard.writeText(logData).then(() => {
+                console.log('Copied to clipboard');
+            }).catch(err => {
+                console.error('Error in copying text: ', err);
+            });
+        });
+    });
+
     $("table tbody tr").each(function() {
-        var tdLog = $(this).find("td[data-log");
+        var tdLog = $(this).find("td[data-log]");
         var rawData = tdLog.data('log');
 
-        // brute force
+        // Brute force cleaning of the data
         var cleanedData = rawData.slice(2, -1)
-          .replace(/\\n/g, " ")
-          .replace(/\\\'|\\\"|\\'/g, "'")
-          .replace(/\\/g, "");
+            .replace(/\\n/g, " ")
+            .replace(/\\\'|\\\"|\\'/g, "'")
+            .replace(/\\/g, "");
 
         var jsonDataObj;
 
@@ -78,35 +96,15 @@ $(document).ready(function() {
             jsonDataObj = { "ParsingError": "Error parsing JSON" };
         }
 
-        var preContent = JSON.stringify(jsonDataObj, null, 2);
+        // Initialize jsonViewer with all items collapsed
+        tdLog.empty(); 
+        var jsonViewer = $('<pre>').appendTo(tdLog);
+        jsonViewer.jsonViewer(jsonDataObj, {collapsed: true, withQuotes: true});
 
-        tdLog.html('<div><pre class="logEntry" style="font-size: 10px;">' + preContent + '</pre><span class="log-expand"><i class="fa fa-ellipsis-h" aria-hidden="true"></i> </span></div>');
-
-        if (!jsonDataObj || jsonDataObj.ParsingError) {
-            tdLog.find('pre').text(cleanedData);
-        }
-
-        // Loop through all <pre> elements
-        $('pre.logEntry').each(function() {
-            var pre = $(this);
-            var currentHeight = pre.height();
-            
-            if (currentHeight > 360) {
-                pre.css('height', '360px');
-            }
+        $('td pre.json-document > a.json-toggle').each(function() {
+            $(this).click();
         });
 
-
-    });
-
-    // Handle click on the expand icon
-    $('.log-expand').on('click', function() {
-        var pre = $(this).siblings('pre.logEntry');
-        if (pre.css('height') != '360px') {
-            pre.css('height', '360px');
-        } else {
-            pre.css('height', '100%');
-        }
     });
 
     $('#clearCompleted').click(function() {
