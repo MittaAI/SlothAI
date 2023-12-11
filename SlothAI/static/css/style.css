@@ -203,6 +203,24 @@ nav h2 a:hover {
   height: 56px !important;
 }
 
+.log-dates {
+  font-family: 'Courier New', Courier, monospace; /* Example of monospace font */
+  font-size:  14px;
+  display: inline-block; /* To ensure width is applied */
+  color: white;
+  padding: 5px 10px;
+  cursor: pointer;
+  border: none;
+  border-radius: 5px;
+  overflow: hidden; /* Prevents overflow of text */
+  text-overflow: ellipsis; /* Adds an ellipsis if the text overflows */
+  white-space: nowrap; /* Keeps the text in a single line */
+}
+
+.json-document {
+  padding: 0.6em 2em !important;
+}
+
 .background {
   background-color: #444;
   color: white;
