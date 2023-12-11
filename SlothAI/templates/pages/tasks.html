@@ -65,29 +65,45 @@
 <script type="text/javascript">
 $(document).ready(function() {
 
-    function storeSortingOrder(order) {
-        document.cookie = "sortingOrder=" + JSON.stringify(order) + "; expires=Fri, 31 Dec 9999 23:59:59 GMT";
+    function storeState(name, value) {
+        document.cookie = name + "=" + JSON.stringify(value) + "; expires=Fri, 31 Dec 9999 23:59:59 GMT";
     }
 
-    function loadSortingOrder() {
-        var cookieValue = document.cookie.split('; ').find(row => row.startsWith('sortingOrder='));
+    function loadState(name, callback) {
+        var cookieValue = document.cookie.split('; ').find(row => row.startsWith(name + '='));
         if (cookieValue) {
-            var order = JSON.parse(cookieValue.split('=')[1]);
-            if (order) {
-                table.order(order).draw();
+            var value = JSON.parse(cookieValue.split('=')[1]);
+            if (value) {
+                callback(value);
             }
         }
     }
 
-    var table = $('#tasksTable').DataTable({});
-    var headers = table.columns().header().toArray();
-
-    $(headers).on('click', function () {
-        var order = table.order();
-        storeSortingOrder(order);
+    var table = $('#tasksTable').DataTable({
+        "pageLength": 10 // Default page length
     });
 
-    loadSortingOrder();
+    // Store sorting order
+    table.columns().header().toArray().forEach(header => {
+        $(header).on('click', function () {
+            storeState('sortingOrder', table.order());
+        });
+    });
+
+    // Load sorting order
+    loadState('sortingOrder', function(order) {
+        table.order(order).draw();
+    });
+
+    // Load and apply saved page length
+    loadState('pageLength', function(length) {
+        table.page.len(length).draw();
+    });
+
+    // Save page length
+    $('select[name="tasksTable_length"]').on('change', function () {
+        storeState('pageLength', table.page.len());
+    });
 
     $(function () {
         $("button").tooltip();
