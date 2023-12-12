@@ -66,10 +66,10 @@
         <i class="fas fa-file"></i> <span>Templates</span>
     </a>
     <a href="/tasks" {% if 'task' in request.endpoint %}class="highlighted-link"{% endif %}>
-        <i class="fas fa-tasks"></i> <span>Tasks</span>
+        <i class="fas fa-tasks"></i> <span>Tasks&nbsp;<span id="task_count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"></span></span>
     </a>
     <a href="/logs" {% if 'log' in request.endpoint %}class="highlighted-link"{% endif %}>
-        <i class="fas fa-bug"></i> <span>Logs</span>
+        <i class="fas fa-bug"></i> <span>Logs&nbsp;<span id="log_count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"></span></span>
     </a>
     <a href="/settings" {% if 'setting' in request.endpoint %}class="highlighted-link"{% endif %}>
         <i class="fas fa-cog"></i> <span>Settings</span>
@@ -120,6 +120,50 @@ $(document).ready(function() {
     {% for message in get_flashed_messages() %}
     toastr.info("{{message}}");
     {% endfor %}
+
+    let fibA = 1, fibB = 1;
+
+    function updateTaskCount() {
+        $.ajax({
+            url: '/task_log/count',
+            type: 'GET',
+            success: function(response) {
+                console.log(response)
+                if (response.log_count == 0) {
+                    $('#log_count').text('');
+                } else {
+                    $('#log_count').text(response.log_count);
+                }
+                
+                if (response.task_count == 0) {
+                    $('#task_count').text('');
+                } else {
+                    $('#task_count').text(response.task_count);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error("Error fetching task count: ", error);
+            },
+            complete: function() {
+                // Calculate next Fibonacci number
+                let nextFib = fibA + fibB;
+
+                // Update the Fibonacci sequence
+                fibA = fibB;
+                fibB = nextFib;
+
+                // Ensure the interval is between 1 and 30 seconds
+                let timeout = Math.min(Math.max(nextFib, 1), 30) * 1000;
+
+                // Set the next timeout
+                setTimeout(updateTaskCount, timeout);
+            }
+        });
+    }
+
+    // Start the sequence with a 1-second timeout
+    setTimeout(updateTaskCount, 1000);
+
 });
 </script>
 

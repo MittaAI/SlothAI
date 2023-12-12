@@ -834,6 +834,12 @@ class Log(flask_login.UserMixin, ndb.Model):
 
     @classmethod
     @ndb_context_manager
+    def count(cls,user_id):
+        count = cls.query(cls.user_id == user_id).count()
+        return count
+
+    @classmethod
+    @ndb_context_manager
     def fetch(cls, **kwargs):
         query_conditions = []
 

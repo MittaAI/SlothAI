@@ -130,14 +130,15 @@ $(document).ready(function() {
     $('#clearErrors').click(function () {
       clearTasks('failed', "Failed tasks cleared.");
     });
-
-    let t;
-    const r = () => location.reload();
-    const s = () => { clearTimeout(t); t = setTimeout(r, 3e4); };
-    
-    $(document).on('mousemove keydown scroll', s);
-    s();
-
+    var initialTaskCount = "0";
+    function checkForChanges() {
+        var currentTaskCount = $("#task_count").text();
+        if (currentTaskCount !== initialTaskCount) { location.reload(); }
+    }
+    setTimeout(function() {
+        initialTaskCount = $("#task_count").text();
+        setInterval(checkForChanges, 5000);
+    }, 3000);
 });
 </script>
 {% endblock %}

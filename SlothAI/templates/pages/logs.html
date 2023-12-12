@@ -36,7 +36,7 @@
                 {% for log in logs %}
                 <tr>
                     <td class="log-dates">
-                        <button class="badge">{{ log.created }}</button>
+                        <button class="badge badge-dark">{{ log.created }}</button>
                     </td>
                     <td data-log="{{ log.line }}"></td>
                 </tr>
@@ -122,8 +122,15 @@ $(document).ready(function() {
         });
     });
 
-    // reload when not in use
-    let t;const r = () => location.reload();const s = () => { clearTimeout(t); t = setTimeout(r, 3e4); };$(document).on('mousemove keydown scroll', s);s();
+    var initialLogCount = "0";
+    function checkForChanges() {
+        var currentLogCount = $("#log_count").text();
+        if (currentLogCount !== initialLogCount) { location.reload(); }
+    }
+    setTimeout(function() {
+        initialLogCount = $("#log_count").text();
+        setInterval(checkForChanges, 5000);
+    }, 3000);
 
 });
 </script>

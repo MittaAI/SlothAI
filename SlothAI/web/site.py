@@ -32,6 +32,7 @@ processors = [
     {"value": "info_file", "label": "Info Processor (File)", "icon": "info"},
     {"value": "read_fb", "label": "Read Processor (FeatureBase)", "icon": "database"},
     {"value": "split_task", "label": "Split Task Processor", "icon": "columns"},
+    {"value": "halt_task", "label": "Halt Task Processor", "icon": "stop"},
     {"value": "write_fb", "label": "Write Processor (FeatureBase)", "icon": "database"},
     {"value": "aidict", "label": "Generative Completion Processor", "icon": "code"},
     {"value": "aichat", "label": "Generative Chat Processor", "icon": "comment-dots"},
@@ -63,7 +64,8 @@ template_examples = [
     {"name": "Split a document into page numbers for split tasks", "template_name": "filename_to_splits", "processor_type": "jinja2"},
     {"name": "Convert page text into chunks", "template_name": "text_filename_to_chunks", "processor_type": "jinja2"},
     {"name": "Convert page text into chunks w/loop", "template_name": "text_filename_to_chunks_loop", "processor_type": "jinja2"},
-    {"name": "Split tasks", "template_name": "split_tasks", "processor_type": "split_task"},
+    {"name": "Split task", "template_name": "split_task", "processor_type": "split_task"},
+    {"name": "Halt task", "template_name": "halt_task", "processor_type": "halt_task"},
     {"name": "Generate keyterms from text", "template_name": "text_to_keyterms", "processor_type": "aidict"},
     {"name": "Generate a question from text and keyterms", "template_name": "text_keyterms_to_question", "processor_type": "aidict"},
     {"name": "Generate a summary from text", "template_name": "text_to_summary", "processor_type": "aidict"},
@@ -136,6 +138,35 @@ def serve_webfonts(filename):
     response = send_from_directory(f"{app.static_folder}/webfonts/", filename)
     response.headers['Cache-Control'] = f'public, max-age={cache_control_max_age}'
     return response
+
+
+@site.route('/task_log/count')
+@flask_login.login_required
+def task_log_count():
+    log_count = Log.count(user_id=current_user.uid)
+
+    # doesn't work, so fix
+    # tasks = app.config['task_service'].fetch_tasks(user_id=current_user.uid, state="running")
+    tasks = app.config['task_service'].fetch_tasks(user_id=current_user.uid)
+    task_count = len(tasks)
+    running_task_count = 0
+    for task in tasks:
+        if task.get('state') == 'running':
+            running_task_count += 1
+
+    # Format the numbers with commas
+    formatted_log_count = "{:,}".format(log_count)
+    formatted_running_task_count = "{:,}".format(running_task_count)
+    formatted_task_count = "{:,}".format(task_count)
+    # Create a dictionary with the formatted values
+    response_data = {
+        "log_count": formatted_log_count,
+        "task_count": formatted_running_task_count,
+        "all_task_count": formatted_task_count
+    }
+
+    # Use json.dumps to format the dictionary with commas
+    return jsonify(response_data)
 
 
 @site.route('/logs', methods=['GET'])

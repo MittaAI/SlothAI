@@ -72,7 +72,7 @@ class Task:
 			"state": self.state.value,
 			"split_status": self.split_status
 		}
-
+		
 	@classmethod
 	def from_dict(cls, task_dict: dict) -> 'Task':
 		"""
@@ -201,44 +201,44 @@ def get_task_schema(data: Dict[str, any]) -> Tuple[Dict[str, str], str]:
 	return schema, None
 
 def get_values_by_json_paths(json_paths, document):
-    results = {}
-    
-    for json_path in json_paths:
-        path_components = json_path.split('.')
-        current_location = document
-        
-        for key in path_components:
-            if key in current_location:
-                current_location = current_location[key]
-            else:
-                # If a key is not found, skip this path
-                break
-        else:
-            # This block executes if the loop completed without a 'break'
-            results[path_components[-1]] = current_location
-    
-    return results
+	results = {}
+	
+	for json_path in json_paths:
+		path_components = json_path.split('.')
+		current_location = document
+		
+		for key in path_components:
+			if key in current_location:
+				current_location = current_location[key]
+			else:
+				# If a key is not found, skip this path
+				break
+		else:
+			# This block executes if the loop completed without a 'break'
+			results[path_components[-1]] = current_location
+	
+	return results
 
 
 def auto_field_data(document):
-    # This will store the maximum length found
-    max_length = 0
+	# This will store the maximum length found
+	max_length = 0
 
-    # This will store the key-value pairs with the max length
-    results = {}
+	# This will store the key-value pairs with the max length
+	results = {}
 
-    # Iterate over the dictionary to find the max length and collect the key-value pairs
-    for key, value in document.items():
-        if isinstance(value, list):  # Ensure the value is a list
-            length = len(value)
-            if length > max_length:
-                max_length = length
-                results = {key: value}  # Start a new dict with this key-value pair
-            elif length == max_length:
-                results[key] = value  # Add the key-value pair to the existing dict
+	# Iterate over the dictionary to find the max length and collect the key-value pairs
+	for key, value in document.items():
+		if isinstance(value, list):  # Ensure the value is a list
+			length = len(value)
+			if length > max_length:
+				max_length = length
+				results = {key: value}  # Start a new dict with this key-value pair
+			elif length == max_length:
+				results[key] = value  # Add the key-value pair to the existing dict
 
-    # Now results contains all key-value pairs with the longest list lengths
-    return results
+	# Now results contains all key-value pairs with the longest list lengths
+	return results
 
 
 def process_data_dict_for_insert(data, column_type_map, table):
@@ -273,7 +273,7 @@ def process_data_dict_for_insert(data, column_type_map, table):
 	# columns = ['_id', 'text', 'value']
 	# records = ["('abc123','Record 1',42)", "('def456','Record 2',57)"]
 	"""
-    
+	
 	records = []
 	columns = list(data.keys())
 
@@ -314,32 +314,32 @@ def all_equal(iterable):
 	return next(g, True) and not next(g, False)
 
 def validate_dict_structure(keys_list, input_dict):
-    for key in keys_list:
-        keys = key.get('name').split('.')
-        current_dict = input_dict
+	for key in keys_list:
+		keys = key.get('name').split('.')
+		current_dict = input_dict
 
-        for k in keys:
-            if k not in current_dict:
-                return key
-            current_dict = current_dict[k]
+		for k in keys:
+			if k not in current_dict:
+				return key
+			current_dict = current_dict[k]
 
-    return None
+	return None
 
 
 def transform_data(output_keys, data):
-    out = {}
+	out = {}
 
-    if len(output_keys) == 1 and output_keys[0] == 'data':
-        # Special case: If the output key is 'data', wrap the data in a single key
-        out['data'] = data
-    else:
-        for key_name in output_keys:
-            if key_name in data:
-                out[key_name] = data[key_name]
-            else:
-                raise KeyError(f"Key not found: {key_name}")
+	if len(output_keys) == 1 and output_keys[0] == 'data':
+		# Special case: If the output key is 'data', wrap the data in a single key
+		out['data'] = data
+	else:
+		for key_name in output_keys:
+			if key_name in data:
+				out[key_name] = data[key_name]
+			else:
+				raise KeyError(f"Key not found: {key_name}")
 
-    return out
+	return out
 
 
 def box_required():
