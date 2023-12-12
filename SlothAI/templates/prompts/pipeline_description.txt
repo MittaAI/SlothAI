@@ -1,0 +1,9 @@
+# Write a description
+1. We have a pipeline with the following JSON data:
+```
+$pipeline
+```
+2a. Consider the entire pipeline in step 1 and build a 'description' key for the dictionary for describing the pipeline operations to the user. You may mention related input keys, extras or other information in detail.
+2b. Speculate on the use (use case) by the user of this pipeline and place the value in 'blurb' to show to the user.
+3. Build the dictionary with 'description' and 'blurb' keys:
+ai_dict = 

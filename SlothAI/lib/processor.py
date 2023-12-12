@@ -55,6 +55,27 @@ env.globals['random_sentence'] = random_sentence
 env.globals['chunk_with_page_filename'] = chunk_with_page_filename
 env.filters['shuffle'] = filter_shuffle
 
+from jinja2 import Undefined
+
+# move this eventually
+def safe_tojson(value):
+    def handle_undefined(value):
+        if isinstance(value, Undefined):
+            return "Undefined"
+        elif isinstance(value, dict):
+            return {k: handle_undefined(v) for k, v in value.items()}
+        elif isinstance(value, list):
+            return [handle_undefined(item) for item in value]
+        else:
+            return value
+
+    processed_data = handle_undefined(value)
+    print(processed_data)
+    return json.dumps(processed_data)
+
+
+env.filters['safe_tojson'] = safe_tojson
+
 class DocumentValidator(Enum):
     INPUT_FIELDS = 'input_fields'
     OUTPUT_FIELDS = 'output_fields'
@@ -144,8 +165,8 @@ def process(task: Task) -> Task:
 
 @processer
 def jinja2(node: Dict[str, any], task: Task) -> Task:
-
     template_service = app.config['template_service']
+
     template = template_service.get_template(template_id=node.get('template_id'))
     if not template:
         raise TemplateNotFoundError(template_id=node.get('template_id'))
@@ -157,8 +178,9 @@ def jinja2(node: Dict[str, any], task: Task) -> Task:
         if template_text:
             jinja_template = env.from_string(template_text)
             jinja = jinja_template.render(task.document)
+
     except Exception as e:
-        raise NonRetriableError(f"jinja2 processor: unable to render jinja: {e}")
+        raise NonRetriableError(f"Unable to render jinja: {e} :: If you are using the |to_json filter, switch to |safe_tojson to surface the missing variables in the document.")
 
     try:
         jinja_json = json.loads(jinja)
@@ -1105,7 +1127,7 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
         raise NonRetriableError("Both filename and content_type must either be equal size lists or strings.")
 
     # Check if the mime type is supported
-    supported_content_types = ['application/pdf', 'text/plain', 'text/csv']
+    supported_content_types = ['application/pdf', 'text/plain', 'text/csv', 'application/json']
 
     for index, file_name in enumerate(filename):
         content_parts = content_type[index].split(';')[0]
@@ -1192,7 +1214,10 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
 
                 # Close the page stream
                 page_stream.close()
-
+        
+            # update document
+            task.document[output_field].extend(texts)
+        
         elif "text/plain" in content_type[index]:
             # grab document
             gcs = storage.Client()
@@ -1220,6 +1245,23 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
                 chunks.append(' '.join(current_chunk))
 
             texts = chunks
+            
+            # update document
+            task.document[output_field].extend(texts)
+
+        elif "application/json" in content_type[index]:
+            # grab JSON document as text
+            gcs = storage.Client()
+            bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
+            blob = bucket.blob(f"{uid}/{file_name}")
+            texts = blob.download_as_text()
+            try:
+                json_data = json.loads(texts)
+            except:
+                raise NonRetriableError("Unable to read the file's JSON data.")
+
+            task.document['json_data'] = json_data
+            task.document['texts'] = "JSON data loaded into 'json_data'"
 
         elif "text/csv" in content_type[index]:
             # check for prepend string
@@ -1357,12 +1399,13 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
             for key, value in data_dict.items():
                 task.document[key] = value
                 texts.append(f"{key}:{','.join(map(str, value))}")
+            
+            # update document
+            task.document[output_field].extend(texts)
         else:
-            raise NonRetriableError("Processor read_file supports text/plain, application/pdf, and text/csv content types only.")
+            raise NonRetriableError("Processor read_file supports text/plain, application/pdf, application/json, and text/csv content types only.")
 
-        # update the document
-        task.document[output_field].extend(texts)
-    
+        
     return task
 
 
@@ -1387,82 +1430,97 @@ def read_uri(node: Dict[str, any], task: Task) -> Task:
     except:
         output_field = "texts"
 
-    input_fields = template.get('input_fields')
-    if not input_fields:
-        raise NonRetriableError("Input fields required for the read_uri processor.")
+    uri = task.document.get('uri')
+    if isinstance(uri, str):
+        uri = [uri]
 
-    uri = task.document.get('uri')[0] # get the first uri
     method = task.document.get('method')
+    if isinstance(method, str):
+        method = [method]
 
     if not uri or not method:
-        raise NonRetriableError("URI and method are required in the input fields.")
+        raise NonRetriableError("URI and method are required in extras or POST fields defined in input_fields.")
 
-    # scan for required fields in the input
-    for field in input_fields:
-        field_name = field['name']
-        if field_name not in task.document:
-            raise NonRetriableError(f"Input field '{field_name}' is not present in the document.")
+    if len(uri) != len(method):
+        raise NonRetriableError("URI and method lists must be the same size.")
 
     # Assuming 'bearer_token' is also a part of input_fields when needed
     bearer_token = task.document.get('bearer_token')
+    if isinstance(bearer_token, str):
+        bearer_token = [bearer_token]
 
-    # Now, you can proceed to build the request based on the method and URI
-    if method == 'GET':
-        # Perform a GET request
-        if bearer_token:
-            headers = {'Authorization': f'Bearer {bearer_token}'}
-            response = requests.get(uri, headers=headers)
-        else:
-            response = requests.get(uri)
-
-    elif method == 'POST':
-        data = {}
-        for field in task.document.get('data_fields'):
-            data[field] = task.document[field]
-        
-        # Perform a POST request
-        if bearer_token:
-            headers = {'Authorization': f'Bearer {bearer_token}'}
-            response = requests.post(uri, headers=headers, json=data, stream=True, allow_redirects=True)
-
-        else:
-            response = requests.post(uri, json=data, stream=True, allow_redirects=True)
-
-    else:
-        raise NonRetriableError("Request must contain a 'method' key that is one of: ['GET','POST'].")
-
-    if response.status_code != 200:
-        raise NonRetriableError(f"Request failed with status code: {response.status_code}")
-
-    # Check if the Content-Disposition header is present
-    if 'Content-Type' in response.headers:
-        content_type = response.headers['Content-Type']
-    else:
-        content_type = tasks.document.get('content_type')
-        if not content_type:
-            raise NonRetriableError("This URL will require using the filename and content_type fields.")
-
-    if 'Content-Type' in response.headers:
-        content_type = response.headers['Content-Type']
-    else:
-        content_type = task.document.get('content_type')
-
+    # check if filename and content_type are set
     filename = task.document.get('filename')
+    if isinstance(filename, str):
+        filename = [filename]
 
-    if filename is None and content_type is None:
-        raise NonRetriableError("This URL will require using the filename and content_type fields.")
+    content_type = task.document.get('content_type')
+    if isinstance(content_type, str):
+        content_type = [content_type]
 
-    if filename is None:
-        file_extension = get_file_extension(content_type)
+    if content_type and filename: 
+        if (len(content_type) != len(filename)) and (len(filename) != len(uri)):
+            raise NonRetriableError("The URI, content_type, filename, and method list must be the same size.")
 
-        if not file_extension:
-            raise NonRetriableError("This URL will require using the filename and content_type fields.")
-        filename = f"{random_string(16)}.{file_extension}"
+    # response objects (wipes any existing filename and content_type set in document)
+    task.document['filename'] = []
+    task.document['content_type'] = []
 
-    bucket_uri = upload_to_storage_requests(uid, filename, response.content, content_type)
+    if bearer_token and (len(bearer_token) != len(uri)):
+        raise NonRetriableError("URI, method, and bearer_token lists must be the same size.")
 
-    task.document['filename'] = filename
-    task.document['content_type'] = content_type
+    for index in range(len(uri)):
+        # Now, you can proceed to build the request based on the method and URI
+        if method[index] == 'GET':
+            # Perform a GET request
+            if bearer_token:
+                headers = {'Authorization': f'Bearer {bearer_token[index]}'}
+                response = requests.get(uri[index], headers=headers)
+            else:
+                response = requests.get(uri[index])
+
+        elif method[index] == 'POST':
+            data = {}
+            for field in task.document.get('data_fields'):
+                data[field] = task.document[field]
+            
+            # Perform a POST request
+            if bearer_token:
+                headers = {'Authorization': f'Bearer {bearer_token[index]}'}
+                response = requests.post(uri[index], headers=headers, json=data, stream=True, allow_redirects=True)
+
+            else:
+                response = requests.post(uri[index], json=data, stream=True, allow_redirects=True)
+
+        else:
+            raise NonRetriableError("Request must contain a 'method' key that is one of: ['GET','POST'].")
+
+        if response.status_code != 200:
+            raise NonRetriableError(f"Request failed with status code: {response.status_code}")
+
+        # Check if the Content-Disposition header is present
+        if 'Content-Type' in response.headers:
+            _content_type = response.headers['Content-Type']
+        else:
+            if not content_type:
+                raise NonRetriableError(f"Unable to determine content type. The URL ({uri[index]}) will require passing in the filename and content_type fields.")
+            else:
+                _content_type = content_type[index]
+
+        # if filename is not set, or empty, we'll generate one from the inferred content type
+        if filename is None:
+            file_extension = get_file_extension(_content_type)
+
+            if not file_extension:
+                raise NonRetriableError("This URL will require using the filename and content_type fields.")
+            _filename = f"{random_string(16)}.{file_extension}"
+        else:
+            _filename = filename[index]
+
+        bucket_uri = upload_to_storage_requests(uid, _filename, response.content, _content_type)
+
+        task.document['filename'].append(_filename)
+        task.document['content_type'].append(_content_type)
 
     return task
 

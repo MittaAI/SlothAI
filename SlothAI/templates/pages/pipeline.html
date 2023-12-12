@@ -122,7 +122,11 @@
             </div>
             {% endif %}
         </div>
-
+        <hr/>
+        <h4>Generative Description</h4>
+        <p id="description">This pipeline can be described by an AI. Click the <strong>Get Description</strong> button for more information.</p>
+        <p id="blurb"></p>
+        <button id="describeButton" data-pipeline_id="{{pipeline.pipe_id}}" class="btn btn-outline-dark"><i class="fas fa-info"></i> Get Description</button>
         <hr/>
         <h4>Graph Layout</h4>
         <div class="mermaid" style="display: none;">
@@ -526,6 +530,27 @@ $(document).ready(function() {
             error: function(xhr, status, error) {
                 toastr.error("Upload failed: " + error);
             },
+        });
+    });
+
+    
+    $("#describeButton").click(function() {
+        var pipelineId = $(this).data("pipeline_id");
+        toastr.info("Generating description, standby.")
+        // Make the AJAX request
+        $.ajax({
+            url: '/pipelines/' + pipelineId + '/describe',
+            type: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                // Handle the response data here
+                $("#description").text(data.description);
+                $("#blurb").text(data.blurb);
+            },
+            error: function(xhr, status, error) {
+                // Handle errors here
+                console.error(xhr.responseText);
+            }
         });
     });
 });

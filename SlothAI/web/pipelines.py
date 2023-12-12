@@ -16,7 +16,7 @@ from werkzeug.utils import secure_filename
 
 from SlothAI.lib.tasks import Task, TaskState
 from SlothAI.web.models import Pipeline, Node, Token
-from SlothAI.lib.util import random_string, upload_to_storage, deep_scrub, transform_single_items_to_lists
+from SlothAI.lib.util import random_string, upload_to_storage, deep_scrub, transform_single_items_to_lists, gpt_dict_completion
 from SlothAI.lib.template import Template
 
 from SlothAI.web.nodes import node_create
@@ -308,6 +308,57 @@ def pipelines_download(pipe_id):
 
     # Set the headers to force a file download with a custom filename
     response.headers["Content-Disposition"] = f"attachment; filename=pipeline_{pipeline.get('name')}.json"
+
+    return response
+
+
+@pipeline.route('/pipelines/<pipe_id>/describe', methods=['GET'])
+@flask_login.login_required
+def pipelines_describe(pipe_id):
+    # Get the user and their tables
+    username = current_user.name
+
+    # Retrieve the pipeline by pipe_id (you need to implement your Pipeline class)
+    pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
+
+    if pipeline is None:
+        return jsonify({"error": "Pipeline not found"})
+
+    # Retrieve nodes for the pipeline (you need to implement your Nodes class)
+    node_ids = pipeline.get('node_ids')  # Assuming 'nodes' is a list of node IDs
+
+    nodes = []
+    for node_id in node_ids:
+        node = Node.get(uid=current_user.uid, node_id=node_id)
+
+        # Retrieve the template for each node
+        template_service = app.config['template_service']
+        template = template_service.get_template(user_id=current_user.uid, template_id=node.get('template_id'))
+
+        # Append the node and its associated template to the nodes list
+        nodes.append({
+            "node": node,
+            "template": template,
+        })
+
+    # Create a dictionary containing pipeline information, including pipe_id
+    pipeline_data = {
+        "pipe_id": pipe_id,
+        "name": pipeline.get('name'),
+        "nodes": nodes,
+    }
+
+    # scrub the data for secrets Response
+    deep_scrub(pipeline_data)
+
+    # Convert pipeline_data to a pretty formatted JSON string
+    json_data = json.dumps(pipeline_data, default=custom_serializer)
+
+    # get the description
+    result = gpt_dict_completion(document={"pipeline": json_data}, template="pipeline_description")
+
+    # Create a Response object with the pretty formatted JSON
+    return jsonify({"description": result.get('description'), "blurb": result.get('blurb')})
 
     return response
 

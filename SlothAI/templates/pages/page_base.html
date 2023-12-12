@@ -128,7 +128,6 @@ $(document).ready(function() {
             url: '/task_log/count',
             type: 'GET',
             success: function(response) {
-                console.log(response)
                 if (response.log_count == 0) {
                     $('#log_count').text('');
                 } else {
@@ -145,17 +144,10 @@ $(document).ready(function() {
                 console.error("Error fetching task count: ", error);
             },
             complete: function() {
-                // Calculate next Fibonacci number
                 let nextFib = fibA + fibB;
-
-                // Update the Fibonacci sequence
                 fibA = fibB;
                 fibB = nextFib;
-
-                // Ensure the interval is between 1 and 30 seconds
-                let timeout = Math.min(Math.max(nextFib, 1), 30) * 1000;
-
-                // Set the next timeout
+                let timeout = Math.min(Math.max(nextFib, 1), 15) * 1000;
                 setTimeout(updateTaskCount, timeout);
             }
         });
