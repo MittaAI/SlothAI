@@ -173,30 +173,35 @@ $(document).ready(function () {
     // grab the nodes from the template and make them available via getNodeInfo
     var nodes = JSON.parse('{{nodes | tojson}}');
 
-    document.querySelectorAll('.button-pipeline').forEach(pipelineButton => {
-        let animationStarted = false;
+    let animationStarted = false;
+    $('.button-pipeline').mouseover(function () {
+        if (!animationStarted) {
+            let nodes = $(this).closest('tr').find('.button-node');
 
-        pipelineButton.addEventListener('mouseover', function() {
-            if (!animationStarted) {
-                let nodes = this.closest('tr').querySelectorAll('.button-node');
+            nodes.removeClass('bounce');
+            nodes.each(function (index) {
+                $(this).css('animation', 'none');
+                void $(this).width(); // Trigger a reflow
 
-                nodes.forEach((node, index) => {
-                    node.classList.remove('bounce');
-                    void node.offsetWidth; // Trigger a reflow
+                setTimeout(() => {
+                    $(this).css('animation', 'bounce 0.5s');
+                }, index * 100);
+            });
 
-                    setTimeout(() => {
-                        node.classList.add('bounce');
-                    }, index * 100);
-                });
+            animationStarted = true;
 
-                animationStarted = true;
-            }
-        });
-
-        pipelineButton.addEventListener('mouseleave', function() {
-            animationStarted = false;
-        });
+            // Clear the "bounce" class from all nodes after the animation
+            setTimeout(() => {
+                nodes.removeClass('bounce');
+                animationStarted = false;
+            }, nodes.length * 100); // Adjust the timeout as needed
+        }
     });
+
+    $('.button-pipeline').mouseleave(function () {
+        animationStarted = false;
+    });
+
 
     function getNodeInfo(nodeId) {
         const node = nodes.find(node => node.node_id === nodeId);
@@ -225,8 +230,6 @@ $(document).ready(function () {
         button.style.backgroundColor = color;
         button.style.borderColor = color;
     });
-
-    $('#pipelineTable').show();
 
     $('button').on('mouseleave', function () {
         const that = this;
@@ -659,7 +662,7 @@ $(document).ready(function () {
         return false;
     };
 
-// Function to get URL parameters
+    // Function to get URL parameters
     var getUrlParameter = function(sParam) {
         var sPageURL = window.location.search.substring(1),
             sURLVariables = sPageURL.split('&'),
@@ -690,6 +693,8 @@ $(document).ready(function () {
             }
         }
     }
+
+    $('#pipelineTable').show();
 
     // Initialize the DataTable
     var table = $('#pipelineTable').DataTable({
@@ -724,16 +729,6 @@ $(document).ready(function () {
         storeState('pageLength', table.page.len());
     });
 
-    // Event listener for DataTables search box
-    $('input[type="search"]').on('input', function() {
-        // Check if the search box is empty
-        if (!this.value) {
-            // Clear the 'q' parameter from the URL
-            var url = new URL(window.location.href);
-            url.searchParams.delete('q');
-            window.history.pushState({}, '', url);
-        }
-    });
 });
 </script>
 {% endblock %}

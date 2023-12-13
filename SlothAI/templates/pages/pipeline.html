@@ -23,7 +23,7 @@
         <p>The pipeline '{{pipeline.name}}' contains the following nodes. Nodes may be reordered, added or deleted.</p>
         <div class="row">
             <div class="col text-left">
-                <ul id="buttonSortable" class="btn-group">
+                <ul id="buttonSortable" class="btn-group" style="display: none;">
                     {% for node_id in pipeline.node_ids %}
                         {% for node in nodes %}
                             {% if node.node_id == node_id %}
@@ -299,11 +299,25 @@ $(document).ready(function() {
             }
         }, 100);
     });
-    
-    // make the buttons sortable
+
+
+    // Function to trigger the shaking animation for the "Save" button
+    function shakeSaveButton() {
+        // Add the "shake" class to the "Save" button
+        $("#SavePipeline").addClass("shake");
+
+        // After the animation duration, remove the "shake" class to stop the animation
+        setTimeout(function () {
+            $("#SavePipeline").removeClass("shake");
+        }, 500); // Adjust the duration as needed (500 milliseconds in this example)
+    }
+
     $("#buttonSortable").sortable({
         revert: true,
-        tolerance: "pointer"
+        tolerance: "pointer",
+        update: function (event, ui) {
+            shakeSaveButton();
+        },
     });
 
     // add node to pipeline
@@ -336,8 +350,13 @@ $(document).ready(function() {
         node_buttons = $('button[data-node_id]');
         setButtonColors();
         setPopovers();
+
         // Close the 'nodeformmodal' modal
         $("#nodeFormModal").modal('hide');
+        
+        setTimeout(function () {
+            shakeSaveButton();
+        }, 1000);
     });
 
     // delete button
@@ -534,7 +553,6 @@ $(document).ready(function() {
         });
     });
 
-    
     $("#describeButton").click(function() {
         var pipelineId = $(this).data("pipeline_id");
         toastr.info("Generating description, standby.")
@@ -554,6 +572,7 @@ $(document).ready(function() {
             }
         });
     });
+    $('#buttonSortable').show();
 });
 </script>
 {% endblock %}

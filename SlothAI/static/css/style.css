@@ -47,6 +47,23 @@ form, label {
   transition: box-shadow 0.3s; /* Smooth transition for box-shadow */
 }
 
+@keyframes shake {
+    0%, 100% {
+        transform: translate(0, 0);
+    }
+    10%, 30%, 50%, 70%, 90% {
+        transform: translate(-2px, -2px);
+    }
+    20%, 40%, 60%, 80% {
+        transform: translate(2px, 2px);
+    }
+}
+
+
+.shake {
+    animation: shake 0.75s;
+}
+
 @keyframes bounce {
     0%, 100% {
         transform: translateY(0);
@@ -54,6 +71,10 @@ form, label {
     50% {
         transform: translateY(-10px);
     }
+}
+
+.bounce {
+    animation: bounce 0.5s;
 }
 
 .button-node.bounce {

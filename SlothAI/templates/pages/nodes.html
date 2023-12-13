@@ -238,7 +238,6 @@ $(document).ready(function() {
     // Wait for both promises to resolve, and then execute anotherFunction
     Promise.all([buttonColorsPromise, badgeColorsPromise]).then(() => {
         $("th").css("border-bottom-color","white");
-        sortTable();
         $("#nodeTable").show();
     });
 
@@ -638,7 +637,7 @@ $(document).ready(function() {
 
     // Initialize the DataTable
     var table = $('#nodesTable').DataTable({
-        "columnDefs": [{ "orderable": false, "targets": [2,3,5] }], // Adjust this as needed
+        "columnDefs": [{ "orderable": false, "targets": [2,3,4,5] }], // Adjust this as needed
         "order": [[0, "asc"]], // Default order
         "pageLength": 10 // Default page length
     });

@@ -130,7 +130,7 @@ def pipeline_add():
         nodes = json_data.get('nodes', None)
 
         if not name or not nodes:
-            return jsonify({"error": "Invalid JSON Object", "message": "The request body must be valid JSON data and contain a 'name' and 'nodess' key."}), 400
+            return jsonify({"error": "Invalid JSON Object", "message": "Ensure you have added a valid node to the pipeline."}), 400
         
         if not isinstance(nodes, list):
             return jsonify({"error": "Invalid JSON Object", "message": f"The value of the 'nodes' key must be a list of node_ids. Got: {type(nodes)}"}), 400
