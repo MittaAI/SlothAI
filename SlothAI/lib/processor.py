@@ -82,8 +82,8 @@ class DocumentValidator(Enum):
 
 retriable_status_codes = [408, 409, 425, 429, 500, 503, 504]
 
-processers = {}
-processer = lambda f: processers.setdefault(f.__name__, f)
+processors = {}
+processor = lambda f: processors.setdefault(f.__name__, f)
 
 def process(task: Task) -> Task:
     user = User.get_by_uid(task.user_id)
@@ -142,8 +142,8 @@ def process(task: Task) -> Task:
     # if "database_id" in node.get('extras'):
     task.document['DATABASE_ID'] = user.get('dbid')
 
-    # processer methods are responsible for adding errors to documents
-    task = processers[node.get('processor')](node, task)
+    # processor methods are responsible for adding errors to documents
+    task = processors[node.get('processor')](node, task)
 
     # TODO, decide what to do with errors and maybe truncate pipeline
     if task.document.get('error'):
@@ -163,7 +163,7 @@ def process(task: Task) -> Task:
 
     return task
 
-@processer
+@processor
 def jinja2(node: Dict[str, any], task: Task) -> Task:
     template_service = app.config['template_service']
 
@@ -192,12 +192,12 @@ def jinja2(node: Dict[str, any], task: Task) -> Task:
     return task
 
 
-@processer
+@processor
 def halt_task(node: Dict[str, any], task: Task) -> Task:
     raise NonRetriableError("Task halted and removed.")
 
 
-@processer
+@processor
 def callback(node: Dict[str, any], task: Task) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
@@ -264,7 +264,7 @@ def callback(node: Dict[str, any], task: Task) -> Task:
     return task
 
 
-@processer
+@processor
 def info_file(node: Dict[str, any], task: Task) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
@@ -347,7 +347,7 @@ def info_file(node: Dict[str, any], task: Task) -> Task:
     return task
 
 
-@processer
+@processor
 def split_task(node: Dict[str, any], task: Task) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
@@ -511,7 +511,7 @@ def sloth_embedding(input_field: str, output_field: str, model: str, task: Task)
     return task
 
 
-@processer
+@processor
 def embedding(node: Dict[str, any], task: Task) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
@@ -573,7 +573,7 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
 
 
 # complete strings
-@processer
+@processor
 def aichat(node: Dict[str, any], task: Task) -> Task:
     # output and input fields
     template_service = app.config['template_service']
@@ -698,7 +698,7 @@ def ai_prompt_to_dict(model="gpt-3.5-turbo-1106", prompt="", retries=3):
 
     return err, ai_dict
 
-@processer
+@processor
 def aidict(node: Dict[str, any], task: Task) -> Task:
     # templates
     template_service = app.config['template_service']
@@ -813,7 +813,7 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
 
 
 # look at a picture and get stuff
-@processer
+@processor
 def aivision(node: Dict[str, any], task: Task) -> Task:
     # Output and input fields
     template_service = app.config['template_service']
@@ -993,7 +993,7 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
 
 
 # generate images off a prompt
-@processer
+@processor
 def aiimage(node: Dict[str, any], task: Task) -> Task:
     # Output and input fields
     template_service = app.config['template_service']
@@ -1088,7 +1088,7 @@ def aiimage(node: Dict[str, any], task: Task) -> Task:
     return task
 
 
-@processer
+@processor
 def read_file(node: Dict[str, any], task: Task) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
@@ -1417,7 +1417,7 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
     return task
 
 
-@processer
+@processor
 def read_uri(node: Dict[str, any], task: Task) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
@@ -1534,7 +1534,7 @@ def read_uri(node: Dict[str, any], task: Task) -> Task:
     return task
 
 
-@processer
+@processor
 def aispeech(node: Dict[str, any], task: Task) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
@@ -1629,7 +1629,7 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
     return task
 
 
-@processer
+@processor
 def aiaudio(node: Dict[str, any], task: Task) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
@@ -1723,7 +1723,7 @@ def aiaudio(node: Dict[str, any], task: Task) -> Task:
     return task
 
 
-@processer
+@processor
 def read_fb(node: Dict[str, any], task: Task) -> Task:
     user = User.get_by_uid(task.user_id)
 
@@ -1794,7 +1794,7 @@ def read_fb(node: Dict[str, any], task: Task) -> Task:
 
 
 from SlothAI.lib.schemar import Schemar
-@processer
+@processor
 def write_fb(node: Dict[str, any], task: Task) -> Task:
     user = User.get_by_uid(task.user_id)
 

@@ -397,15 +397,19 @@ def box_required():
 class RetriableError(Exception):
 	def __init__(self, message):
 		super().__init__(message)
+
 class NonRetriableError(Exception):
 	def __init__(self, message):
 		super().__init__(message)
+
 class ResourceNotFoundError(NonRetriableError):
 	def __init__(self, message):
 		super().__init__(message)
+
 class PipelineNotFoundError(ResourceNotFoundError):
 	def __init__(self, pipeline_id):
 		super().__init__(f"pipeline with id {pipeline_id} not found.")
+
 class UserNotFoundError(ResourceNotFoundError):
 	def __init__(self, user_id):
 		super().__init__(f"user with id {user_id} not found.")
@@ -425,6 +429,7 @@ class TemplateNotFoundError(ResourceNotFoundError):
 class MissingFieldError(NonRetriableError):
 	def __init__(self, message):
 		super().__init__(message)
+
 class MissingInputFieldError(MissingFieldError):
 	def __init__(self, field, node):
 		super.__init__(f"task document is missing required input field {field} for node {node}")
