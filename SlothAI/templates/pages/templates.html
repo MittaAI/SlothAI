@@ -161,7 +161,6 @@ $(document).ready(function() {
     // Wait for both promises to resolve, and then execute anotherFunction
     Promise.all([buttonColorsPromise, badgeColorsPromise]).then(() => {
         $("th").css("border-bottom-color","white")
-        sortTable();
         $('#templateTable').show();
     });
 

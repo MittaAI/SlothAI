@@ -66,10 +66,10 @@
         <i class="fas fa-file"></i> <span>Templates</span>
     </a>
     <a href="/tasks" {% if 'task' in request.endpoint %}class="highlighted-link"{% endif %}>
-        <i class="fas fa-tasks"></i> <span>Tasks&nbsp;<span id="task_count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"></span></span>
+        <i class="fas fa-tasks"></i> <span>Tasks&nbsp;<span id="task_count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-dark"></span>&nbsp;<span id="failed_count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"></span></span>
     </a>
     <a href="/logs" {% if 'log' in request.endpoint %}class="highlighted-link"{% endif %}>
-        <i class="fas fa-bug"></i> <span>Logs&nbsp;<span id="log_count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"></span></span>
+        <i class="fas fa-bug"></i> <span>Logs&nbsp;<span id="log_count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-dark"></span></span>
     </a>
     <a href="/settings" {% if 'setting' in request.endpoint %}class="highlighted-link"{% endif %}>
         <i class="fas fa-cog"></i> <span>Settings</span>
@@ -124,6 +124,7 @@ $(document).ready(function() {
     let fibA = 1, fibB = 1;
     let prevLogCount = null;
     let prevTaskCount = null;
+    let prevFailedCount = null;
     let timeoutId = null; // To keep track of the current timeout ID
 
     function updateTaskCount() {
@@ -133,6 +134,7 @@ $(document).ready(function() {
             success: function(response) {
                 let logCountChanged = prevLogCount !== response.log_count;
                 let taskCountChanged = prevTaskCount !== response.task_count;
+                let failedCountChanged = prevFailedCount !== response.failed_count;
 
                 if (response.log_count == 0) {
                     $('#log_count').text('');
@@ -146,12 +148,19 @@ $(document).ready(function() {
                     $('#task_count').text(response.task_count);
                 }
 
+                if (response.failed_count == 0) {
+                    $('#failed_count').text('');
+                } else {
+                    $('#failed_count').text(response.failed_count);
+                }
+
                 // Update the previous counts
                 prevLogCount = response.log_count;
                 prevTaskCount = response.task_count;
+                prevFailedCount = response.failed_count;
 
                 // Reset Fibonacci sequence if counts have changed
-                if (logCountChanged || taskCountChanged) {
+                if (logCountChanged || taskCountChanged || failedCountChanged) {
                     fibA = 1;
                     fibB = 1;
                 }
@@ -171,11 +180,7 @@ $(document).ready(function() {
             }
         });
     }
-
-    // Start the sequence with a 1-second timeout
     timeoutId = setTimeout(updateTaskCount, 1000);
-
-
 });
 </script>
 

@@ -148,21 +148,24 @@ def task_log_count():
     # doesn't work, so fix
     # tasks = app.config['task_service'].fetch_tasks(user_id=current_user.uid, state="running")
     tasks = app.config['task_service'].fetch_tasks(user_id=current_user.uid)
-    task_count = len(tasks)
+
     running_task_count = 0
+    failed_task_count = 0
     for task in tasks:
         if task.get('state') == 'running':
             running_task_count += 1
+        if task.get('state') == 'failed':
+            failed_task_count += 1
 
     # Format the numbers with commas
     formatted_log_count = "{:,}".format(log_count)
     formatted_running_task_count = "{:,}".format(running_task_count)
-    formatted_task_count = "{:,}".format(task_count)
+    formatted_failed_task_count = "{:,}".format(failed_task_count)
     # Create a dictionary with the formatted values
     response_data = {
         "log_count": formatted_log_count,
         "task_count": formatted_running_task_count,
-        "all_task_count": formatted_task_count
+        "failed_count": formatted_failed_task_count
     }
 
     # Use json.dumps to format the dictionary with commas
