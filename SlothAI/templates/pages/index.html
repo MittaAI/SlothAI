@@ -9,17 +9,15 @@
 {% endblock %}
 
 {% block content %}
-    <div style="padding-top: 105px;"></div>
-
-    <div class="background">
+    <div class="background"  style="margin-top: 125px;">
       <div class="container">
         <div class="row align-items-center justify-content-center">
           <div class="col-md-6">
-            <img src="/images/sloth.png" width="420" class="rounded img-fluid" style="border: 8px solid white; max-width: 100%;">
+            <img src="/images/sloth.png" class="rounded img-fluid" style="border: 8px solid white; max-width: 100%;">
 
           </div>
-          <div width="420" class="col-md-4 text-left">
-            <h1 style="font-family: Roboto; font-weight: 700; font-size: 48px; opacity: 100%;">Build fast AI pipelines and bots, like a beast.</h1>
+          <div class="col-md-4 text-left">
+            <h1 style="font-family: Roboto; font-weight: 700; font-size: 48px; opacity: 100%; padding-top: 23px;">Build fast AI pipelines and bots, like a beast.</h1>
             <p class="homelead">Powered by <a href="https://github.com/MittaAI/SlothAI">SlothAI</a>.</p>
             <div style="padding-bottom: 23px;">
               <a href="/pipelines" class="btn btn-outline-light btn-bottoms" type="button">{% if username != 'anonymous' %}Dashboard{% else %}Join Open Beta{% endif %}</a>
@@ -30,7 +28,6 @@
       </div>
     </div>
 
-
     <div style="padding-top: 79px;"></div>
 
   	<div style="background-color: #EEE; border-top: 2px dotted #BBB; border-bottom: 2px dotted #BBB; padding-bottom: 83px;">
@@ -38,7 +35,7 @@
   	    <div class="row">
   	      <div style="padding-right: 100px;" class="col-lg-12">
   	        <h1 style="font-size: 40px; opacity: 100%;">Build <strong>Strong</strong> AI Applications</h1>
-  	        <p class="lead">{{brand.get('name')}} is a pipeline management system built for large scale document and data processing. It offers developers a quick and easy way to build AI applications (and bots) using transformational document chains powered by <a href="https://jinja.palletsprojects.com/en/3.1.x/templates/">Jinja2 templates</a>. Documents, and their contents, may be deseralized and transformed by the system in parallel during processing using task queues and containers for scale and speed. {{brand.get('name')}} supports calls to <a href="https://platform.openai.com/docs/api-reference">OpenAI</a> and Google's <a href="https://cloud.google.com/document-ai?hl=en">Document and Vision</a> APIs, in addition to supporting calls to other machine learning models. Document types supported by the system include PDFs, text files, CSVs, images, audio files, webpages, and more.</p>
+  	        <p class="lead">{{brand.get('name')}} is a pipeline system built for large scale document and data processing. It offers developers a quick and easy way to build AI applications (and bots) using transformational document chains powered by <a href="https://jinja.palletsprojects.com/en/3.1.x/templates/">Jinja2 templates</a>. Documents, and their contents, may be deseralized and transformed by the system in parallel during processing using task queues and containers for scale and speed. {{brand.get('name')}} supports calls to <a href="https://platform.openai.com/docs/api-reference">OpenAI</a> and Google's <a href="https://cloud.google.com/document-ai?hl=en">Document and Vision</a> APIs, in addition to supporting calls to other machine learning models. Document types supported by the system include PDFs, text files, CSVs, images, audio files, webpages, and more.</p>
 
             <h3 style="padding-top: 30px;">Open Beta</h3>
             <p class="lead">
@@ -51,18 +48,20 @@
 
             <h2 style="padding-top: 30px;">Videos</h2>
             <p class="lead">Get started with MittaAI by building a simple pipeline to generate words, make a callback, and write the results into the database.</p>
-            <iframe width="560" height="315" src="https://www.youtube.com/embed/ntLqz38hC60?si=67DC_FEEnEwHNXhk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            <div class="video-responsive">
+              <iframe width="560" height="315" src="https://www.youtube.com/embed/ntLqz38hC60?si=67DC_FEEnEwHNXhk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            </div>
 
             <h3 style="padding-top: 30px;">Integrated Storage</h3>
-            <p class="lead">{{brand.get('name')}} currently uses a single managed database, <a href="https://www.featurebase.com/cloud">FeatureBase Cloud</a>, which handles in-memory set operations, vector storage and search, and point lookups for AI workloads. <a href="https://featurebase.com">FeatureBase</a> can execute complex SQL queries against analytical, tabular, or vector data. These queries can also be generated using AI models.  Secure support for file storage is provided by <a href="https://cloud.google.com/">Google Cloud</a>.</p>
+            <p class="lead">{{brand.get('name')}} utilizes a single managed database, <a href="https://www.featurebase.com/cloud">FeatureBase Cloud</a>, which handles in-memory set operations, vector storage and search, and point lookups for AI workloads. <a href="https://featurebase.com">FeatureBase</a> can execute complex SQL queries against analytical, tabular, or vector data. These queries can also be generated using AI models.  Secure support for file storage is provided by <a href="https://cloud.google.com/">Google Cloud</a>.</p>
 
             <h3 style="padding-top: 30px;">Retrieval Augmented Generation</h3>
             <p class="lead">{{brand.get('name')}}'s' framework can be used to build customized <a href="https://research.ibm.com/blog/retrieval-augmented-generation-RAG">RAG</a>-based pipelines. It also provides tools for chunking PDFs, text files, and other types of documents, like images. Use OpenAI's <a href="https://platform.openai.com/docs/guides/embeddings">text-embedding-ada-002</a> embeddings or our free embeddings powered by <a href="https://instructor-embedding.github.io/">Instructor</a> to make your content AI-ready.</p>
-            <a href="/cookbooks#pdf-indexing" class="btn btn-outline-dark"><i class="fas fa-code-branch"></i> View RAG Cookbook</a>
+            <a href="/cookbooks#pdf-indexing" class="btn btn-outline-dark"><i class="fas fa-code-branch"></i> View Cookbook</a>
         
             <h3 style="padding-top: 30px;">Innovative Bot Building</h3>
             <p class="lead">Bots, or artificial intelligence powered agents, can be built with {{brand.get('name')}} by creating indexing and querying pipelines for documents, webpages, or other types of document media and then referencing those document fragments in prompt templates built for discussion using vector search. AI agents are more useful when their data is up-to-date, or they have the ability to reference material found on the Web, through searching. {{brand.get('name')}} provides real-time web content retrieval, document storage, indexing, agent history (memory) operations, and more.</p>
-            <a href="/cookbooks#pirate-bot" class="btn btn-outline-dark"><i class="fas fa-code-branch"></i> View Bot Cookbook</a>
+            <a href="/cookbooks#pirate-bot" class="btn btn-outline-dark"><i class="fas fa-code-branch"></i> View Cookbook</a>
 
             <h3 style="padding-top: 30px;">Intelligent Enterprise Search</h3>
             <p class="lead">In enterprise search use cases, the integration of vector search with documents provides more accurate and contextually relevant results from LLMs by extracting or generating semantic relationships within a set of documents, and then using that generative data to augment the prompts sent to the AI for assembly. These relationships can be extracted from documents automatically using prompts built with {{brand.get('name')}}'s templating system.</p>
@@ -72,8 +71,9 @@
 
             <h3 style="padding-top: 30px;">Grounded Storytelling</h3>
             <p class="lead">Stories based on historic customer data and interactions can be used to tell a more efficient and dynamic story about the health of a business and its customers. Take data from dashboards, PDFs, Slack, and more and use AI to make things more explainable to more people. Analyze alerting systems for faster time to resolution, create dynamic content for websites, instructions for use of a product, summarize Slack conversations, get in front of outage issues, or even build dynamic blurbs for homepages, like this one.</p>
+            <a href="/cookbooks#hackerbot" class="btn btn-outline-dark"><i class="fas fa-code-branch"></i> View Cookbook</a>
 
-  	        <div style="padding-bottom: 23px;">
+  	        <div style="padding-top: 43px; padding-bottom: 23px;">
   	          {% if uid != "anonymous" %}
   	          <a class="btn btn-outline-dark" href="/pipelines">Build Now</a>
   	          {% else %}
@@ -132,12 +132,16 @@ $(document).ready(function(){
 
   function tri() {
     // Create the Trianglify pattern
+    const width = document.documentElement.clientWidth || window.innerWidth;
+    const height = document.documentElement.clientHeight || window.innerHeight;
+
     const pattern = trianglify({
-      width: window.innerWidth,
-      height: window.innerHeight,
-      xColors: gradient,
-      yColors: 'match'
-    }); $('#f1f2f3').remove();
+        width: width,
+        height: height+2000,
+        xColors: gradient,
+        yColors: 'match'
+    });
+    $('#f1f2f3').remove();
 
     // Serialize the SVG object to a String
     var m = new XMLSerializer().serializeToString(pattern.toSVG());

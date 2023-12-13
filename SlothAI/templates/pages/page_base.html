@@ -122,22 +122,38 @@ $(document).ready(function() {
     {% endfor %}
 
     let fibA = 1, fibB = 1;
+    let prevLogCount = null;
+    let prevTaskCount = null;
+    let timeoutId = null; // To keep track of the current timeout ID
 
     function updateTaskCount() {
         $.ajax({
             url: '/task_log/count',
             type: 'GET',
             success: function(response) {
+                let logCountChanged = prevLogCount !== response.log_count;
+                let taskCountChanged = prevTaskCount !== response.task_count;
+
                 if (response.log_count == 0) {
                     $('#log_count').text('');
                 } else {
                     $('#log_count').text(response.log_count);
                 }
-                
+
                 if (response.task_count == 0) {
                     $('#task_count').text('');
                 } else {
                     $('#task_count').text(response.task_count);
+                }
+
+                // Update the previous counts
+                prevLogCount = response.log_count;
+                prevTaskCount = response.task_count;
+
+                // Reset Fibonacci sequence if counts have changed
+                if (logCountChanged || taskCountChanged) {
+                    fibA = 1;
+                    fibB = 1;
                 }
             },
             error: function(xhr, status, error) {
@@ -147,14 +163,18 @@ $(document).ready(function() {
                 let nextFib = fibA + fibB;
                 fibA = fibB;
                 fibB = nextFib;
-                let timeout = Math.min(Math.max(nextFib, 1), 15) * 1000;
-                setTimeout(updateTaskCount, timeout);
+                let timeout = Math.min(Math.max(nextFib, 1), 30) * 1000;
+
+                // Clear existing timeout and set a new one
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(updateTaskCount, timeout);
             }
         });
     }
 
     // Start the sequence with a 1-second timeout
-    setTimeout(updateTaskCount, 1000);
+    timeoutId = setTimeout(updateTaskCount, 1000);
+
 
 });
 </script>

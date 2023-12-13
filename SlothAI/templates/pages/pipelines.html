@@ -1,7 +1,7 @@
 {% extends "pages/page_base.html" %}
 
 {% block title %}
-<title>Pipelines | FeatureBase AI</title>
+<title>Pipelines | {{brand.get('name')}}</title>
 <meta property='og:title' content="Pipelines | {{ brand.get('name') }}"/>
 {% endblock %}
 
@@ -27,37 +27,34 @@
             </button>
         </div>
 
-        <table id="pipelineTable" class="stripe hover">
+        <table id="pipelineTable" class="stripe hover" style="display: none;">
             <thead>
                 <tr>
                     <th>Name</th>
                     <th>Nodes</th>
-                    <th>Action</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
                 {% for pipeline in pipelines %}
                 <tr id="tr_{{pipeline.pipe_id}}">
                     <td>
-                        <button class="btn btn-secondary" onclick="location.href='/pipelines/{{ pipeline.pipe_id }}'"><i class="fas fa-code-branch"></i><br/>{{ pipeline.name }}</button>
+                        <button class="btn btn-secondary button-pipeline" onclick="location.href='/pipelines/{{ pipeline.pipe_id }}'"><i class="fas fa-code-branch"></i><br/>{{ pipeline.name }}</button>
                     </td>
                     <td>
-                        <div class="btn-group">
                             {% for node_id in pipeline.node_ids %}
                                 {% for node in nodes %}
                                     {% if node.node_id == node_id %}
-                                        <button title="{{ node.processor }}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" class="btn btn-secondary button-node btn-sortable"><i class="fas fa-{% for processor_info in processors if processor_info.value == node.processor %}{{processor_info.icon }}{% endfor %}"></i><br/>{{ node.name }}</button>
+                                        <button class="btn button-node" title="{{ node.template_name }}<br/>{{node.processor}}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" class="btn btn-secondary button-node btn-sortable"><i class="fas fa-{% for processor_info in processors if processor_info.value == node.processor %}{{processor_info.icon }}{% endfor %}"></i><br/>{{ node.name }}</button>
                                     {% endif %}
                                 {% endfor %}
                             {% endfor %}
-                        </div>
+                        
                     </td>
                     <td>
-                        <div class="btn-group btn-group-sm">
-                            <button data-toggle="tooltip" data-placement="top" title="Download {{ pipeline.name }}" class="download-button btn btn-primary btn-action" data-pipe_name="{{ pipeline.name }}" data-pipe_id="{{ pipeline.pipe_id }}"><i class="fas fa-download"></i></button>
-                            <button class="delete-button btn btn-danger btn-action" data-pipe_id="{{ pipeline.pipe_id }}"><i class="fas fa-trash-alt"></i></button>
+                            <button data-toggle="tooltip" data-placement="top" title="Download {{ pipeline.name }}" class="download-button btn btn-primary btn-sm btn-bottoms" data-pipe_name="{{ pipeline.name }}" data-pipe_id="{{ pipeline.pipe_id }}"><i class="fas fa-download"></i></button>
+                            <button class="delete-button btn btn-danger btn-sm btn-bottoms" data-pipe_id="{{ pipeline.pipe_id }}"><i class="fas fa-trash-alt"></i></button>
                             <div class="spinner-border spinner-border-sm text-danger" role="status" style="display: none; margin-left: 10px; margin-top: 9px;"><span class="sr-only"></span></div>
-                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -176,6 +173,31 @@ $(document).ready(function () {
     // grab the nodes from the template and make them available via getNodeInfo
     var nodes = JSON.parse('{{nodes | tojson}}');
 
+    document.querySelectorAll('.button-pipeline').forEach(pipelineButton => {
+        let animationStarted = false;
+
+        pipelineButton.addEventListener('mouseover', function() {
+            if (!animationStarted) {
+                let nodes = this.closest('tr').querySelectorAll('.button-node');
+
+                nodes.forEach((node, index) => {
+                    node.classList.remove('bounce');
+                    void node.offsetWidth; // Trigger a reflow
+
+                    setTimeout(() => {
+                        node.classList.add('bounce');
+                    }, index * 100);
+                });
+
+                animationStarted = true;
+            }
+        });
+
+        pipelineButton.addEventListener('mouseleave', function() {
+            animationStarted = false;
+        });
+    });
+
     function getNodeInfo(nodeId) {
         const node = nodes.find(node => node.node_id === nodeId);
 
@@ -203,6 +225,8 @@ $(document).ready(function () {
         button.style.backgroundColor = color;
         button.style.borderColor = color;
     });
+
+    $('#pipelineTable').show();
 
     $('button').on('mouseleave', function () {
         const that = this;
@@ -260,7 +284,7 @@ $(document).ready(function () {
         });
         button.css('background-color', getColorFromName(name));
         button.html(name);
-        button.popover({trigger: 'focus'});
+        button.popover({trigger: 'click'});
         return button;
     }
 
@@ -584,8 +608,6 @@ $(document).ready(function () {
             });
     }
 
-
-
     $('#fileInput').on('change', function() {
         var file = this.files[0];
 
@@ -637,19 +659,81 @@ $(document).ready(function () {
         return false;
     };
 
-    // sort table
-    var table = {}
-    function sortTable() {
-        table = $('#pipelineTable').DataTable({
-            "columnDefs": [{ "orderable": false, "targets": [2] }],
-            "order": [[0, "asc"]]
-        });
-        if (getUrlParameter('q')) {
-            table.search(getUrlParameter('q')).draw();
+// Function to get URL parameters
+    var getUrlParameter = function(sParam) {
+        var sPageURL = window.location.search.substring(1),
+            sURLVariables = sPageURL.split('&'),
+            i;
+
+        for (i = 0; i < sURLVariables.length; i++) {
+            var sParameterName = sURLVariables[i].split('=');
+
+            if (sParameterName[0] === sParam) {
+                return sParameterName[1] === undefined ? true : decodeURIComponent(sParameterName[1]);
+            }
+        }
+        return false;
+    };
+
+    // Function to store state in cookies
+    function storeState(name, value) {
+        document.cookie = name + "=" + JSON.stringify(value) + "; expires=Fri, 31 Dec 9999 23:59:59 GMT";
+    }
+
+    // Function to load state from cookies
+    function loadState(name, callback) {
+        var cookieValue = document.cookie.split('; ').find(row => row.startsWith(name + '='));
+        if (cookieValue) {
+            var value = JSON.parse(cookieValue.split('=')[1]);
+            if (value) {
+                callback(value);
+            }
         }
     }
-    $("th").css("border-bottom-color","white");
-    sortTable();
+
+    // Initialize the DataTable
+    var table = $('#pipelineTable').DataTable({
+        "columnDefs": [{ "orderable": false, "targets": [2] }], // Adjust this as needed
+        "order": [[0, "asc"]], // Default order
+        "pageLength": 10 // Default page length
+    });
+
+    // Load and apply saved sorting order
+    loadState('sortingOrder', function(order) {
+        table.order(order).draw();
+    });
+
+    // Load and apply saved page length
+    loadState('pageLength', function(length) {
+        table.page.len(length).draw();
+    });
+
+    // Check if 'q' parameter is present and apply search filter
+    var searchQuery = getUrlParameter('q');
+    if (searchQuery) {
+        table.search(searchQuery).draw();
+    }
+
+    // Save sorting order when a column header is clicked
+    table.on('order.dt', function() {
+        storeState('sortingOrder', table.order());
+    });
+
+    // Save page length when it changes
+    $('select[name="pipelineTable_length"]').on('change', function () {
+        storeState('pageLength', table.page.len());
+    });
+
+    // Event listener for DataTables search box
+    $('input[type="search"]').on('input', function() {
+        // Check if the search box is empty
+        if (!this.value) {
+            // Clear the 'q' parameter from the URL
+            var url = new URL(window.location.href);
+            url.searchParams.delete('q');
+            window.history.pushState({}, '', url);
+        }
+    });
 });
 </script>
 {% endblock %}

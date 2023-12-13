@@ -201,7 +201,8 @@ $(document).ready(function() {
     function setButtonColors() {
       const buttons = document.querySelectorAll(".btn-group .btn:not(.ignore-color)");
       buttons.forEach(button => {
-        const name = button.innerText;
+        const name = button.innerText.trimStart();
+        console.log(name);
         const color = getColorFromName(name);
         button.style.backgroundColor = color;
         button.style.borderColor = color;

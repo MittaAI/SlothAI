@@ -38,7 +38,52 @@ form, label {
 
 .button-node {
   flex: 0 0 auto; /* Do not grow, do not shrink, and is automatically sized based on content */
-  max-width: 120px; /* Set a fixed width */
+  width: 83px; /* Fixed width */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 4px;
+  color: white;
+  transition: box-shadow 0.3s; /* Smooth transition for box-shadow */
+}
+
+@keyframes bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.button-node.bounce {
+    animation: bounce 0.5s ease;
+}
+
+.button-node:hover {
+  /* Keep the pulse glow effect, remove any bounce effect */
+  box-shadow: 0 0 5px gray, 0 0 10px gray;
+  color: white;
+  animation: pulseGlow 1.5s infinite ease-in-out;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 5px gray, 0 0 10px gray;
+  }
+  50% {
+    box-shadow: 0 0 15px gray, 0 0 20px gray;
+  }
+}
+
+.button-pipeline {
+  flex: 0 0 auto; /* Do not grow, do not shrink, and is automatically sized based on content */
+  width: 103px; /* Fixed width */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 4px;
+  color: white;
 }
 
 
@@ -73,9 +118,6 @@ footer {
   background: #EEE;
 }
 
-.btn-action {
-  border-radius: 0 !important;
-}
 .btn-bottoms {
   margin-bottom: 4px;
 }
@@ -262,6 +304,27 @@ nav h2 a:hover {
   .content {
     margin-left: 200px;
   }
+}
+
+@media only screen and (max-width: 768px) {
+    body {
+        background-size: cover;
+        /* Other background properties as needed */
+    }
+}
+
+.video-responsive {
+  position: relative;
+  overflow: hidden;
+  padding-top: 56.25%; /* 16:9 Aspect Ratio */
+}
+
+.video-responsive iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .page_heading {

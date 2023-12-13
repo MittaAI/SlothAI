@@ -210,6 +210,7 @@ $(document).ready(function() {
                     }
                 },
                 error: function(error) {
+                    console.log(error);
                     if (error.responseJSON && error.responseJSON.message) {
                         toastr.error(error.responseJSON.message);
                     } else {

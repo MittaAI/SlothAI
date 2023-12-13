@@ -26,7 +26,7 @@
         <p></p>
         <h5>Node Template</h5>
         <p>The <strong>{{ node.name }}</strong> node uses the <strong>{{ template.name }}</strong> template with the <strong>{{ node.processor }}</strong> processor.</p>
-        <a class="btn btn-secondary min-button" href="#"><i class="fas fa-cube"></i><br/>{{ node.name }}</a>
+        <a class="btn btn-secondary min-button" href="#"><i class="fas fa-{% for processor_info in processors if processor_info.value == node.processor %}{{processor_info.icon }}{% endfor %}"></i><br/>{{ node.name }}</a>
         <i class="fas fa-arrow-left"></i>
         <a class="btn btn-secondary min-button" href="/templates/{{ template.template_id }}"><i class="fas fa-file"></i><br/>{{ template.name }}</a>
         <p></p>

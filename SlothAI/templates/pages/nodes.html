@@ -19,22 +19,22 @@
         </div>
         <p></p>
         <div>
-        <table width="100%" id="nodesTable" class="stripe hover">
+        <table width="100%" id="nodesTable" class="stripe hover" style="display: none;">
             <thead>
                 <tr>
                     <th>Node</th>
-                    <th>Processor</th>
+                    <th>Type</th>
                     <th>Inputs</th>
                     <th>Outputs</th>
                     <th>Extras</th>
-                    <th>Remove</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody id="nodeTable">
                 {% for node in nodes %}
                 <tr id="tr_{{ node.node_id }}">
                     <td><a href="/nodes/{{ node.node_id }}" type="button" class="btn btn-secondary min-button" disabled><i class="fas fa-cube"></i><br/>{{ node.name }}</a></td>
-                    <td><a tabindex="1" role="button" data-placement="left" class="btn btn-secondary processors min-button" title="{{ node.name }}" data-content="{{ processors | selectattr('value', 'equalto', node.processor) | map(attribute='label') | first }}" disabled data-trigger="focus"><i class="fas fa-microchip"></i><br/>{{ node.processor }}</a></td>
+                    <td><a tabindex="1" role="button" data-placement="left" class="btn btn-secondary processors min-button" title="{{ node.template.name }}" data-content="{{ processors | selectattr('value', 'equalto', node.processor) | map(attribute='label') | first }}" disabled data-trigger="focus"><i class="fas fa-{% for processor_info in processors if processor_info.value == node.processor %}{{processor_info.icon }}{% endfor %}"></i><br/>{{ node.processor }}</a></td>
 
                     <td>
                         {% if node.template.input_fields is not none %}
@@ -239,6 +239,7 @@ $(document).ready(function() {
     Promise.all([buttonColorsPromise, badgeColorsPromise]).then(() => {
         $("th").css("border-bottom-color","white");
         sortTable();
+        $("#nodeTable").show();
     });
 
     function processString(inputString) {
@@ -603,14 +604,14 @@ $(document).ready(function() {
       $('[data-toggle="popover"]').tooltip()
     })
 
-    var getUrlParameter = function getUrlParameter(sParam) {
+    // Function to get URL parameters
+    var getUrlParameter = function(sParam) {
         var sPageURL = window.location.search.substring(1),
             sURLVariables = sPageURL.split('&'),
-            sParameterName,
             i;
 
         for (i = 0; i < sURLVariables.length; i++) {
-            sParameterName = sURLVariables[i].split('=');
+            var sParameterName = sURLVariables[i].split('=');
 
             if (sParameterName[0] === sParam) {
                 return sParameterName[1] === undefined ? true : decodeURIComponent(sParameterName[1]);
@@ -619,21 +620,67 @@ $(document).ready(function() {
         return false;
     };
 
-    var table = {};
+    // Function to store state in cookies
+    function storeState(name, value) {
+        document.cookie = name + "=" + JSON.stringify(value) + "; expires=Fri, 31 Dec 9999 23:59:59 GMT";
+    }
 
-    // Function to run after both changeButtonColors and changeBadgeColors are done
-    function sortTable() {
-        // sort table
-        table = $('#nodesTable').DataTable({
-            "columnDefs": [{ "orderable": false, "targets": [2,3,4,5] }],
-            "order": [[0, "asc"]],
-            "pageLength": 25,
-            "responsive": true
-        });
-        if (getUrlParameter('q')) {
-            table.search(getUrlParameter('q')).draw();
+    // Function to load state from cookies
+    function loadState(name, callback) {
+        var cookieValue = document.cookie.split('; ').find(row => row.startsWith(name + '='));
+        if (cookieValue) {
+            var value = JSON.parse(cookieValue.split('=')[1]);
+            if (value) {
+                callback(value);
+            }
         }
     }
+
+    // Initialize the DataTable
+    var table = $('#nodesTable').DataTable({
+        "columnDefs": [{ "orderable": false, "targets": [2,3,5] }], // Adjust this as needed
+        "order": [[0, "asc"]], // Default order
+        "pageLength": 10 // Default page length
+    });
+
+    // Load and apply saved sorting order
+    loadState('sortingOrder', function(order) {
+        table.order(order).draw();
+    });
+
+    // Load and apply saved page length
+    loadState('pageLength', function(length) {
+        table.page.len(length).draw();
+    });
+
+    // Check if 'q' parameter is present and apply search filter
+    var searchQuery = getUrlParameter('q');
+    if (searchQuery) {
+        table.search(searchQuery).draw();
+    }
+
+    // Save sorting order when a column header is clicked
+    table.on('order.dt', function() {
+        storeState('sortingOrder', table.order());
+    });
+
+    // Save page length when it changes
+    $('select[name="nodesTable_length"]').on('change', function () {
+        storeState('pageLength', table.page.len());
+    });
+
+    // Event listener for DataTables search box
+    $('input[type="search"]').on('input', function() {
+        // Check if the search box is empty
+        if (!this.value) {
+            // Clear the 'q' parameter from the URL
+            var url = new URL(window.location.href);
+            url.searchParams.delete('q');
+            window.history.pushState({}, '', url);
+        }
+    });
+    
+    $('#nodesTable').show();
     $("#addNodeModalButton").prop("disabled", false);
 });
 </script>

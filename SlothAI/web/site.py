@@ -380,21 +380,9 @@ def nodes():
     template_service = app.config['template_service']
     templates = template_service.fetch_template(user_id=current_user.uid)
 
-    template_lookup = {template['template_id']: template['name'] for template in templates}
-
     name_random = random_name(2).split('-')[1]
 
     tokens = Token.get_all_by_uid(current_user.uid)
-
-    """
-    # hide the tokens and passwords
-    for node in nodes:
-        extras = node.get('extras', None)  
-        if extras:
-            for key in extras.keys():
-                if 'token' in key or 'password' in key or 'secret' in key:
-                    extras[key] = f'[{key}]'
-    """
 
     # update the template names
     _nodes = []

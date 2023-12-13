@@ -106,7 +106,7 @@ def process(task: Task) -> Task:
     # get tokens from service tokens
     # and process values for numbers
     _extras = {}
-
+    
     for key, value in node.get('extras').items():
         # cast certain strings to other things
         if isinstance(value, str):  
@@ -1260,8 +1260,16 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
             except:
                 raise NonRetriableError("Unable to read the file's JSON data.")
 
-            task.document['json_data'] = json_data
-            task.document['texts'] = "JSON data loaded into 'json_data'"
+            # append the JSON to the document
+            if 'json_data' not in task.document or not task.document['json_data']:
+                task.document['json_data'] = [json_data]
+            else:
+                if not isinstance(task.document['json_data'], list):
+                    task.document['json_data'] = [task.document['json_data']]
+                
+                task.document['json_data'].append(json_data)
+
+            task.document[output_field].append("Data exported to 'json_data'")
 
         elif "text/csv" in content_type[index]:
             # check for prepend string
@@ -1431,6 +1439,7 @@ def read_uri(node: Dict[str, any], task: Task) -> Task:
         output_field = "texts"
 
     uri = task.document.get('uri')
+
     if isinstance(uri, str):
         uri = [uri]
 

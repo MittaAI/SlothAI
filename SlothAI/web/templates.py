@@ -90,7 +90,10 @@ def template_update(template_id):
         if key in template_payload:
             template[key] = template_payload[key]
 
-    _template = Template.from_dict(template)
+    try:
+        _template = Template.from_dict(template)
+    except Exception as ex:
+        return jsonify({"error": "Update failed", "message": f"{ex}"}), 500
 
     nodes = Node.fetch(template_id=template_id)
     if nodes and not sorted(template.get('extras')) == sorted(_template.extras):

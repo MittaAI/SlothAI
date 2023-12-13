@@ -50,6 +50,7 @@ class Template():
         # results.
         input_fields, output_fields = self.fields_from_template(dict.get('text'))                
         extras = self.extras_from_template(dict.get('text'))
+
         processor = extras.get('processor', dict.get('processor', 'jinja2'))
 
         id = dict.get('id', random_string(16))
