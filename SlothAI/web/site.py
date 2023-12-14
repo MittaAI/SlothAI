@@ -48,6 +48,7 @@ template_examples = [
     {"name": "Start with a callback", "template_name": "get_started_callback", "processor_type": "callback"},
     {"name": "Generate random words", "template_name": "get_started_random_word", "processor_type": "jinja2"},
     {"name": "Convert text to embedding", "template_name": "text_to_embedding", "processor_type": "embedding"},
+    {"name": "Convert text to a Gemini embedding", "template_name": "text_to_gemini_embedding", "processor_type": "embedding"},
     {"name": "Convert text to an OpenAI embedding", "template_name": "text_to_ada_embedding", "processor_type": "embedding"},
     {"name": "Write to table", "template_name": "write_table", "processor_type": "write_fb"},
     {"name": "Write file chunks to a table", "template_name": "chunks_embeddings_pages_to_table", "processor_type": "write_fb"},

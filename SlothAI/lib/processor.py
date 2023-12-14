@@ -10,6 +10,7 @@ import requests
 import json
 
 import openai
+import google.generativeai as genai
 
 import pandas as pd
 import numpy as np
@@ -565,6 +566,29 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
 
                 raise NonRetriableError(f"Exception talking to OpenAI ada embedding: {ex}")
 
+        elif model == "gemini-embedding-001" or model == "embedding-001":
+            gemini_model = "models/embedding-001"
+            if not task.document.get('gemini_token'):
+                raise NonRetriableError(f"You'll need to specify a 'gemini_token' in extras to use the {model} model.")
+            if not task.document.get('task_type'):
+                raise NonRetriableError(f"You'll need to specify a 'task_type' in extras to use the {model} model.")
+
+            if task.document.get('task_type') not in ["retrieval_document","retrieval_query"]:
+                raise NonRetriableError(f"The 'task_type' needs to be set to 'retrieval_query' or 'retrieval_document'.")
+
+            genai.configure(api_key=task.document.get('gemini_token'))
+            try:
+                batch_size = 10
+                for i in range(0, len(input_data), batch_size):
+                    batch = input_data[i:i + batch_size]
+                    embedding_results = genai.embed_content(model=gemini_model, content=batch, task_type=task.document.get('task_type'))
+                    embeddings.extend([_object for _object in embedding_results['embedding']])
+
+                # Add the embeddings to the output field
+                task.document[output_field] = embeddings
+            except Exception as ex:
+                app.logger.info(f"embedding processor: {ex}")
+                raise NonRetriableError(f"Exception talking to Gemini embedding: {ex}")
 
         elif "instructor" in model:
             task = sloth_embedding(input_field_name, output_field, model, task)

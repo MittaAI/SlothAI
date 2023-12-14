@@ -1,0 +1,12 @@
+{# Use this template to drive an Google Gemini embedding node processor! #}
+
+{# Input Fields #}
+input_fields = [{'name': "chunks", 'type': "strings"}]
+
+{# Output Fields #}
+output_fields = [{'name': "chunks_embedding", 'type': "vectors"}]
+
+{# Extras for Gemini embeddings #}
+{# Gemini embeddings requires a task type of 'retreival_document' or 'retreival_query' #}
+{# See more info: https://ai.google.dev/docs/embeddings_guide #}
+extras = { 'processor': 'embedding', 'model': 'embedding-001',  'vector_size': 768, 'task_type': "retrieval_document", 'gemini_token': None}
