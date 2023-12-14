@@ -680,6 +680,27 @@ def aichat(node: Dict[str, any], task: Task) -> Task:
         else:               
             raise NonRetriableError(f"Tried {retries} times to get an answer from the AI, but failed.")    
     
+    elif "gemini-pro" in task.document.get('model'):
+        model = task.document.get('model')
+        if not task.document.get('gemini_token'):
+            raise NonRetriableError(f"You'll need to specify a 'gemini_token' in extras to use the {model} model.")
+
+        template_text = Template.remove_fields_and_extras(template.get('text'))
+
+        if template_text:
+            jinja_template = env.from_string(template_text)
+            prompt = jinja_template.render(task.document)
+        else:
+            raise NonRetriableError("Couldn't find template text.")
+
+        system_prompt = task.document.get('system_prompt', "You are a helpful assistant.")
+        
+        # upgrade model to genai
+        model = genai.GenerativeModel(model)
+        response = model.generate_content(f"system: {system_prompt}\n\n{prompt}")
+        task.document[output_field] = [response.text]
+
+        return task
     else:
         raise NonRetriableError("The aichat processor expects a supported model.")
 
@@ -876,8 +897,6 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
             raise NonRetriableError("If filename is a list, content_type must also be a list.")
         if len(filename) != len(content_type):
             raise NonRetriableError("Document must contain equal size lists of filename and content-type.")
-        filename = filename[0]
-        content_type = content_type[0]
     elif isinstance(filename, str) and isinstance(content_type, str):
         # If both variables are strings, convert them into lists
         filename = [filename]
@@ -914,6 +933,42 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
             if not task.document.get(output_field):
                 task.document[output_field] = []
             task.document[output_field].append(labels)
+
+        elif "gemini-pro-vision" in model:
+            from PIL import Image
+            if not task.document.get('gemini_token'):
+                raise NonRetriableError(f"You'll need to specify a 'gemini_token' in extras to use the {model} model.")
+
+            if task.document.get('system_prompt'):
+                system_prompt = task.document.get('system_prompt')
+            else:
+                system_prompt = "Describe in detail the image scene."
+
+            genai.configure(api_key=task.document.get('gemini_token'))
+
+            # Get the document
+            gcs = storage.Client()
+            bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
+            blob = bucket.blob(f"{uid}/{file_name}")
+
+            # even though the exceptions says it takes a Blob, we use PIL instead
+            image_bytes = blob.download_as_bytes()
+            image_stream = BytesIO(image_bytes)
+            img = Image.open(image_stream)
+
+            # generate 
+            try:
+                model = genai.GenerativeModel(model)
+                response = model.generate_content([system_prompt, img], stream=True)
+                response.resolve()
+            except Exception as ex:
+                raise NonRetriableError(f"Gemini error: {ex}")
+
+            if not task.document.get(output_field):
+                task.document[output_field] = []
+
+            # oh google
+            task.document[output_field].append(response.text)
 
         elif "gpt" in model:
             # Get the document
