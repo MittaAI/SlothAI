@@ -1,0 +1,10 @@
+{# Use this template to drive a Mistral embedding node processor! #}
+
+{# Input Fields #}
+input_fields = [{'name': "chunks", 'type': "strings"}]
+
+{# Output Fields #}
+output_fields = [{'name': "chunks_embedding", 'type': "vectors"}]
+
+{# Extras for Mistral embeddings #}
+extras = { 'processor': 'embedding', 'model': 'mistral-embed',  'vector_size': 1024, 'mistral_token': None}

@@ -120,9 +120,12 @@ def template_update(template_id):
 @flask_login.login_required
 def generate_name():
     # get short name
-    for x in range(20):
-        name_random = random_name(2).split('-')[0]
-        if len(name_random) < 9:
+    while True:
+        for x in range(20):
+            name_random = random_name(2).split('-')[0]
+            if len(name_random) < 9:
+                break
+        if not Node.get(name=name_random):
             break
     return jsonify({"name": name_random})
 

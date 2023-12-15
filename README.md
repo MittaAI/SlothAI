@@ -16,7 +16,7 @@ Individual movements of a sloth are measured and intentional, mirroring the pace
 
 SlothAI distinguishes itself from other frameworks like LangChain, AutoChain, Auto-GPT, and Ray by focusing on scalable asynchronous inferences coupled with an intuitive UI that simplifies the editing of templates and the management of pipeline flows. SlothAI makes template editing and debugging fun and easy.
 
-SlothAI use a SQL engine (FeatureBase) capable of point lookups, binary set operations, and vector similarity for its storage layers. Tasks are executed within containers on Google Cloud via task queues, and for more demanding inferencing tasks, it orchestrates calls to GPU boxes, streamlining the process of running large model inferences.
+If you need to store things or report on things, SlothAI use an insanely fst SQL engine (FeatureBase) capable of point lookups, binary set operations, and vector similarity. Documents are stored temporaraly on Google Cloud Storage. Tasks are executed within containers on Google Cloud via task queues, and for more demanding inferencing tasks, it orchestrates calls to GPU boxes, streamlining the process of running large model inferences.
 
 In the world of data, async ETL's strength is not in the speed of a single process, but in the collective and orchestrated efforts that move mountains of data with remarkable agility.
 
@@ -94,6 +94,8 @@ pip3 install -r requirements
 ### Dependencies - FeatureBase
 You will need a FeatureBase cloud account to use the read_fb and write_fb processors. It's free to signup and requires your email address: https://cloud.featurebase.com/.
 
+MittaAI provides a shared database option, where you do not need to have a FeatureBase Cloud account.
+
 ### Dependencies - Google Cloud
 You'll need a whole bunch of Google Cloud things done. Enabling AppEngine, Compute, Cloud Tasks, domain names, firewalls and setting up credentials will eventually be documented here.
 
@@ -152,4 +154,4 @@ http://localhost:8080
 ```
 
 ### Login
-To login to the system, use your FeatureBase Cloud [database ID](https://cloud.featurebase.com/databases) and [API key](https://cloud.featurebase.com/configuration/api-keys) (token).
+To login to the system, enter your email address and check your mail for the token.

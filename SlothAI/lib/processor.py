@@ -533,6 +533,13 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
     if not output_fields:
         raise NonRetriableError("embedding processor: output_fields required.")
 
+    if task.document.get('batch_size'):
+        batch_size = int(task.document.get('batch_size'))
+        if batch_size < 1:
+            batch_size = 5
+    else:
+        batch_size = 5
+
     # Loop through each input field and produce the proper output for each <key>_embedding output field
     for input_field in input_fields:
         input_field_name = input_field.get('name')
@@ -553,7 +560,6 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
         if model == "text-embedding-ada-002":
             openai.api_key = task.document.get('openai_token')
             try:
-                batch_size = 10
                 for i in range(0, len(input_data), batch_size):
                     batch = input_data[i:i + batch_size]
                     embedding_results = openai.embeddings.create(input=batch, model=task.document.get('model'))
@@ -578,7 +584,6 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
 
             genai.configure(api_key=task.document.get('gemini_token'))
             try:
-                batch_size = 10
                 for i in range(0, len(input_data), batch_size):
                     batch = input_data[i:i + batch_size]
                     embedding_results = genai.embed_content(model=gemini_model, content=batch, task_type=task.document.get('task_type'))
@@ -590,7 +595,32 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
                 app.logger.info(f"embedding processor: {ex}")
                 raise NonRetriableError(f"Exception talking to Gemini embedding: {ex}")
 
+        elif "mistral-embed" in model:
+            from mistralai.client import MistralClient
+
+            if not task.document.get('mistral_token'):
+                raise NonRetriableError(f"You'll need to specify a 'mistral_token' in extras to use the {model} model.")
+
+            mistral = MistralClient(api_key=task.document.get('mistral_token'))
+
+            try:
+                for i in range(0, len(input_data), batch_size):
+                    batch = input_data[i:i + batch_size]
+                    embedding_results = mistral.embeddings(
+                        model=model,
+                        input=batch,
+                    )
+                    embeddings.extend([_object.embedding for _object in embedding_results.data])
+                
+                # Add the embeddings to the output field
+                task.document[output_field] = embeddings
+            except Exception as ex:
+                app.logger.info(f"embedding processor: {ex}")
+                raise NonRetriableError(f"Exception talking to Mistral embedding: {ex}")
+
         elif "instructor" in model:
+            # just skip everything and deal with the task
+            # needs a rewrite
             task = sloth_embedding(input_field_name, output_field, model, task)
 
     return task
@@ -701,6 +731,67 @@ def aichat(node: Dict[str, any], task: Task) -> Task:
         task.document[output_field] = [response.text]
 
         return task
+    
+    elif "mistral" in task.document.get('model'):
+        model = task.document.get('model')
+
+        from mistralai.client import MistralClient
+        from mistralai.models.chat_completion import ChatMessage
+
+        if not task.document.get('mistral_token'):
+            raise NonRetriableError(f"You'll need to specify a 'mistral_token' in extras to use the {model} model.")
+
+        mistral = MistralClient(api_key=task.document.get('mistral_token'))
+
+        template_text = Template.remove_fields_and_extras(template.get('text'))
+
+        if template_text:
+            jinja_template = env.from_string(template_text)
+            prompt = jinja_template.render(task.document)
+        else:
+            raise NonRetriableError("Couldn't find template text.")
+
+        system_prompt = task.document.get('system_prompt', "You are a helpful assistant.")
+
+        # we always reverse the lists, so it's easier to do without timestamps
+        message_history = task.document.get('message_history', [])
+        role_history = task.document.get('role_history', [])
+
+        if message_history or role_history:
+            if len(message_history) != len(role_history):
+                raise NonRetriableError("'role_history' length must match 'message_history' length.")
+            else:
+                message_history.reverse()
+                role_history.reverse()
+
+        # build list of ChatMessage objects
+        chat_messages = [ChatMessage(role="system", content=system_prompt)]
+
+        # Iterate through the user history
+        for idx, message in enumerate(message_history):
+            # Determine the role (user or assistant) based on the index
+            role = role_history[idx]
+
+            # Create a message object and append it to the chat_messages list
+            chat_messages.append(ChatMessage(role = role, content=message))
+
+        # add the user input
+        chat_messages.append(ChatMessage(role="user", content=prompt))
+
+        retries = 3
+        # try a few times
+        for _try in range(retries):
+            try:
+                completion = mistral.chat(model=model, messages=chat_messages)
+                answer = completion.choices[0].message.content
+                if answer:
+                    task.document[output_field] = answer
+                    return task
+            except Exception as ex:
+                raise NonRetriableError(f"Model {model}: {ex}")
+        else:               
+            raise NonRetriableError(f"Tried {retries} times to get an answer from the AI, but failed.")    
+
     else:
         raise NonRetriableError("The aichat processor expects a supported model.")
 

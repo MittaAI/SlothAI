@@ -49,6 +49,7 @@ template_examples = [
     {"name": "Generate random words", "template_name": "get_started_random_word", "processor_type": "jinja2"},
     {"name": "Convert text to embedding", "template_name": "text_to_embedding", "processor_type": "embedding"},
     {"name": "Convert text to a Gemini embedding", "template_name": "text_to_gemini_embedding", "processor_type": "embedding"},
+    {"name": "Convert text to a Mistral embedding", "template_name": "text_to_mistral_embedding", "processor_type": "embedding"},
     {"name": "Convert text to an OpenAI embedding", "template_name": "text_to_ada_embedding", "processor_type": "embedding"},
     {"name": "Write to table", "template_name": "write_table", "processor_type": "write_fb"},
     {"name": "Write file chunks to a table", "template_name": "chunks_embeddings_pages_to_table", "processor_type": "write_fb"},
@@ -75,6 +76,7 @@ template_examples = [
     {"name": "Generate answers from chunks and a query", "template_name": "chunks_query_to_answer", "processor_type": "aidict"},
     {"name": "Generate chat from texts (OpenAI)", "template_name": "text_to_chat", "processor_type": "aichat"},
     {"name": "Generate chat from texts (Gemini)", "template_name": "text_to_chat_gemini", "processor_type": "aichat"},
+    {"name": "Generate chat from texts (Mistral)", "template_name": "text_to_mistral_chat", "processor_type": "aichat"},
     {"name": "Generate an image from text", "template_name": "text_to_image", "processor_type": "aiimage"},
     {"name": "Find objects in image (Google Vision)", "template_name": "image_to_objects", "processor_type": "aivision"},
     {"name": "Find text in image (Google Vision)", "template_name": "image_to_text", "processor_type": "aivision"},
@@ -540,9 +542,12 @@ def template_detail(template_id="new"):
         nodes = []
 
     # get short name
-    for x in range(20):
-        name_random = random_name(2).split('-')[0]
-        if len(name_random) < 9:
+    while True:
+        for x in range(20):
+            name_random = random_name(2).split('-')[0]
+            if len(name_random) < 9:
+                break
+        if not Node.get(name=name_random):
             break
 
     empty_template = '{# This is a reference jinja2 processor template #}\n\n{# Input Fields #}\ninput_fields = [{"name": "input_key", "type": "strings"}]\n\n{# Output Fields #}\noutput_fields = [{"name": "output_key", "type": "strings"}]\n\n{# Extras are required. #}\nextras = {"processor": "jinja2", "static_value": "String for static value.", "dynamic_value": None, "referenced_value": "{{static_value}}"}\n\n{"dict_key": "{{dynamic_value}}"}'

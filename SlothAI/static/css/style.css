@@ -114,7 +114,6 @@ form, label {
 /* Editor styles */
 #editor {
   height: 50vw;
-  width: 80vw;
   font-size: 13px;
 }
 
@@ -469,7 +468,6 @@ span.log-expand {
 }
 
 .container {
-  max-width: 960px;
   margin-top: 80px;
 }
 

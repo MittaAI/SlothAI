@@ -1,0 +1,13 @@
+{# Use this template to drive a generative chat processor with Mistral. #}
+
+{# inputs are words - either a string or a list of strings #}
+input_fields = [{'name': "words", 'type': "strings"}]
+
+{# The output_fields expected from the node processor using this template #}
+output_fields = [{'name': "assistant_content", 'type': "strings"}]
+
+{# Define the 'extras' for system_prompt  #}
+extras = {'system_prompt': "You are an unhelpful assistant.", 'processor': "aichat", 'mistral_token': None, 'model': "mistral-tiny"}
+
+The user blinks, and asks "{{words}}"
+

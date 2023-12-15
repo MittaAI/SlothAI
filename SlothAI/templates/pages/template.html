@@ -9,52 +9,53 @@
 <!-- Main Content -->
 <div class="content container mt-5 pt-4">    
     <h2 class="page_heading">{% if template %}Edit Template{% else %}New Template{% endif %}</h2>
-    <div class="instructions">
-        <p>You are {% if template %}editing a{% else %}creating a new{% endif %} template. {% if nodes %}The {% set ns = namespace(counter=0) %}{% for node in nodes %}{% set ns.counter = ns.counter + 1 %}{% if ns.counter == 1 %}<a href="/nodes/{{ node.node_id }}">{{ node.name }}</a>{% elif ns.counter == pipelines|length %} and <a href="/nodes/{{ node.node_id }}">{{ node.name }}</a>{% else %}, <a href="/nodes/{{ node.node_id }}">{{ node.name }}</a>{% endif %}{% endfor %} node(s) are using this template.{% endif %}</p>
-    </div>
-    <div class="row">
-        <div class="col text-left">
-            <form class="form-inline">
-                <div class="form-group">
-                    <input type="text" class="form-control" id="templateName" value="{% if template %}{{ template.name }}{% else %}{{name_random}}{% endif %}">
-                </div>
-
-                <button id="{% if template %}renameButton{% else %}generateButton{% endif %}" class="btn btn-secondary">{% if template %}Rename{% else %}Generate Name{% endif %}</button>
-            </form>
+    <div class="rounded-lg p-3">
+        <div class="instructions">
+            <p>You are {% if template %}editing a{% else %}creating a new{% endif %} template. {% if nodes %}The {% set ns = namespace(counter=0) %}{% for node in nodes %}{% set ns.counter = ns.counter + 1 %}{% if ns.counter == 1 %}<a href="/nodes/{{ node.node_id }}">{{ node.name }}</a>{% elif ns.counter == pipelines|length %} and <a href="/nodes/{{ node.node_id }}">{{ node.name }}</a>{% else %}, <a href="/nodes/{{ node.node_id }}">{{ node.name }}</a>{% endif %}{% endfor %} node(s) are using this template.{% endif %}</p>
         </div>
-        <div class="col text-right">
-            <a id="saveButton" href class="btn btn-success"><i class="fas fa-save"></i> Save</a>
-            {% if template %}<a id="cloneButton" href class="btn btn-secondary"><i class="fas fa-clone"></i> Clone</a>{% endif %}
-        </div>
-    </div>
-    <p></p>
-    <div class="p-3">
         <div class="row">
-            <div class="text-left">
-                <button id="goBack" class="btn btn-danger btn-bottoms"><i class="fas fa-arrow-left"></i> Back</button>
-                <div class="dropdown d-inline">
-                    {% if not template %}<button class="btn btn-warning dropdown-toggle btn-bottoms" type="button" id="generateTemplateDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        <i class="fas fa-cogs"></i> Cookbooks
-                    </button>{% endif %}
-                    <div class="dropdown-menu btn-bottoms" aria-labelledby="generateTemplateDropdown">
-                        {% for item in template_examples %}
-                            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generativeTemplateModal" data-template-name="{{ item.template_name }}" data-processor-type="{{ item.processor_type }}">{{ item.name }}</a>
-                            {% if not loop.last and item.processor_type != template_examples[loop.index].processor_type %}
-                                <div class="dropdown-divider"></div>
-                            {% endif %}
-                        {% endfor %}
+            <div class="col text-left">
+                <form class="mb-3 form-inline">
+                    <div class="form-group">
+                        <input type="text" class="form-control" id="templateName" value="{% if template %}{{ template.name }}{% else %}{{name_random}}{% endif %}">
                     </div>
-                </div>
-                {% if template %}<a id="downloadButton" href class="btn btn-info btn-bottoms" download="template.txt"><i class="fas fa-download"></i> Download</a>{% endif %}
-                <input type="file" id="fileInput" style="display: none;" accept=".txt">
-                {% if not template %}<button id="loadButton" class="btn btn-primary btn-bottoms"><i class="fas fa-upload"></i> Upload</button>{% endif %}
-                {% if template %}<button id="createNode" class="btn btn-outline-dark btn-bottoms"><i class="fas fa-plus"></i> Create Node</button>{% endif %}
+
+                    <button id="{% if template %}renameButton{% else %}generateButton{% endif %}" class="btn btn-secondary">{% if template %}Rename{% else %}Generate Name{% endif %}</button>
+                </form>
+            </div>
+            <div class="col text-right" h-25>
+                <a id="saveButton" href class="btn btn-success"><i class="fas fa-save"></i> Save</a>
+                {% if template %}<a id="cloneButton" href class="btn btn-secondary"><i class="fas fa-clone"></i> Clone</a>{% endif %}
             </div>
         </div>
-    </div>
-
-    <div class="form-group mt-3">
-        <div id="editor" class="form-control" id="templateText" rows="4">{% if template %}{{ template.text }}{% else %}{{empty_template}}{% endif %}</div>
+        <p></p>
+        <div class="p-3">
+            <div class="row">
+                <div class="text-left">
+                    <button id="goBack" class="btn btn-danger btn-bottoms"><i class="fas fa-arrow-left"></i> Back</button>
+                    <div class="dropdown d-inline">
+                        {% if not template %}<button class="btn btn-warning dropdown-toggle btn-bottoms" type="button" id="generateTemplateDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="fas fa-cogs"></i> Cookbooks
+                        </button>{% endif %}
+                        <div class="dropdown-menu btn-bottoms" aria-labelledby="generateTemplateDropdown">
+                            {% for item in template_examples %}
+                                <a class="dropdown-item" href="#" data-toggle="modal" data-target="#generativeTemplateModal" data-template-name="{{ item.template_name }}" data-processor-type="{{ item.processor_type }}">{{ item.name }}</a>
+                                {% if not loop.last and item.processor_type != template_examples[loop.index].processor_type %}
+                                    <div class="dropdown-divider"></div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% if template %}<a id="downloadButton" href class="btn btn-info btn-bottoms" download="template.txt"><i class="fas fa-download"></i> Download</a>{% endif %}
+                    <input type="file" id="fileInput" style="display: none;" accept=".txt">
+                    {% if not template %}<button id="loadButton" class="btn btn-primary btn-bottoms"><i class="fas fa-upload"></i> Upload</button>{% endif %}
+                    {% if template %}<button id="createNode" class="btn btn-outline-dark btn-bottoms"><i class="fas fa-plus"></i> Create Node</button>{% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="form-group mt-3">
+            <div id="editor" class="form-control" id="templateText" rows="4">{% if template %}{{ template.text }}{% else %}{{empty_template}}{% endif %}</div>
+        </div>
     </div>
 </div>
 {% endblock %}

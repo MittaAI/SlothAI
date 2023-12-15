@@ -35,3 +35,4 @@ Pillow==10.1.0
 pydub==0.25.1
 ffmpeg-python==0.2.0
 pandas==2.1.2
+mistralai==0.0.8
