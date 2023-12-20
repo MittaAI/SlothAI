@@ -56,7 +56,6 @@ def get_template(template_id):
         "tokens": _tokens
     }
 
-    print(data)
     if template:
         return jsonify(data)
     else:
@@ -125,8 +124,14 @@ def generate_name():
             name_random = random_name(2).split('-')[0]
             if len(name_random) < 9:
                 break
-        if not Node.get(name=name_random):
+
+        template_service = app.config['template_service']
+        template = template_service.get_template(user_id=current_user.uid, name=name_random)
+        
+        # check if we have this name already
+        if not template:
             break
+
     return jsonify({"name": name_random})
 
 

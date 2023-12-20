@@ -41,7 +41,7 @@ import datetime
 import warnings
 warnings.filterwarnings("ignore")
 
-from SlothAI.web.custom_commands import random_word, random_sentence, chunk_with_page_filename, filter_shuffle
+from SlothAI.web.custom_commands import random_word, random_sentence, chunk_with_page_filename, filter_shuffle, random_entry
 from SlothAI.web.models import User, Node, Pipeline
 
 from SlothAI.lib.tasks import Task, process_data_dict_for_insert, auto_field_data, transform_data, get_values_by_json_paths, box_required, validate_dict_structure, TaskState, NonRetriableError, RetriableError, MissingInputFieldError, MissingOutputFieldError, UserNotFoundError, PipelineNotFoundError, NodeNotFoundError, TemplateNotFoundError
@@ -53,6 +53,7 @@ import SlothAI.lib.services as services
 env = Environment()
 env.globals['random_word'] = random_word
 env.globals['random_sentence'] = random_sentence
+env.globals['random_entry'] = random_entry
 env.globals['chunk_with_page_filename'] = chunk_with_page_filename
 env.filters['shuffle'] = filter_shuffle
 
@@ -71,7 +72,6 @@ def safe_tojson(value):
             return value
 
     processed_data = handle_undefined(value)
-    print(processed_data)
     return json.dumps(processed_data)
 
 
@@ -181,7 +181,7 @@ def jinja2(node: Dict[str, any], task: Task) -> Task:
             jinja = jinja_template.render(task.document)
 
     except Exception as e:
-        raise NonRetriableError(f"Unable to render jinja: {e} :: If you are using the |to_json filter, switch to |safe_tojson to surface the missing variables in the document.")
+        raise NonRetriableError(f"Unable to render jinja: {e}. You may want to use |safe_tojson to handle null entries and check your syntax.")
 
     try:
         jinja_json = json.loads(jinja)
@@ -517,21 +517,29 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
     
+    # do we need this?
     extras = node.get('extras', None)
     if not extras:
         raise NonRetriableError("embedding processor: extras not found but is required")
     
     model = extras.get('model')
     if not model:
-        raise NonRetriableError("embedding processor: model not found in extras but is required")
+        raise NonRetriableError("Model not found in extras but is required.")
 
     input_fields = template.get('input_fields')
     if not input_fields:
-        raise NonRetriableError("embedding processor: input_fields required.")
-    
+        raise NonRetriableError("Input fields are required.")
+
     output_fields = template.get('output_fields')
     if not output_fields:
-        raise NonRetriableError("embedding processor: output_fields required.")
+        output_fields = []
+        for input_field in input_fields:
+            # Define the output field name for embeddings
+            output_fields.append(f"{input_field.get('name')}_embedding")
+    else:
+        # fields are defined in output_fields    
+        if len(output_fields) != len(inputs_fields):
+            raise NonRetriableError("Input and output fields must be of the same length.")
 
     if task.document.get('batch_size'):
         batch_size = int(task.document.get('batch_size'))
@@ -541,18 +549,14 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
         batch_size = 5
 
     # Loop through each input field and produce the proper output for each <key>_embedding output field
-    for input_field in input_fields:
+    for index, input_field in enumerate(input_fields):
         input_field_name = input_field.get('name')
-
-        # Define the output field name for embeddings
-        output_field = f"{input_field_name}_embedding"
-
-        # Check if the output field is in output_fields
-        if output_field not in [field['name'] for field in output_fields]:
-            raise NonRetriableError(f"'{output_field}' is not in 'output_fields'.")
 
         # Get the input data chunks
         input_data = task.document.get(input_field_name)
+
+        # Define the output field name for embeddings
+        output_field = output_fields[index]
 
         # Initialize a list to store the embeddings
         embeddings = []
@@ -712,11 +716,12 @@ def aichat(node: Dict[str, any], task: Task) -> Task:
     
     elif "gemini-pro" in task.document.get('model'):
         model = task.document.get('model')
+
         if not task.document.get('gemini_token'):
             raise NonRetriableError(f"You'll need to specify a 'gemini_token' in extras to use the {model} model.")
+        genai.configure(api_key=task.document.get('gemini_token'))
 
         template_text = Template.remove_fields_and_extras(template.get('text'))
-
         if template_text:
             jinja_template = env.from_string(template_text)
             prompt = jinja_template.render(task.document)
@@ -1709,9 +1714,6 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
 
-    # OpenAI only for now
-    openai.api_key = task.document.get('openai_token')
-
     if not template:
         raise TemplateNotFoundError(template_id=node.get('template_id'))
 
@@ -1724,23 +1726,6 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
         field_name = field['name']
         if field_name not in task.document:
             raise NonRetriableError(f"Input field '{field_name}' is not present in the document.")
-
-    # stuff this into util.py TODO
-    f = False
-    for index, output_field in enumerate(output_fields):
-        if "uri" in output_field.get('name'):
-            f = True
-            break
-    else:
-        raise NonRetriableError("You must have 'uri' defined in output_fields. This will return URL(s) for retrieving the audio file(s).")
-
-    # voice and model
-    voice = task.document.get('voice')
-    model = task.document.get('model')
-    if not voice:
-        voice = "alloy"
-    if not model:
-        model = "tts-1"
     
     # user stuff, arguable we need it
     user = User.get_by_uid(uid=task.user_id)
@@ -1774,22 +1759,52 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
     else:
         items = [task.document.get(input_field)]
 
+    model = task.document.get('model')
+    if not model:
+        raise NonRetriableError("A key for 'model' must be defined and be one of ['tts-1','eleven_multilingual_v2','eleven_monolingual_v1'].")
+
     task.document['uri'] = []
     
     # loop through items to process
     for index, item in enumerate(items):
-        response = openai.audio.speech.create(
-            model = model,
-            voice = voice,
-            input = item
-        )
+        # template the string, if needed
+        template_text = Template.remove_fields_and_extras(item)
+        template_text = template_text.strip()
 
-        # Example usage
+        try:
+            if template_text:
+                jinja_template = env.from_string(template_text)
+                item = jinja_template.render(task.document)
+        except:
+            pass
+
+        if isinstance(task.document.get('voice'), list):
+            voice = task.document.get('voice')[index]
+        elif isinstance(task.document.get('voice'), str):
+            voice = task.document.get('voice')
+
+        if "tts" in model:
+            openai.api_key = task.document.get('openai_token')
+            if not voice:
+                voice = "alloy"
+            response = openai.audio.speech.create(model=model, voice=voice, input=item)
+            
+            # Assuming 'response.content' contains the binary content of the audio file
+            audio_data = response.content
+
+        elif "eleven" in model:
+            try:
+                from elevenlabs import voices, generate, set_api_key
+                set_api_key(task.document.get('elevenlabs_token'))
+                if not voice:
+                    voice = "Nicole"
+                audio_data = generate(text=item, voice=voice, model=model)
+            except:
+                raise NonRetriableError("Something went wrong wih the call to ElevenLabs.")
+
+        # save audio file
         new_filename = add_index_to_filename(filename, index)
         
-        # Assuming 'response.content' contains the binary content of the audio file
-        audio_data = response.content
-
         content_type = 'audio/mpeg'  # Set the appropriate content type for the audio file
         bucket_uri = upload_to_storage_requests(uid, new_filename, audio_data, content_type)
 
@@ -1798,7 +1813,7 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
 
     return task
 
-
+# audio input, text output
 @processor
 def aiaudio(node: Dict[str, any], task: Task) -> Task:
     template_service = app.config['template_service']
@@ -1865,8 +1880,9 @@ def aiaudio(node: Dict[str, any], task: Task) -> Task:
     for chunk_stream in audio_chunks:
         # process the audio
         model = task.document.get('model', "whisper-1")
-        transcript = openai.audio.transcriptions.create(model=model, file=chunk_stream)
-
+        if "whisper" in model:
+            transcript = openai.audio.transcriptions.create(model=model, file=chunk_stream)
+        
         # split on words
         words = transcript.text.split(" ")
         chunks = []
@@ -1924,6 +1940,12 @@ def read_fb(node: Dict[str, any], task: Task) -> Task:
                 raise NonRetriableError("Unable to template your SQL to the shared database. Check syntax.")
         else:
             raise NonRetriableError("Specify a 'table' key and value and template the table in your SQL.")
+
+    # rewrite show tables
+    pattern = r'\b(show|tables)\b'
+    matches = re.findall(pattern, sql.lower())
+    if matches:
+        raise NonRetriableError("SHOW TABLE functions are disabled for shared database access. Add a FeatureBase account to settings to enable advanced queries.")
 
     resp, err = featurebase_query(document=doc)
     if err:
@@ -2004,7 +2026,6 @@ def write_fb(node: Dict[str, any], task: Task) -> Task:
     if err:
         raise NonRetriableError("Can't connect to database. Check your FeatureBase connection.")
     
-
     # if it doesn't exists, create it
     if not tbl_exists:
         create_schema = Schemar(data=data).infer_create_table_schema() # check data.. must be lists

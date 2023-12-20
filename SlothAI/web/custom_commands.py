@@ -28,12 +28,17 @@ def random_word():
     fake = Faker()
     return fake.word()
 
+@custom_commands.app_template_global()
+def random_entry(texts):
+    if texts and isinstance(texts, list) and len(texts) > 0:
+        return random.choice(texts)
+    else:
+        return texts
 
 @custom_commands.app_template_global()
 def random_sentence():
     fake = Faker()
     return fake.sentence()
-
 
 @custom_commands.app_template_global()
 def chunk_with_page_filename(texts, filename, length=512, start_page=1, overlap=0):

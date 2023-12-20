@@ -680,6 +680,7 @@ $(document).ready(function () {
 
     // Function to store state in cookies
     function storeState(name, value) {
+        toastr.info("storing state")
         document.cookie = name + "=" + JSON.stringify(value) + "; expires=Fri, 31 Dec 9999 23:59:59 GMT";
     }
 

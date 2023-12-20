@@ -272,7 +272,7 @@ $(document).ready(function() {
             var pipe_id = "{{pipeline.get('pipe_id')}}";
             container.append($('<a href="/templates/'+nodeTemplateID+'">Edit Template</a><br/>'));
             container.append($('<a href="/nodes/'+nodeID+'">Edit Node</a><br/>'));
-            container.append($('<a href="/pipelines/'+pipe_id+'/'+nodeID+'/delete">Delete Node</a>'));
+            container.append($('<a href="/pipelines/'+pipe_id+'/'+nodeID+'/delete">Remove Node</a>'));
             nodeButton.popover({
                 content: container.html(),
                 trigger: 'focus',

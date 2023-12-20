@@ -83,7 +83,8 @@ template_examples = [
     {"name": "Generate scene text from image (Gemini)", "template_name": "image_to_text_gemini", "processor_type": "aivision"},
     {"name": "Generate scene text from image (OpenAI GPT)", "template_name": "image_to_scene", "processor_type": "aivision"},
     {"name": "Transcribe audio to text pages", "template_name": "audio_to_text", "processor_type": "aiaudio"},
-    {"name": "Convert text to speech audio", "template_name": "text_to_speech", "processor_type": "aispeech"},
+    {"name": "Convert text to speech (OpenAI)", "template_name": "text_to_speech", "processor_type": "aispeech"},
+    {"name": "Convert text to speech (ElevenLabs)", "template_name": "text_to_speech_el", "processor_type": "aispeech"},
 ]
 
 def get_brand(app):

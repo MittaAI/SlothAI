@@ -111,6 +111,10 @@ form, label {
   outline: 0;
 }
 
+.rotate {
+  transform: rotate(180deg); /* Rotate the character 180 degrees */
+}
+
 /* Editor styles */
 #editor {
   height: 50vw;
