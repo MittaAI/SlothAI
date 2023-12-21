@@ -236,12 +236,12 @@ $(document).ready(function() {
     });
 
     // Load and apply saved sorting order
-    loadState('sortingOrder', function(order) {
+    loadState('templateSortingOrder', function(order) {
         table.order(order).draw();
     });
 
     // Load and apply saved page length
-    loadState('pageLength', function(length) {
+    loadState('templatePageLength', function(length) {
         table.page.len(length).draw();
     });
 
@@ -253,12 +253,12 @@ $(document).ready(function() {
 
     // Save sorting order when a column header is clicked
     table.on('order.dt', function() {
-        storeState('sortingOrder', table.order());
+        storeState('templateSortingOrder', table.order());
     });
 
     // Save page length when it changes
     $('select[name="templatesTable_length"]').on('change', function () {
-        storeState('pageLength', table.page.len());
+        storeState('templatePageLength', table.page.len());
     });
 
     // Event listener for DataTables search box
