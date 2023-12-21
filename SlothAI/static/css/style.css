@@ -250,6 +250,10 @@ nav h2 a:hover {
   color: white;
 }
 
+.lead {
+  font-size: 16px;
+}
+
 .badge-dark {
   padding-top: 5px;
   height: 24px;
@@ -262,10 +266,6 @@ nav h2 a:hover {
 
 .text-muted {
   margin-bottom: 14px;
-}
-
-.navbar {
-  height: 56px !important;
 }
 
 .log-dates {
@@ -296,8 +296,12 @@ nav h2 a:hover {
 }
 
 /* Navbar and sidebar */
-.navbar, .sidebar {
+.sidebar {
   background-color: #444;
+}
+
+.navbar {
+  background-color:  #484848;
 }
 
 /* Content styles */
@@ -333,6 +337,18 @@ nav h2 a:hover {
     body {
         background-size: cover;
         /* Other background properties as needed */
+    }
+}
+
+/* Media query for Bootstrap 4.6.2 breakpoint */
+@media (max-width: 575.98px) { 
+    .navbar-collapse {
+        display: flex;
+        justify-content: center; /* Center content horizontally */
+    }
+
+    .navbar-collapse .dropdown {
+        flex: 0 0 auto; /* Prevent the dropdown from stretching */
     }
 }
 
@@ -490,9 +506,8 @@ span.log-expand {
   width: 15%;
   max-width: 192px;
   position: fixed;
-  top: 56px;
   left: 0;
-  padding-top: 16px;
+  padding-top: 23px;
   transition: width 0.3s;
 }
 
