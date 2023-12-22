@@ -45,8 +45,9 @@ processors = [
 
 # template examples
 template_examples = [
-    {"name": "Start with a callback", "template_name": "get_started_callback", "processor_type": "callback"},
     {"name": "Generate random words", "template_name": "get_started_random_word", "processor_type": "jinja2"},
+    {"name": "Generate sentence from words (OpenAI)", "template_name": "words_to_sentence", "processor_type": "aichat"},
+    {"name": "Return data with a callback", "template_name": "get_started_callback", "processor_type": "callback"},
     {"name": "Convert text to embedding", "template_name": "text_to_embedding", "processor_type": "embedding"},
     {"name": "Convert text to a Gemini embedding", "template_name": "text_to_gemini_embedding", "processor_type": "embedding"},
     {"name": "Convert text to a Mistral embedding", "template_name": "text_to_mistral_embedding", "processor_type": "embedding"},

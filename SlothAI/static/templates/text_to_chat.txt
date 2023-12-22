@@ -1,6 +1,6 @@
 {# Use this template to drive a generative chat processor. #}
 
-{# Define the input_fields used in this template; user_history alternates user,assistant,user,assistant.. #}
+{# Define the input_fields used in this template #}
 {# Remove user_history if you don't want to use a history #}
 input_fields = [{'name': "objects", 'type': "stringset"},{'name': "words", 'type': "strings"}]
 

@@ -134,7 +134,7 @@ def login_post():
         print(ex)
         # reset the offer
         flash("Need to validate an email address.")
-        return redirect(url_for('auth.email'))
+        return redirect(url_for('auth.login'))
 
     # handle bots filling out forms
     transaction_id = request.form.get('transaction_id')
@@ -338,7 +338,7 @@ def verify_phone():
 
     # no email?
     if not email:
-        return redirect(url_for('auth.email'))
+        return redirect(url_for('auth.login'))
     
     # find the user and set hint
     user = User.get_by_email(email)
@@ -369,7 +369,7 @@ def verify_phone_post():
     # check the length
     if len(digits) > 4:
         flash("Verify the last 4 digits of your phone number!")
-        return redirect(url_for('auth.email', **options))
+        return redirect(url_for('auth.login', **options))
     
     # find the user again and get their code
     user = User.get_by_email(email)
@@ -388,7 +388,7 @@ def verify_phone_post():
         else:
             options['use_token'] = 1
             flash("Unable to send SMS token. You'll need to login with an email token.")
-            return redirect(url_for('auth.email', **options))
+            return redirect(url_for('auth.login', **options))
     else:
         # silently reset the code, because validation was wrong
         with client.context():
@@ -479,7 +479,7 @@ def token_post():
     email = request.args.get('email')
 
     if not mail_token:
-        return redirect(url_for('auth.email'))
+        return redirect(url_for('auth.login'))
 
     # url paste login
     next_url = request.args.get('next')
@@ -545,7 +545,7 @@ def phone():
     if not email:
         # redirect with options for gathering phone
         options = {'op': 1, 'next': url_for('auth.phone')}
-        return redirect(url_for('auth.email',**options))
+        return redirect(url_for('auth.login',**options))
 
     next_url = request.args.get('next')
     if not next_url:
@@ -638,7 +638,7 @@ def tfa_post():
             phone = user.phone
     except:
         # no user, no email, so return
-        return redirect(url_for('auth.email'))
+        return redirect(url_for('auth.login'))
 
     # check if the code is correct
     # we update user below
@@ -663,7 +663,7 @@ def tfa_post():
                 user.put() 
 
         flash("Wrong code. Try again!")
-        return redirect(url_for('auth.email', **options))
+        return redirect(url_for('auth.login', **options))
 
     # update user
     with client.context():

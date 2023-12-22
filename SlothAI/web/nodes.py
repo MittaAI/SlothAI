@@ -156,7 +156,6 @@ def update_extras(node_id):
     if not node:
         return jsonify({"error": "Node not found"}), 404
 
-
     # process service tokens
     _extras = {}
     for _key, _value in extras.items():

@@ -17,9 +17,9 @@
 
           </div>
           <div class="col-md-6 text-left">
-            <h1 style="font-family: Roboto; font-weight: 700; font-size: 32px; opacity: 100%; padding-top: 23px;">Accelerate Your Data Workflow with AI-Powered Pipelines</h1>
+            <h1 style="font-family: Roboto; font-weight: 700; font-size: 32px; opacity: 100%; padding-top: 23px;">Accelerate  Data Workflows <br/>with AI-Powered Pipelines</h1>
             <p class="lead">Effortlessly manage document AI workflows with Python templates and an integrated database and vector storage you can query with SQL. Join our Open Beta now.</p>
-            <a href="/pipelines" class="btn btn-outline-light btn-bottoms" type="button">{% if username != 'anonymous' %}Dashboard{% else %}Join Beta{% endif %}</a>
+            <a href="/pipelines" class="btn btn-outline-light btn-bottoms" type="button">{% if username != 'anonymous' %}Dashboard{% else %}Try Now{% endif %}</a>
             <a href="https://discord.gg/dZPH8JFxvY" class="btn btn-outline-light btn-bottoms" type="button"><i class="fab fa-discord"></i> Discord</a>
             <a href="https://github.com/MittaAI/SlothAI" class="btn btn-outline-light btn-bottoms" type="button"><i class="fab fa-github"></i> Code</a>
             </div>
@@ -37,12 +37,10 @@
   	        <h1 style="font-size: 38px; opacity: 100%;">Build <strong>Strong</strong> AI Applications</h1>
   	        <p class="lead">{{brand.get('name')}} is a pipeline service built for large scale document and data indexing, processing and querying. It offers developers a quick and easy way to build AI applications (and bots) using transformational document chains powered by <a href="https://jinja.palletsprojects.com/en/3.1.x/templates/">Jinja2 templates</a>. Documents, and their contents, may be deseralized and transformed by the system in parallel during processing using task queues and containers for scale and speed. {{brand.get('name')}} supports calls to <a href="https://platform.openai.com/docs/api-reference">OpenAI</a>, <a href="https://mistral.ai/">MistralAI</a>, <a href="https://deepmind.google/technologies/gemini/">Google Gemini</a>, <a href="https://elevenlabs.io">ElevenLabs</a> speech models, and Google's <a href="https://cloud.google.com/document-ai?hl=en">Document and Vision</a> APIs, in addition to other machine learning models. Document transformation types supported by the system include PDFs, text files, CSVs, images, JSON, audio files, webpages, and more.</p>
 
-            <h3 style="padding-top: 30px;">Open Beta</h3>
+            <h3 style="padding-top: 30px;">Need assistance?</h3>
             <p class="lead">
-              MittaAI is in Open Beta. Any accounts set up before the Beta concludes on <strong>2024/03/01</strong>, and which have actively <a href="https://www.youtube.com/watch?v=ntLqz38hC60">created and utilized a pipeline</a>, will be eligible for a complimentary year of our standard account, normally valued at $799*. If you encounter any issues using the system, we encourage you to reach out for support by <a href="https://github.com/MittaAI/SlothAI/issues">opening a ticket</a> or joining the conversation on our <a href="{{brand.get('discord_url')}}">Discord</a> channel.
+              If you need support, or encounter any issues using the system, we encourage you to reach out by <a href="https://github.com/MittaAI/SlothAI/issues">opening a ticket</a> or joining the conversation on our <a href="{{brand.get('discord_url')}}">Discord</a> server.
             </p>
-            <p>*Limit one account per organization. User must sign up with an organization's domain to be eligible.</p>
-
 
             <img src="/images/screenshot.png" style="border-radius: 10px; max-width: 100%; height: auto; margin: 20px 0 30px 0;" />
 
@@ -62,12 +60,6 @@
             <h3 style="padding-top: 30px;">Innovative Bot Building</h3>
             <p class="lead">Bots, or artificial intelligence powered agents, can be built with {{brand.get('name')}} by creating indexing and querying pipelines for documents, webpages, or other types of document media and then referencing those document fragments in prompt templates built for discussion using vector search. AI agents are more useful when their data is up-to-date, or they have the ability to reference material found on the Web, through searching. {{brand.get('name')}} provides real-time web content retrieval, document storage, indexing, agent history (memory) operations, and more.</p>
             <a href="/cookbooks#pirate-bot" class="btn btn-outline-dark"><i class="fas fa-code-branch"></i> View Cookbook</a>
-
-            <h3 style="padding-top: 30px;">Intelligent Enterprise Search</h3>
-            <p class="lead">In enterprise search use cases, the integration of vector search with documents provides more accurate and contextually relevant results from LLMs by extracting or generating semantic relationships within a set of documents, and then using that generative data to augment the prompts sent to the AI for assembly. These relationships can be extracted from documents automatically using prompts built with {{brand.get('name')}}'s templating system.</p>
-
-            <h3 style="padding-top: 30px;">Effortless ETL</h3>
-            <p class="lead">We know firsthand that managing, moving, and transforming data can be a difficult undertaking. {{brand.get('name')}} was designed from the ground up to build and run pipelines which load and transform data seamlessly and automatically using AI agents. The system provides a simple and powerful UI for building AI pipelines quickly and easily, and was built for speed and scale.</p>
 
             <h3 style="padding-top: 30px;">Grounded Storytelling</h3>
             <p class="lead">Stories based on historic customer data and interactions can be used to tell a more efficient and dynamic story about the health of a business and its customers. Take data from dashboards, PDFs, Slack, and more and use AI to make things more explainable to more people. Analyze alerting systems for faster time to resolution, create dynamic content for websites, instructions for use of a product, summarize Slack conversations, get in front of outage issues, or even build dynamic blurbs for homepages, like this one.</p>

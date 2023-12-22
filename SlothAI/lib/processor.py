@@ -179,7 +179,6 @@ def jinja2(node: Dict[str, any], task: Task) -> Task:
         if template_text:
             jinja_template = env.from_string(template_text)
             jinja = jinja_template.render(task.document)
-
     except Exception as e:
         raise NonRetriableError(f"Unable to render jinja: {e}. You may want to use |safe_tojson to handle null entries and check your syntax.")
 
@@ -187,6 +186,7 @@ def jinja2(node: Dict[str, any], task: Task) -> Task:
         jinja_json = json.loads(jinja)
         for k,v in jinja_json.items():
             task.document[k] = v
+
     except Exception as e:
         raise NonRetriableError(f"jinja2 processor: unable to load jinja output as JSON. Try throwing a pair of curly braces at the bottom or consider fixing this error: {e}")
 
@@ -729,7 +729,7 @@ def aichat(node: Dict[str, any], task: Task) -> Task:
             raise NonRetriableError("Couldn't find template text.")
 
         system_prompt = task.document.get('system_prompt', "You are a helpful assistant.")
-        
+
         # upgrade model to genai
         model = genai.GenerativeModel(model)
         response = model.generate_content(f"system: {system_prompt}\n\n{prompt}")
@@ -1188,7 +1188,7 @@ def aiimage(node: Dict[str, any], task: Task) -> Task:
     try:
         output_field = output_fields[0].get('name')
     except:
-        output_field = "objects"
+        output_field = "uri"
 
     # Check if each input field is present in 'task.document'
     input_fields = template.get('input_fields')
@@ -1516,7 +1516,7 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
             # patch all the None fields
             for index, row in df.to_dict(orient='list').items():
                 row_data = []
-                row_type = None  # Reset row_type for each row
+                row_type = None  # Reset row_type for each row 
 
                 # Determine the row_type by scanning the entire column if needed
                 for col_index, item in enumerate(row):
@@ -1718,8 +1718,17 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
         raise TemplateNotFoundError(template_id=node.get('template_id'))
 
     output_fields = template.get('output_fields')
-    input_fields = template.get('input_fields')
+    # Check that there is no more than one output field
+    if len(output_fields) > 1:
+        raise NonRetriableError("Only one output field is allowed in 'output_fields'.")
 
+    # use the first output field, or set one
+    try:
+        output_field = output_fields[0].get('name')
+    except:
+        output_field = "uri"
+
+    input_fields = template.get('input_fields')    
     # needs to be moved
     # scan for required fields in the input
     for field in input_fields:
@@ -1741,7 +1750,8 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
             input_field = _input_field.get('name')
 
     # set the filename from the document
-    if uses_filename:
+    filename = task.document.get('filename')
+    if uses_filename and 'mp3' not in filename:
         filename = task.document.get('filename')
         if not filename:
             raise NonRetriableError("If you specify an input field for filename, you must provide one for use in this node.")
@@ -1762,8 +1772,6 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
     model = task.document.get('model')
     if not model:
         raise NonRetriableError("A key for 'model' must be defined and be one of ['tts-1','eleven_multilingual_v2','eleven_monolingual_v1'].")
-
-    task.document['uri'] = []
     
     # loop through items to process
     for index, item in enumerate(items):
@@ -1782,6 +1790,8 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
             voice = task.document.get('voice')[index]
         elif isinstance(task.document.get('voice'), str):
             voice = task.document.get('voice')
+        else:
+            voice = False
 
         if "tts" in model:
             openai.api_key = task.document.get('openai_token')
@@ -1798,6 +1808,7 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
                 set_api_key(task.document.get('elevenlabs_token'))
                 if not voice:
                     voice = "Nicole"
+
                 audio_data = generate(text=item, voice=voice, model=model)
             except:
                 raise NonRetriableError("Something went wrong wih the call to ElevenLabs.")
@@ -1809,7 +1820,10 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
         bucket_uri = upload_to_storage_requests(uid, new_filename, audio_data, content_type)
 
         access_uri = f"https://{app.config.get('APP_DOMAIN')}/d/{user.get('name')}/{new_filename}?token="
-        task.document['uri'].append(access_uri)
+
+        if not task.document.get(output_field):
+            task.document[output_field] = []
+        task.document[output_field].append(access_uri)
 
     return task
 
@@ -2118,9 +2132,13 @@ def evaluate_extras(node, task) -> Dict[str, any]:
     # get the node's current extras, which may be templated
     extras = node.get('extras', {})
 
-    # combine with inputs
-    combined_dict = extras.copy()
-    combined_dict.update(task.document)
+    # combine with document (extras in node will overwrite entries in document)
+    combined_dict = task.document.copy()
+    combined_dict.update(extras)
+
+    # we used to do it the other way around
+    # combined_dict = extras.copy()
+    # combined_dict.update(task.document)
 
     user = User.get_by_uid(task.user_id)
     combined_dict['username'] = user.get('name')
@@ -2131,7 +2149,8 @@ def evaluate_extras(node, task) -> Dict[str, any]:
     extras_eval = ast.literal_eval(extras_from_template)
 
     # remove the keys that were in the document
-    extras_eval = {key: value for key, value in extras_eval.items() if key not in task.document}
+    # extras_eval = {key: value for key, value in extras_eval.items() if key not in task.document}
+    # instead, leave the keys
 
     return extras_eval
 
@@ -2145,7 +2164,9 @@ def clean_extras(extras: Dict[str, any], task: Task):
     if extras:
         for k in extras.keys():
             if k in task.document.keys():
-                del task.document[k]
+                for item in ['secret', 'token', 'password']:
+                    if item in k:
+                        del task.document[k]
     return task
 
 

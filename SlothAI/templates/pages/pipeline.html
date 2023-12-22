@@ -45,7 +45,7 @@
         <p>The pipeline is used by POST'ing data to the task ingestion endpoint:</p>
 
         <ul class="nav nav-tabs" id="codeTabs" role="tablist">
-            {% if (nodes[0].processor == 'jinja2' or nodes[0].processor == 'info_file') and nodes[0].extras.get('upload') == True %}
+            {% if (nodes[0].processor == 'jinja2' or nodes[0].processor == 'info_file') and nodes[0].extras.get('upload') %}
             <li class="nav-item">
                 <a class="nav-link upload-tab" id="upload-files-tab" data-toggle="tab" href="#upload-files" role="tab" aria-controls="upload" aria-selected="false">Upload</a>
             </li>
@@ -85,7 +85,7 @@
                 <input type="file" id="fileInput" style="display: none;" accept=".pdf, .txt, .jpg, .jpeg, .png, .bmp">
                 <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
             </div>
-            {% elif nodes[0].processor == 'jinja2' and nodes[0].extras.get('upload') == True %}
+            {% elif nodes[0].processor == 'jinja2' and nodes[0].extras.get('upload') %}
             <div class="tab-pane fade" id="upload-files" role="tabpanel" aria-labelledby="upload-files-tab">
                 <p></p>
                 <p>You may upload single files (<strong>.pdf, .txt, .jpg, .jpeg, .png, or .bmp</strong>) to this pipeline. To upload multiple files, please use the code examples.</p>

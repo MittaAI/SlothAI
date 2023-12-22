@@ -12,17 +12,16 @@
     <meta property='og:title' content="{{ brand.get('name') }}" />
     {% endblock %}
 
-    <meta property="og:image" content="/images/sloth.png" />
-    <meta property="og:description" content="Blazing Fast AI Pipelines" />
+    <meta property="og:image" content="https://mitta.ai/images/speed.png" />
+    <meta property="og:description" content="Accelerate Your Data Workflow with AI-Powered Pipelines" />
     <meta property="og:url" content="{{ brand.get('service_url') }}" />
-    <meta property="og:title" content="{{ brand.get('name') }}" />
     <meta property="og:site_name" content="{{ brand.get('name') }}">
 
     <meta name="twitter:card" content="summary_large_image" /> <!-- This specifies a large image card -->
     <meta name="twitter:site" content="{{ brand.get('twitter_handle') }}" /> <!-- Replace with your Twitter handle -->
     <meta name="twitter:title" content="{{ brand.get('name') }}" />
-    <meta name="twitter:description" content="Blazing Fast AI Pipelines" />
-    <meta name="twitter:image" content="/images/sloth.png" />
+    <meta name="twitter:description" content="Accelerate Your Data Workflow with AI-Powered Pipelines" />
+    <meta name="twitter:image" content="https://mitta.ai/images/speed.png" />
 
     <link rel="shortcut icon" href="/images/favicon.ico">
 
@@ -34,6 +33,17 @@
     <link rel="stylesheet" href="/css/jquery-ui.css">
     <link rel="stylesheet" href="/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="/css/style.css">
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-11454464074">
+    </script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'AW-11454464074');
+    </script>
 
     {% block style %}
     {% endblock %}
