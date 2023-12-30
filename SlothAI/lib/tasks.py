@@ -149,11 +149,11 @@ def box_required():
 				response_time = ping(box.get('ip_address'), timeout=2.0)  # Set a 2-second timeout
 
 				if response_time and check_webserver_connection(box.get('ip_address'), 9898):
-					print("pinging", box.get('ip_address'), response_time, box.get('status'))
+					# print("pinging", box.get('ip_address'), response_time, box.get('status'))
 					# ping worked and the server responded
 					active_t4s.append(box)
 				else:
-					print("box is not running")
+					# print("box is not running")
 					halted_t4s.append(box)
 			else:
 				# box wasn't RUNNING or at START

@@ -482,36 +482,6 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
     return task
 
 
-def sloth_embedding(input_field: str, output_field: str, model: str, task: Task) -> Task:
-
-    data = {
-        "text": task.document[input_field],
-        "model": model
-        # data = get_values_by_json_paths(keys, task.document)
-        # TODO: could be a nested key
-    }
-
-    defer, selected_box = box_required()
-    if defer:
-        raise RetriableError("sloth virtual machine is being started")
-    
-    url = f"http://sloth:{app.config['SLOTH_TOKEN']}@{selected_box.get('ip_address')}:9898/embed"
-
-    try:
-        # Send the POST request with the JSON data
-        response = requests.post(url, data=json.dumps(data), headers={"Content-Type": "application/json"}, timeout=60)
-    except Exception as ex:
-        raise NonRetriableError(f"Exception raised connecting to sloth virtual machine: {ex}")
-
-    # Check the response status code for success
-    if response.status_code == 200:
-        task.document[output_field] = response.json().get("embeddings")
-    else:
-        raise NonRetriableError(f"Embedding server is overloaded. Error code: {response.status_code}. The likely reason is that you've asked to embed too many things at once. Try splitting your tasks.")
-
-    return task
-
-
 @processor
 def embedding(node: Dict[str, any], task: Task) -> Task:
     template_service = app.config['template_service']
@@ -532,13 +502,12 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
 
     output_fields = template.get('output_fields')
     if not output_fields:
-        output_fields = []
-        for input_field in input_fields:
-            # Define the output field name for embeddings
-            output_fields.append(f"{input_field.get('name')}_embedding")
+        output_fields = [f"{input_field.get('name')}_embedding" for input_field in input_fields]
     else:
-        # fields are defined in output_fields    
-        if len(output_fields) != len(inputs_fields):
+        # Ensure output_fields is a list of names only
+        output_fields = [field['name'] for field in output_fields if 'name' in field]
+
+        if len(output_fields) != len(input_fields):
             raise NonRetriableError("Input and output fields must be of the same length.")
 
     if task.document.get('batch_size'):
@@ -623,9 +592,41 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
                 raise NonRetriableError(f"Exception talking to Mistral embedding: {ex}")
 
         elif "instructor" in model:
-            # just skip everything and deal with the task
-            # needs a rewrite
-            task = sloth_embedding(input_field_name, output_field, model, task)
+            # Call box_required to get the selected box details
+            defer, selected_box = box_required()
+            if defer:
+                raise RetriableError("Sloth virtual machine is being started.")
+
+            sloth_url = f"http://sloth:{app.config['SLOTH_TOKEN']}@{selected_box.get('ip_address')}:9898/embed"
+
+            try:
+                # Initialize a list to store the embeddings
+                embeddings = []
+
+                for i in range(0, len(input_data), batch_size):
+                    batch = input_data[i:i + batch_size]
+
+                    # Prepare the data for the POST request
+                    sloth_data = {
+                        "text": batch,
+                        "model": model
+                    }
+
+                    # Send the POST request to the Sloth embedding service
+                    response = requests.post(sloth_url, json=sloth_data, headers={"Content-Type": "application/json"}, timeout=60)
+
+                    # Check the response and extract embeddings
+                    if response.status_code == 200:
+                        batch_embeddings = response.json().get("embeddings")
+                        embeddings.extend(batch_embeddings)
+                    else:
+                        raise NonRetriableError(f"Embedding server is overloaded. Error code: {response.status_code}")
+
+                # Add the embeddings to the output field in the task document
+                task.document[output_field] = embeddings
+            except Exception as ex:
+                app.logger.info(f"embedding processor: {ex}")
+                raise NonRetriableError(f"Exception talking to Sloth embedding: {ex}")
 
     return task
 
@@ -1848,8 +1849,17 @@ def aiaudio(node: Dict[str, any], task: Task) -> Task:
 
     user = User.get_by_uid(uid=task.user_id)
     uid = user.get('uid')
+    
     filename = task.document.get('filename')
     content_type = task.document.get('content_type')
+
+    # Check if 'filename' is a list, and if so, get the first element
+    if isinstance(filename, list) and len(filename) > 0:
+        filename = filename[0]
+
+    # Check if 'content_type' is a list, and if so, get the first element
+    if isinstance(content_type, list) and len(content_type) > 0:
+        content_type = content_type[0]
 
     # Check if the mime type is supported
     supported_content_types = ['audio/mpeg', 'audio/mpeg3', 'audio/x-mpeg-3', 'audio/mp3', 'audio/mpeg-3', 'audio/wav', 'audio/webm', 'audio/mp4', 'audio/x-m4a', 'audio/m4a', 'audio/x-wav']
