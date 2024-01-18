@@ -1,4 +1,4 @@
-six==1.16.
+six==1.16.0
 Flask==2.3.3
 Jinja2==3.1.2
 Werkzeug==2.3.8

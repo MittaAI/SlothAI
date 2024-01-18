@@ -347,6 +347,132 @@ def aigrub(node: Dict[str, any], task: Task) -> Task:
 
     return task
 
+
+@processor
+def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
+    # Retrieve the template
+    template_service = app.config['template_service']
+    template = template_service.get_template(template_id=node.get('template_id'))
+
+    # Get user information
+    user = User.get_by_uid(uid=task.user_id)
+    uid = user.get('uid')
+
+    # Box selection for embeddings and AIFFMPEG processing
+    defer, selected_box = box_required()
+    if defer:
+        raise RetriableError("Sloth virtual machine is being started to run ffmpeg.")
+
+    # inputs
+    input_fields = template.get('input_fields')
+
+    # Check if each input field is present in 'task.document'
+    for field in input_fields:
+        field_name = field['name']
+        if field_name not in task.document:
+            raise NonRetriableError(f"Input field '{field_name}' is not present in the document.")
+
+    # output file name
+    if not task.document.get('output_file'):
+        task.document['output_file'] = random_string(13)
+    output_file = task.document.get('output_file')
+
+    # Construct the AIFFMPEG service URL using the selected box details
+    ffmpeg_url = f"http://sloth:{app.config['SLOTH_TOKEN']}@{selected_box.get('ip_address')}:5454/convert"
+
+    # Identify the target pipeline for the output
+    target_pipeline = task.document.get('pipeline')
+    if not target_pipeline:
+        raise NonRetriableError("A valid target pipeline name is required for the `pipeline` key.")
+    else:
+        pipeline = Pipeline.get(uid=task.user_id, name=target_pipeline)
+        if not pipeline:
+            raise NonRetriableError("Pipeline not found.")
+        pipe_id = pipeline.get('pipe_id')
+
+    # ffmpeg_string
+    ffmpeg_string = task.document.get('ffmpeg_request')
+    if not ffmpeg_string:
+        raise NonRetriableError("The `aiffmpeg` processor or requires a `ffmpeg_request` key with the request to run.")
+
+    # File URL to process (get just the first one)
+    mitta_uri = task.document.get('mitta_uri')[0]
+
+    if not mitta_uri:
+        raise NonRetriableError("The `aiffmpeg` processor requires a `mitta_uri` key with the media file URL. Use the info_file processor to upload or access the file.")
+    else:
+        mitta_uri = f"{mitta_uri}?token={user.get('api_token')}"
+
+      # Callback URL
+    if app.config["DEV"] == "True":
+        callback_url = f"{app.config['NGROK_URL']}/pipeline/{pipe_id}/task?token={user.get('api_token')}"
+    else:
+        callback_url = f"https://mitta.ai/pipeline/{pipe_id}/task?token={user.get('api_token')}"
+
+    # get the model and begin
+    model = task.document.get('model')
+
+    # load the template
+    template_text = Template.remove_fields_and_extras(template.get('text'))
+
+    if template_text:
+        jinja_template = env.from_string(template_text)
+        prompt = jinja_template.render(task.document)
+    else:
+        raise NonRetriableError("Couldn't find template text.")
+
+    # negotiate the format
+    if model == "gpt-3.5-turbo-1106" and "JSON" in prompt:
+        system_content = task.document.get('system_content', "You write JSON for the user, which are used to drive an ffmpeg file conversion.")
+        response_format = {'type': "json_object"}
+    else:
+        system_content = task.document.get('system_content', "You write JSON dictionaries for the user, which are used to drive an ffmpeg file conversion, without using text markup or wrappers.\nYou output things like:\n'''ai_dict={'akey': 'avalue'}'''")
+        response_format = None
+
+    # call the ai
+    err, ai_dict = ai_prompt_to_dict(
+        task=task,
+        model=model,
+        prompt=prompt,
+        retries=3
+    )
+
+    if "ffmpeg_command" not in ai_dict:
+        raise NonRetriableError("The AI didn't return an `ffmpeg_command`. Try rewording your query.")
+    if "output_file" not in ai_dict:
+        raise NonRetriableError("The AI didn't return an `output_file`. Try rewording your query or include an `output_file` key in your input fields.")
+
+    # Prepare data for AIFFMPEG service
+    ffmpeg_data = {
+        "uid": uid,
+        "mitta_uri": mitta_uri,
+        "callback_url": callback_url,
+        "ffmpeg_command": ai_dict.get('ffmpeg_command'),
+        "output_file": ai_dict.get('output_file')
+    }
+
+    # Post request to AIFFMPEG service
+    ffmpeg_response = requests.post(
+        ffmpeg_url,
+        json = ffmpeg_data,
+        timeout = 10
+    )
+
+    if ffmpeg_response:
+        ffmpeg_response = ffmpeg_response.json()
+    
+    # Handle response
+    if "result" in ffmpeg_response:
+        if ffmpeg_response.get('result') == "success":
+            task.document['aiffmpeg_status'] = "started"
+        else:
+            raise NonRetriableError("Processing failed. Check the file URL or try another file.")
+    else:
+        raise NonRetriableError("Processing failed with no result. Check the file URL or try another file.")
+
+    return task
+
+
 @processor
 def info_file(node: Dict[str, any], task: Task) -> Task:
     template_service = app.config['template_service']
@@ -679,7 +805,7 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
             # Call box_required to get the selected box details
             defer, selected_box = box_required()
             if defer:
-                raise RetriableError("Sloth virtual machine is being started.")
+                raise RetriableError("Sloth virtual machine is being started to run embeddings.")
 
             sloth_url = f"http://sloth:{app.config['SLOTH_TOKEN']}@{selected_box.get('ip_address')}:9898/embed"
 

@@ -82,7 +82,7 @@
             <div class="tab-pane fade" id="upload-files" role="tabpanel" aria-labelledby="upload-files-tab">
                 <p></p>
                 <p>You may upload single files to this pipeline. To upload multiple files, please use the code examples.</p>
-                <input type="file" id="fileInput" style="display: none;" accept=".pdf, .txt, .jpg, .jpeg, .png, .bmp">
+                <input type="file" id="fileInput" style="display: none;">
                 <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
             </div>
             {% elif nodes[0].processor == 'jinja2' and nodes[0].extras.get('upload') %}
