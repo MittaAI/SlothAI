@@ -516,7 +516,7 @@ def info_file(node: Dict[str, any], task: Task) -> Task:
         gcs = storage.Client()
         bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
         blob = bucket.get_blob(f"{uid}/{file_name}")
-        file_content = blob.download_as_bytes()
+        file_content = download_as_bytes(uid, file_name)
 
         # Get the content type of the file from metadata
         try:
@@ -552,7 +552,7 @@ def info_file(node: Dict[str, any], task: Task) -> Task:
             task.document[output_field].append(access_uri)
 
     # handle existing content_type in the document
-    if not task.document['content_type'] or not isinstance(task.document.get('content_type'), list):
+    if not task.document.get('content_type') or not isinstance(task.document.get('content_type'), list):
         task.document['content_type'] = storage_content_types
 
     return task
@@ -2293,6 +2293,7 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
     if not model:
         raise NonRetriableError("A key for 'model' must be defined and be one of ['tts-1','eleven_multilingual_v2','eleven_monolingual_v1'].")
     
+    new_filenames = []
     # loop through items to process
     for index, item in enumerate(items):
         # template the string, if needed
@@ -2345,6 +2346,10 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
             task.document[output_field] = []
         task.document[output_field].append(access_uri)
 
+        new_filenames.append(new_filename)
+
+    if new_filenames:
+        task.document['filename'] = new_filenames
     return task
 
 

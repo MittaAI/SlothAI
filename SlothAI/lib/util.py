@@ -175,8 +175,8 @@ def load_from_storage(uid, filename):
 def download_as_bytes(uid, filename):
     gcs = storage.Client()
     bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
-    blob = bucket.blob("%s/%s" % (uid, filename))
-
+    blob = bucket.get_blob(f"{uid}/{filename}")
+    
     # Download the file contents as bytes
     content = blob.download_as_bytes()
     return content
