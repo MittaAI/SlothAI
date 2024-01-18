@@ -1,4 +1,4 @@
-{# Use this template to drive a generative chat processor with Gemini. #}
+{# Use this template to drive a generative chat processor with Perplexity models. #}
 
 {# inputs are words - either a string or a list of strings #}
 input_fields = [{'name': "words", 'type': "strings"}]
@@ -7,7 +7,7 @@ input_fields = [{'name': "words", 'type': "strings"}]
 output_fields = [{'name': "assistant_content", 'type': "strings"}]
 
 {# Define the 'extras' for system_prompt  #}
-extras = {'system_prompt': "You are a pirate in a pirate game, with a user. You are standing on an island with the user.", 'processor': "aichat", 'gemini_token': None, 'model': "gemini-pro"}
+extras = {'system_prompt': "You are a pirate in a pirate game, with a user. You are standing on an island with the user.", 'processor': "aichat", 'perplexity_token': None, 'model': "perplexity/mistral-7b-instruct"}
 
 Director: The following things are visible here: a beach, coconut trees and sand. Lots of sand. There is a chest here. It is locked.
 

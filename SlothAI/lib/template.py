@@ -160,13 +160,16 @@ class Template():
     def remove_fields_and_extras(self, template):
         # Remove extras definition
         extras_pattern = re.compile(r'extras\s*=\s*{([\s\S]*?)}\s*', re.DOTALL)
+        extras_pattern = re.compile(r'\s*extras\s*=\s*{.*?}\s*$', re.DOTALL)
+        extras_pattern = re.compile(r'^\s*extras\s*=\s*{[^{}]*({{[^}]*}}[^{}]*)*}\s*$', re.MULTILINE)
+
         template = extras_pattern.sub('', template)
 
         # Remove input_fields and output_fields definitions
         input_pattern = re.compile(r'input_fields\s*=\s*(\[.*?\])', re.DOTALL)
-        output_pattern = re.compile(r'output_fields\s*=\s*(\[.*?\])', re.DOTALL)
-
         template = input_pattern.sub('', template)
+
+        output_pattern = re.compile(r'output_fields\s*=\s*(\[.*?\])', re.DOTALL)
         template = output_pattern.sub('', template)
 
         return template

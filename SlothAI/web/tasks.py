@@ -1,7 +1,7 @@
 import json
 import traceback
 
-from flask import Blueprint, request
+from flask import Blueprint, request, jsonify
 from flask import current_app as app
 import flask_login
 from flask_login import current_user
@@ -66,61 +66,63 @@ def process_tasks(cron_key):
 @tasks.route('/tasks', methods=['DELETE'])
 @flask_login.login_required
 def delete_tasks():
-	'''
-	DELETE /tasks?state=running&state=complete
-	'''
-	task_service = app.config['task_service']
-	states = request.args.getlist('state')
-	if not states:
-		states = [
-			TaskState.COMPLETED.value,
-			TaskState.CANCELED.value,
-			TaskState.FAILED.value
-		]
-	else:
-		for state in states:
-			if not task_service.is_valid_state_for_delete(state):
-				return f"Invalid state: {state}", 400
-	
-	ok = task_service.delete_tasks_by_states(user_id=current_user.uid, states=states)
-	if not ok:
-		return "Issue deleting tasks", 500
-		
-	return "OK", 200
+    '''
+    DELETE /tasks?state=running&state=complete
+    '''
+    task_service = app.config['task_service']
+    states = request.args.getlist('state')
+    if not states:
+        states = [
+            TaskState.COMPLETED.value,
+            TaskState.CANCELED.value,
+            TaskState.FAILED.value
+        ]
+    else:
+        for state in states:
+            if not task_service.is_valid_state_for_delete(state):
+                return jsonify({"error": f"Invalid state: {state}"}), 400
+
+    ok = task_service.delete_tasks_by_states(user_id=current_user.uid, states=states)
+    if not ok:
+        return jsonify({"error": "Issue deleting tasks"}), 500
+
+    return jsonify({"message": "OK"}), 200
 
 
 @tasks.route('/tasks/<task_id>', methods=['DELETE'])
 @flask_login.login_required
 def delete_task(task_id):
-	task_service = app.config['task_service']
-	tasks = task_service.fetch_tasks(task_id=task_id)
-	if len(tasks) == 0:
-		return "Task not found", 404
-	
-	# user can only delete task they own
-	if tasks[0].user_id != current_user.uid:
-		return "Task not found", 404
-	
-	if tasks[0].state == TaskState.RUNNING.value:
-		return "Cannot delete a task in running state. Cancel the task first, then try again", 403
+    task_service = app.config['task_service']
+    tasks = task_service.fetch_tasks(task_id=task_id)
+    if len(tasks) == 0:
+        return jsonify({"error": "Task not found"}), 404
 
-	ok = task_service.delete_task_by_id(task_id=task_id)
-	if not ok:
-		return "Issue deleting task", 500
-	
-	return f"OK", 200
+    # user can only delete task they own
+    if tasks[0].user_id != current_user.uid:
+        return jsonify({"error": "Task not found"}), 404
+
+    if tasks[0].state == TaskState.RUNNING.value:
+        return jsonify({"error": "Cannot delete a task in running state. Cancel the task first, then try again"}), 403
+
+    ok = task_service.delete_task_by_id(task_id=task_id)
+    if not ok:
+        return jsonify({"error": "Issue deleting task"}), 500
+
+    return jsonify({"message": "OK"}), 200
+
 
 @tasks.route('/tasks/<task_id>/cancel', methods=['POST'])
 @flask_login.login_required
 def cancel_task(task_id):
-	task_service = app.config['task_service']
-	try:
-		task_service.cancel_task(task_id=task_id, user_id=current_user.uid)
-	except TaskNotFoundError as e:
-		return "Task not found", 404
-	except services.InvalidStateForCancel as e:
-		return str(e), 403
-	except Exception as e:
-		return str(e), 500
-	
-	return f"OK", 200
+    task_service = app.config['task_service']
+    try:
+        task_service.cancel_task(task_id=task_id, user_id=current_user.uid)
+    except TaskNotFoundError as e:
+        return jsonify({"error": "Task not found"}), 404
+    except services.InvalidStateForCancel as e:
+        return jsonify({"error": str(e)}), 403
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    return jsonify({"message": "OK"}), 200
+

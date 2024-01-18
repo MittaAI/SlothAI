@@ -29,12 +29,14 @@ processors = [
     {"value": "callback", "label": "Callback Processor", "icon": "ethernet"},
     {"value": "read_file", "label": "Read Processor (File)", "icon": "book-reader"},
     {"value": "read_uri", "label": "Read Processor (URI)", "icon": "globe"},
+    {"value": "aigrub", "label": "Read Processor (URI)", "icon": "desktop"},
     {"value": "info_file", "label": "Info Processor (File)", "icon": "info"},
     {"value": "read_fb", "label": "Read Processor (FeatureBase)", "icon": "database"},
     {"value": "split_task", "label": "Split Task Processor", "icon": "columns"},
     {"value": "halt_task", "label": "Halt Task Processor", "icon": "stop-circle"},
     {"value": "write_fb", "label": "Write Processor (FeatureBase)", "icon": "database"},
     {"value": "aidict", "label": "Generative Completion Processor", "icon": "code"},
+    {"value": "aistruct", "label": "Generative Structure Processor", "icon": "building"},
     {"value": "aichat", "label": "Generative Chat Processor", "icon": "comment-dots"},
     {"value": "aiimage", "label": "Generative Image Processor", "icon": "images"},
     {"value": "embedding", "label": "Embedding Vectors Processor", "icon": "table"},
@@ -64,20 +66,25 @@ template_examples = [
     {"name": "Deserialize a PDF to pages and convert to text", "template_name": "deserialized_pdf_to_text", "processor_type": "read_file"},
     {"name": "Download file from URI with GET", "template_name": "uri_to_file", "processor_type": "read_uri"},
     {"name": "POST data to URI", "template_name": "json_to_uri", "processor_type": "read_uri"},
+    {"name": "Screenshot a website", "template_name": "uri_to_image", "processor_type": "aigrub"},
     {"name": "Split a document into page numbers for split tasks", "template_name": "filename_to_splits", "processor_type": "jinja2"},
     {"name": "Convert page text into chunks", "template_name": "text_filename_to_chunks", "processor_type": "jinja2"},
     {"name": "Convert page text into chunks w/loop", "template_name": "text_filename_to_chunks_loop", "processor_type": "jinja2"},
     {"name": "Split task", "template_name": "split_task", "processor_type": "split_task"},
     {"name": "Halt task", "template_name": "halt_task", "processor_type": "halt_task"},
+    {"name": "Generate lists of keys from input", "template_name": "text_to_struct", "processor_type": "aistruct"},
     {"name": "Generate keyterms from text", "template_name": "text_to_keyterms", "processor_type": "aidict"},
     {"name": "Generate a question from text and keyterms", "template_name": "text_keyterms_to_question", "processor_type": "aidict"},
     {"name": "Generate a summary from text", "template_name": "text_to_summary", "processor_type": "aidict"},
     {"name": "Generate image prompt from words", "template_name": "words_to_prompt", "processor_type": "aidict"},
     {"name": "Generate text sentiment", "template_name": "text_to_sentiment", "processor_type": "aidict"},
     {"name": "Generate answers from chunks and a query", "template_name": "chunks_query_to_answer", "processor_type": "aidict"},
-    {"name": "Generate chat from texts (OpenAI)", "template_name": "text_to_chat", "processor_type": "aichat"},
+    {"name": "Generate a pirate chat from texts (OpenAI)", "template_name": "text_to_chat", "processor_type": "aichat"},
+    {"name": "Generate a pirate thoughts from texts (OpenAI)", "template_name": "text_to_chat_plain", "processor_type": "aichat"},
     {"name": "Generate chat from texts (Gemini)", "template_name": "text_to_chat_gemini", "processor_type": "aichat"},
     {"name": "Generate chat from texts (Mistral)", "template_name": "text_to_mistral_chat", "processor_type": "aichat"},
+    {"name": "Generate chat from texts (Together)", "template_name": "text_to_together_chat", "processor_type": "aichat"},
+    {"name": "Generate chat from texts (Perplexity)", "template_name": "text_to_chat_perplexity", "processor_type": "aichat"},
     {"name": "Generate an image from text", "template_name": "text_to_image", "processor_type": "aiimage"},
     {"name": "Find objects in image (Google Vision)", "template_name": "image_to_objects", "processor_type": "aivision"},
     {"name": "Find text in image (Google Vision)", "template_name": "image_to_text", "processor_type": "aivision"},
@@ -99,6 +106,7 @@ def get_brand(app):
     brand['twitter_handle'] = app.config['BRAND_X_HANDLE']
     brand['github_url'] = app.config['BRAND_GITHUB_URL']
     brand['discord_url'] = app.config['BRAND_DISCORD_URL']
+    brand['slack_url'] = app.config['BRAND_SLACK_URL']
     brand['youtube_url'] = app.config['BRAND_YOUTUBE_URL']
     return brand
 
@@ -158,8 +166,15 @@ def task_log_count():
 
     running_task_count = 0
     failed_task_count = 0
+    active_nodes = []
     for task in tasks:
         if task.get('state') == 'running':
+            node_info = {
+                'node_id': task.get('current_node_id'),
+                'pipe_id': task.get('pipe_id')
+            }
+            active_nodes.append(node_info)
+
             running_task_count += 1
         if task.get('state') == 'failed':
             failed_task_count += 1
@@ -168,11 +183,13 @@ def task_log_count():
     formatted_log_count = "{:,}".format(log_count)
     formatted_running_task_count = "{:,}".format(running_task_count)
     formatted_failed_task_count = "{:,}".format(failed_task_count)
+
     # Create a dictionary with the formatted values
     response_data = {
         "log_count": formatted_log_count,
         "task_count": formatted_running_task_count,
-        "failed_count": formatted_failed_task_count
+        "failed_count": formatted_failed_task_count,
+        "active_nodes": active_nodes
     }
 
     # Use json.dumps to format the dictionary with commas
@@ -549,7 +566,9 @@ def template_detail(template_id="new"):
             name_random = random_name(2).split('-')[0]
             if len(name_random) < 9:
                 break
-        if not Node.get(name=name_random):
+
+        # check the template name doesn't exist (finally fixing this weird issue)
+        if not template_service.get_template(user_id=current_user.uid, name=name_random):
             break
 
     empty_template = '{# This is a reference jinja2 processor template #}\n\n{# Input Fields #}\ninput_fields = [{"name": "input_key", "type": "strings"}]\n\n{# Output Fields #}\noutput_fields = [{"name": "output_key", "type": "strings"}]\n\n{# Extras are required. #}\nextras = {"processor": "jinja2", "static_value": "String for static value.", "dynamic_value": None, "referenced_value": "{{static_value}}"}\n\n{"dict_key": "{{dynamic_value}}"}'

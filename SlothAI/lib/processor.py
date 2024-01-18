@@ -50,7 +50,7 @@ from SlothAI.lib.util import strip_secure_fields, filter_document, random_string
 
 import SlothAI.lib.services as services
 
-env = Environment()
+env = Environment(trim_blocks=True, lstrip_blocks=True)
 env.globals['random_word'] = random_word
 env.globals['random_sentence'] = random_sentence
 env.globals['random_entry'] = random_entry
@@ -183,7 +183,7 @@ def jinja2(node: Dict[str, any], task: Task) -> Task:
         raise NonRetriableError(f"Unable to render jinja: {e}. You may want to use |safe_tojson to handle null entries and check your syntax.")
 
     try:
-        jinja_json = json.loads(jinja)
+        jinja_json = json.loads(jinja.strip())
         for k,v in jinja_json.items():
             task.document[k] = v
 
@@ -266,6 +266,88 @@ def callback(node: Dict[str, any], task: Task) -> Task:
 
 
 @processor
+def aigrub(node: Dict[str, any], task: Task) -> Task:
+    template_service = app.config['template_service']
+    template = template_service.get_template(template_id=node.get('template_id'))
+
+    # user
+    user = User.get_by_uid(uid=task.user_id)
+    uid = user.get('uid')
+
+    # grub config
+    grub_ip = app.config["GRUB_IP"]
+    grub_token = app.config["GRUB_TOKEN"]
+
+    # request URL for cluster
+    request_url = f"http://grub:{grub_token}@{grub_ip}/g"
+
+    # verify output fields steampunk style
+    output_fields = template.get('output_fields')
+
+    # use the first output field, or set one
+    try:
+        output_field = output_fields[0].get('name')
+    except:
+        output_field = "url"
+
+    # find the destination pipeline
+    target_pipeline = task.document.get('pipeline')
+    if not target_pipeline:
+        raise NonRetriableError("A valid target pipeline name is required.")
+    else:
+        pipeline = Pipeline.get(uid=task.user_id, name=target_pipeline)
+        if not pipeline:
+            raise NonRetriableError("A valid target pipeline name is required.")
+
+        pipe_id = pipeline.get('pipe_id')
+    
+    # uri to crawl
+    uris = task.document.get('uri')
+
+    if not uris:
+        raise NonRetriableError("Grub processor needs a `uri` key and value of either a URL or a list of URLs.")
+    elif isinstance(uris, str):
+        uris = [uris]
+    
+    if app.config["DEV"] == "True":
+        upload_url = f"{app.config['NGROK_URL']}/pipeline/{pipe_id}/task"
+    else:
+        upload_url = f"https://mitta.ai/pipeline/{pipe_id}/task"
+
+    for uri in uris:    
+        data = {
+            "doc_id": random_string(17),
+            "sidekick_name": user.get('name'),
+            "url": uri,
+            "upload_url": upload_url,
+            "api_token": user.get('api_token')
+        }
+
+        grub_response = requests.post(
+            request_url,
+            data = data,
+            timeout = 10
+        )
+
+        if grub_response:
+            grub_response = grub_response.json()
+        
+        if "result" in grub_response:
+            if grub_response.get('result') == "success":
+                task.document['upload_url'] = upload_url
+                task.document['crawl_status'] = "success"
+                if 'grub_url' not in task.document:
+                    task.document['grub_url'] = [uri]
+                else:
+                    task.document['grub_url'].append(uri) 
+            else:
+                raise NonRetriableError("Status of crawl is failed. Try another URL.")
+        else:
+            raise NonRetriableError("Status of crawl is failed with no result. Try another URL.")
+
+    return task
+
+@processor
 def info_file(node: Dict[str, any], task: Task) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
@@ -288,23 +370,18 @@ def info_file(node: Dict[str, any], task: Task) -> Task:
 
     # verify output fields steampunk style
     output_fields = template.get('output_fields')
-    _break = [0,0,0,1] # size, ttl, content_type, pdf_num_pages
-    for index, output_field in enumerate(output_fields):
-        if "content_type" in output_field.get('name'):
-            _break[2] = 1
-        if "file_size_bytes" in output_field.get('name'):
-            _break[0] = 1
-        if "ttl" in output_field.get('name'):
-            _break[1] = 1
-        if 0 not in _break:
-            break
-    if 0 in _break:
-        raise NonRetriableError("You must have 'content_type', 'file_size_bytes', and 'ttl' defined in output_fields. Optionally, you can use 'pdf_num_pages' for the number of pages in a PDFs.")
-    
+
+    # use the first output field, or set one
+    try:
+        output_field = output_fields[0].get('name')
+    except:
+        output_field = "mitta_uri"
+
     # outputs
     task.document['file_size_bytes'] = []
     task.document['ttl'] = []
     task.document['pdf_num_pages'] = []
+    task.document['txt_num_lines'] = []
     storage_content_types = []
 
     # let's get to the chopper
@@ -328,8 +405,8 @@ def info_file(node: Dict[str, any], task: Task) -> Task:
             pdf_reader = PyPDF2.PdfReader(pdf_content_stream)
             pdf_num_pages = len(pdf_reader.pages)
             task.document['pdf_num_pages'].append(pdf_num_pages)
-        elif "text/plain" or "text/csv" in content_type:
-            with io.BytesIO(file_content) as file:
+        elif "text/plain" in content_type or "text/csv" in content_type:
+            with BytesIO(file_content) as file:
                 txt_num_lines = sum(1 for line in file)
             task.document['txt_num_lines'].append(line_count)
         else:
@@ -340,6 +417,13 @@ def info_file(node: Dict[str, any], task: Task) -> Task:
         storage_content_types.append(content_type)
         task.document['file_size_bytes'].append(file_size_bytes)
         task.document['ttl'].append(-1) # fix this
+
+        access_uri = f"https://{app.config.get('APP_DOMAIN')}/d/{user.get('name')}/{file_name}"
+
+        if output_field not in task.document:
+            task.document[output_field] = [access_uri]
+        else:
+            task.document[output_field].append(access_uri)
 
     # handle existing content_type in the document
     if not task.document['content_type'] or not isinstance(task.document.get('content_type'), list):
@@ -734,10 +818,153 @@ def aichat(node: Dict[str, any], task: Task) -> Task:
         # upgrade model to genai
         model = genai.GenerativeModel(model)
         response = model.generate_content(f"system: {system_prompt}\n\n{prompt}")
+        
         task.document[output_field] = [response.text]
 
         return task
-    
+
+    elif "perplexity" in task.document.get('model'):
+        full_model_name = task.document.get('model')
+        
+        # Strip the 'perplexity/' prefix to get the actual model name
+        model = full_model_name.split('perplexity/')[1] if 'perplexity/' in full_model_name else full_model_name
+
+        # Check for the Perplexity API token
+        if not task.document.get('perplexity_token'):
+            raise NonRetriableError("A 'perplexity_token' is required to use the Perplexity API.")
+
+        # Configure the Perplexity API key
+        perplexity_api_key = task.document.get('perplexity_token')
+
+        # Process the template text
+        template_text = Template.remove_fields_and_extras(template.get('text'))
+        if template_text:
+            jinja_template = env.from_string(template_text)
+            prompt = jinja_template.render(task.document)
+        else:
+            raise NonRetriableError("Couldn't find template text.")
+
+        # Set up the system prompt
+        system_prompt = task.document.get('system_prompt', "Be precise and concise.")
+
+        # Prepare the messages for the API request
+        message_history = task.document.get('message_history', [])
+        role_history = task.document.get('role_history', [])
+        if message_history or role_history:
+            if len(message_history) != len(role_history):
+                raise NonRetriableError("'role_history' length must match 'message_history' length.")
+
+            message_history.reverse()
+            role_history.reverse()
+
+        messages = []
+        messages.append({"role": "system", "content": system_prompt})
+
+        for idx, message in enumerate(message_history):
+            role = role_history[idx]
+            messages.append({"role": role, "content": message})
+        messages.append({"role": "user", "content": prompt})
+
+        # API request setup
+        url = "https://api.perplexity.ai/chat/completions"
+        headers = {
+            'Authorization': f'Bearer {perplexity_api_key}',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+        data = {
+            "model": model,
+            "messages": messages
+        }
+
+        # Try making the API request
+        retries = 3
+        for _try in range(retries):
+            try:
+                response = requests.post(url, json=data, headers=headers)
+                response.raise_for_status()  # Raise an error for bad responses
+                answer = response.json()
+                if answer and answer.get('choices')[0]:
+                    task.document[output_field] = answer.get('choices')[0].get('message').get('content')
+                    task.document['processor_output'] = answer
+                    return task
+            except Exception as ex:
+                print(ex)
+                if _try == retries - 1:
+                    raise NonRetriableError(f"Model {model}: {ex}")
+
+    # needs to be tested before mistral, given together runs mistral
+    elif "together" in task.document.get('model'):
+        full_model_name = task.document.get('model')
+        
+        # Strip the 'together/' prefix to get the actual model name
+        model = full_model_name.split('together/')[1] if 'together/' in full_model_name else full_model_name
+
+        # Check for the Together API token
+        if not task.document.get('together_token'):
+            raise NonRetriableError("A 'together_token' is required to use the Together API.")
+
+        # Configure the Together API key
+        together_api_key = task.document.get('together_token')
+
+        # Process the template text
+        template_text = Template.remove_fields_and_extras(template.get('text'))
+        if template_text:
+            jinja_template = env.from_string(template_text)
+            prompt = jinja_template.render(task.document)
+        else:
+            raise NonRetriableError("Couldn't find template text.")
+
+        # Set up the system prompt
+        system_prompt = task.document.get('system_prompt', "You are a helpful assistant.")
+
+        # Prepare the messages for the API request
+        message_history = task.document.get('message_history', [])
+        role_history = task.document.get('role_history', [])
+        if message_history or role_history:
+            if len(message_history) != len(role_history):
+                raise NonRetriableError("'role_history' length must match 'message_history' length.")
+
+            message_history.reverse()
+            role_history.reverse()
+
+        messages = []
+        messages.append({"role": "system", "content": system_prompt})
+
+        for idx, message in enumerate(message_history):
+            role = role_history[idx]
+            messages.append({"role": role, "content": message})
+        messages.append({"role": "user", "content": prompt})
+
+        # API request setup
+        url = "https://api.together.xyz/inference"
+        headers = {
+            'Authorization': f'Bearer {together_api_key}',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+        data = {
+            "messages": messages,
+            "model": model,
+            "max_tokens": 1024
+        }
+
+        # Try making the API request
+        retries = 3
+        for _try in range(retries):
+            try:
+                response = requests.post(url, json=data, headers=headers)
+                response.raise_for_status()  # Raise an error for bad responses
+                answer = response.json()
+                if answer and answer.get('output').get('choices')[0]:
+                    task.document[output_field] = answer.get('output').get('choices')[0].get('text')
+                    task.document['processor_output'] = answer
+                    return task
+            except Exception as ex:
+                print(ex)
+                if _try == retries - 1:
+                    raise NonRetriableError(f"Model {model}: {ex}")
+
     elif "mistral" in task.document.get('model'):
         model = task.document.get('model')
 
@@ -796,32 +1023,53 @@ def aichat(node: Dict[str, any], task: Task) -> Task:
             except Exception as ex:
                 raise NonRetriableError(f"Model {model}: {ex}")
         else:               
-            raise NonRetriableError(f"Tried {retries} times to get an answer from the AI, but failed.")    
+            raise NonRetriableError(f"Tried {retries} times to get an answer from the AI, but failed.")
 
     else:
         raise NonRetriableError("The aichat processor expects a supported model.")
 
 
 # complete dictionaries
-def ai_prompt_to_dict(model="gpt-3.5-turbo-1106", prompt="", retries=3):
+def ai_prompt_to_dict(task=None, model="gpt-3.5-turbo-1106", prompt="", retries=3):
+    # check model
+    if "gpt" in model:
+        if not task.document.get('openai_token'):
+            raise NonRetriableError(f"You'll need to specify a 'openai_token' in extras to use the {model} model.")
+        openai.api_key = task.document.get('openai_token')
+    elif "gemini-pro" in model:
+        if not task.document.get('gemini_token'):
+            raise NonRetriableError(f"You'll need to specify a 'gemini_token' in extras to use the {model} model.")
+        genai.configure(api_key=task.document.get('gemini_token'))
+    else:
+        raise NonRetriableError("The aidict processor expects a supported model.")
+
     # negotiate the format
     if model == "gpt-3.5-turbo-1106" and "JSON" in prompt:
-        system_content = "You write JSON for the user."
+        system_content = task.document.get('system_content', "You write JSON for the user.")
         response_format = {'type': "json_object"}
     else:
-        system_content = "You write JSON dictionaries for the user, without using text markup or wrappers.\nYou output things like:\n'''ai_dict={'akey': 'avalue'}'''"
+        system_content = task.document.get('system_content', "You write JSON dictionaries for the user, without using text markup or wrappers.\nYou output things like:\n'''ai_dict={'akey': 'avalue'}'''")
         response_format = None
 
     # try a few times
     for _try in range(retries):
-        completion = openai.chat.completions.create(
-            model = model,
-            response_format = response_format,
-            messages = [
-                {"role": "system", "content": system_content},
-                {"role": "user", "content": prompt}
-            ]
-        )
+
+        if "gpt" in model:        
+            completion = openai.chat.completions.create(
+                model = model,
+                response_format = response_format,
+                messages = [
+                    {"role": "system", "content": system_content},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+
+        elif "gemini-pro":
+            # upgrade model to genai
+            model = genai.GenerativeModel(model)
+            response = model.generate_content(f"system: {system_content}\n\n{prompt}")
+
+        # process the text output in the message.content
         ai_dict_str = completion.choices[0].message.content.replace("\n", "").replace("\t", "")
         ai_dict_str = ai_dict_str.replace("null", "None") # fix null issue
         ai_dict_str = re.sub(r'\s+', ' ', ai_dict_str).strip()
@@ -883,47 +1131,180 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
 
     # get the model and begin
     model = task.document.get('model')
-    if "gpt" in model:
-        openai.api_key = task.document.get('openai_token')
 
-        # Loop over iterator field list, or if "False", just loop once
+    # Loop over iterator field list, or if "False", just loop once
+    for outer_index, item in enumerate(iterator):
+        # if the item is not a list, we make it one
+        if not isinstance(item, list):
+            item = [item]
+
+        ai_dicts = []
+        
+        # loop over inner list
+        for inner_index in range(len(item)):
+            # set the fields for the template's loop inclusions, if it has any
+            task.document['outer_index'] = outer_index
+            task.document['inner_index'] = inner_index
+
+            template_text = Template.remove_fields_and_extras(template.get('text'))
+
+            if template_text:
+                jinja_template = env.from_string(template_text)
+                prompt = jinja_template.render(task.document)
+            else:
+                raise NonRetriableError("Couldn't find template text.")
+
+            # call the ai
+            err, ai_dict = ai_prompt_to_dict(
+                task=task,
+                model=model,
+                prompt=prompt,
+                retries=3
+            )
+            ai_dicts.append(ai_dict)
+
+            if err:
+                print(ai_dict)
+                raise NonRetriableError(f"{err}: {ai_dict}")
+
+        if is_list_of_lists:
+            # Process as list of lists
+            sublist_result_dict = {field['name']: [] for field in output_fields}
+            for dictionary in ai_dicts:
+                for key, value in dictionary.items():
+                    sublist_result_dict[key].append(value)
+
+            for field in output_fields:
+                field_name = field['name']
+                if field_name not in task.document:
+                    task.document[field_name] = []
+                task.document[field_name].append(sublist_result_dict[field_name])
+        else:
+            # Process as a simple list
+            result_dict = {field['name']: [] for field in output_fields}
+            for dictionary in ai_dicts:
+                for key, value in dictionary.items():
+                    result_dict[key].append(value)
+
+            for field in output_fields:
+                field_name = field['name']
+                if field_name not in task.document:
+                    task.document[field_name] = []
+                task.document[field_name].extend(result_dict[field_name])
+
+    task.document.pop('outer_index', None)
+    task.document.pop('inner_index', None)
+
+    return task
+
+
+@processor
+def aistruct(node: Dict[str, any], task: Task) -> Task:
+    from openai import OpenAI
+    from typing import List
+    from pydantic import create_model
+    import instructor
+    from datetime import datetime, date, time
+
+    template_service = app.config['template_service']
+    template = template_service.get_template(template_id=node.get('template_id'))
+    if not template:
+        raise TemplateNotFoundError(template_id=node.get('template_id'))
+
+    input_fields = template.get('input_fields')
+    for field in input_fields:
+        field_name = field['name']
+        if field_name not in task.document:
+            raise NonRetriableError(f"Input field '{field_name}' is not present in the document.")
+
+    task.document = process_input_fields(task.document, input_fields)
+
+    # Determine the iterate_field
+    if len(input_fields) > 1:
+        iterate_field_name = task.document.get('iterate_field', 'False')
+        if iterate_field_name != "False" and iterate_field_name not in [field['name'] for field in input_fields]:
+            raise NonRetriableError(f"'{iterate_field_name}' must be present in 'input_fields' when there are more than one input fields, or you may use a 'False' string for no iteration.")
+    else:
+        iterate_field_name = input_fields[0]['name']
+
+    iterator = task.document.get(iterate_field_name, ["False"]) if iterate_field_name != "False" else ["False"]
+    is_list_of_lists = isinstance(iterator, list) and all(isinstance(elem, list) for elem in iterator)
+
+    # build a custom model from the output fields
+    output_fields = template.get('output_fields')
+
+    # Mapping of type aliases to Python types and list types
+    type_mapping = {
+        "string": str,
+        "strings": List[str],
+        "stringset": List[str],  # Assuming stringset is also meant to be a list of strings
+        "int": int,
+        "ints": List[int],
+        "float": float,
+        "floats": List[float],
+        "boolean": bool,
+        "booleans": List[bool]
+    }
+
+    CustomModel = create_model(
+        'CustomModel',
+        **{field['name']: (type_mapping.get(field['type'], str), ...) for field in output_fields}
+    )
+
+    # get the requested model
+    model = task.document.get('model')
+
+    if "gpt" in model:
+        # Initialize the OpenAI client with the an instructor patch
+        client = instructor.patch(OpenAI(api_key=task.document.get('openai_token')))
+
+        system_prompt = task.document.get('system_prompt', "You extract things from texts and return them as specified in variables.")
+
         for outer_index, item in enumerate(iterator):
-            # if the item is not a list, we make it one
             if not isinstance(item, list):
                 item = [item]
 
-            ai_dicts = []
-            
-            # loop over inner list
-            for inner_index in range(len(item)):
-                # set the fields for the template's loop inclusions, if it has any
+            ai_structs = []
+
+            for inner_index, sub_item in enumerate(item):
                 task.document['outer_index'] = outer_index
                 task.document['inner_index'] = inner_index
 
+                # Construct the prompt
                 template_text = Template.remove_fields_and_extras(template.get('text'))
-
                 if template_text:
                     jinja_template = env.from_string(template_text)
                     prompt = jinja_template.render(task.document)
                 else:
                     raise NonRetriableError("Couldn't find template text.")
 
-                # call the ai
-                err, ai_dict = ai_prompt_to_dict(
+                # Call the AI using the dynamically created CustomModel
+                response = client.chat.completions.create(
                     model=model,
-                    prompt=prompt,
-                    retries=3
+                    response_model=CustomModel,
+                    max_retries=3,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": prompt}
+                    ]
                 )
-                ai_dicts.append(ai_dict)
 
-                if err:
-                    print(ai_dict)
-                    raise NonRetriableError(f"{err}: {ai_dict}")
+                # check it matches the Model we built
+                assert isinstance(response, CustomModel)
 
+                # loop through the output_fields
+                for field in output_fields:
+                    assert hasattr(response, field.get('name'))
+    
+                # Parse the response
+                parsed_response = response.dict()
+                ai_structs.append(parsed_response)
+
+            # Process and compile the results based on the structure of the iterator
             if is_list_of_lists:
                 # Process as list of lists
                 sublist_result_dict = {field['name']: [] for field in output_fields}
-                for dictionary in ai_dicts:
+                for dictionary in ai_structs:
                     for key, value in dictionary.items():
                         sublist_result_dict[key].append(value)
 
@@ -935,7 +1316,7 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
             else:
                 # Process as a simple list
                 result_dict = {field['name']: [] for field in output_fields}
-                for dictionary in ai_dicts:
+                for dictionary in ai_structs:
                     for key, value in dictionary.items():
                         result_dict[key].append(value)
 
@@ -945,13 +1326,13 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
                         task.document[field_name] = []
                     task.document[field_name].extend(result_dict[field_name])
 
+
         task.document.pop('outer_index', None)
         task.document.pop('inner_index', None)
 
         return task
-
     else:
-        raise NonRetriableError("The aidict processor expects a supported model.")
+        raise NonRetriableError("The aistruct processor expects a supported model.")
 
 
 # look at a picture and get stuff
@@ -1189,7 +1570,7 @@ def aiimage(node: Dict[str, any], task: Task) -> Task:
     try:
         output_field = output_fields[0].get('name')
     except:
-        output_field = "uri"
+        output_field = "mitta_uri"
 
     # Check if each input field is present in 'task.document'
     input_fields = template.get('input_fields')
@@ -1251,9 +1632,25 @@ def aiimage(node: Dict[str, any], task: Task) -> Task:
                 # Loop over the 'data' list and extract the 'url' from each item
                 for item in response.data:
                     if item.url:
-                        urls.append(item.url)
+                        image_response = requests.get(item.url)
+                        if image_response.status_code == 200:
+                            image_file = BytesIO(image_response.content)
+                            image_bytes = image_file.getvalue()
 
-                task.document[output_field].append(urls)
+                            content_type = 'image/png'
+                            new_filename = random_string(16) + ".png"
+                            bucket_uri = upload_to_storage_requests(uid, new_filename, image_bytes, content_type)
+
+                            access_uri = f"https://{app.config.get('APP_DOMAIN')}/d/{user.get('name')}/{new_filename}"
+                            
+                            urls.append(item.url)
+
+                            if output_field not in task.document:
+                                task.document[output_field] = [access_uri]
+                            else:
+                                task.document[output_field].append(access_uri)
+                        else:
+                            raise NonRetriableError("Failed to retrieve the file from OpenAI.")
 
             except Exception as ex:
                 # non-retriable error for now but add retriable as needed
@@ -1589,7 +1986,6 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
         else:
             raise NonRetriableError("Processor read_file supports text/plain, application/pdf, application/json, and text/csv content types only.")
 
-        
     return task
 
 
@@ -1597,9 +1993,6 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
 def read_uri(node: Dict[str, any], task: Task) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
-    
-    # OpenAI only for now
-    openai.api_key = task.document.get('openai_token')
 
     if not template:
         raise TemplateNotFoundError(template_id=node.get('template_id'))
@@ -1727,7 +2120,7 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
     try:
         output_field = output_fields[0].get('name')
     except:
-        output_field = "uri"
+        output_field = "mitta_uri"
 
     input_fields = template.get('input_fields')    
     # needs to be moved
@@ -1820,13 +2213,14 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
         content_type = 'audio/mpeg'  # Set the appropriate content type for the audio file
         bucket_uri = upload_to_storage_requests(uid, new_filename, audio_data, content_type)
 
-        access_uri = f"https://{app.config.get('APP_DOMAIN')}/d/{user.get('name')}/{new_filename}?token="
+        access_uri = f"https://{app.config.get('APP_DOMAIN')}/d/{user.get('name')}/{new_filename}"
 
         if not task.document.get(output_field):
             task.document[output_field] = []
         task.document[output_field].append(access_uri)
 
     return task
+
 
 # audio input, text output
 @processor
@@ -1861,24 +2255,18 @@ def aiaudio(node: Dict[str, any], task: Task) -> Task:
     if isinstance(content_type, list) and len(content_type) > 0:
         content_type = content_type[0]
 
-    # Check if the mime type is supported
-    supported_content_types = ['audio/mpeg', 'audio/mpeg3', 'audio/x-mpeg-3', 'audio/mp3', 'audio/mpeg-3', 'audio/wav', 'audio/webm', 'audio/mp4', 'audio/x-m4a', 'audio/m4a', 'audio/x-wav']
-    
-    for supported_type in supported_content_types:
-        if supported_type in content_type:
-            break
-    else:
-        raise NonRetriableError(f"Unsupported file type: {content_type}")
-
     # Get the document
     gcs = storage.Client()
     bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
     blob = bucket.blob(f"{uid}/{filename}")
     audio_file = BytesIO()
 
-    audio_file.name = f"{filename}"  # You can choose a unique name
-    
-    # download to file
+    audio_file.name = f"{filename}"
+
+    # uri for google, if used
+    uri = f"gs://{app.config['CLOUD_STORAGE_BUCKET']}/{uid}/{filename}"
+
+    # download to file, for openai if used
     blob.download_to_file(audio_file)
     audio_file.content_type = content_type
     
@@ -1905,10 +2293,78 @@ def aiaudio(node: Dict[str, any], task: Task) -> Task:
         # process the audio
         model = task.document.get('model', "whisper-1")
         if "whisper" in model:
+            # Check if the mime type is supported
+            supported_content_types = ['audio/mpeg', 'audio/mpeg3', 'audio/x-mpeg-3', 'audio/mp3', 'audio/mpeg-3', 'audio/wav', 'audio/webm', 'audio/mp4', 'audio/x-m4a', 'audio/m4a', 'audio/x-wav']
+            
+            for supported_type in supported_content_types:
+                if supported_type in content_type:
+                    break
+            else:
+                raise NonRetriableError(f"Unsupported file type: {content_type}")
+
             transcript = openai.audio.transcriptions.create(model=model, file=chunk_stream)
-        
+            transcript_text = transcript.text
+        elif "gc_speech" in model:
+            # Check if the mime type is supported
+            supported_content_types = [
+                'audio/flac',
+                'audio/l16',
+                'audio/x-l16',
+                'audio/linear',
+                'audio/amr',
+                'audio/amr-wb',
+                'audio/ogg',
+                'application/ogg',
+                'audio/speex',
+                'audio/webm',
+                'audio/wav',
+                'audio/mpeg',
+                'audio/mpeg3',
+                'audio/x-mpeg-3',
+                'audio/mp3',
+                'audio/mpeg-3'
+            ]
+
+            for supported_type in supported_content_types:
+                if supported_type in content_type:
+                    break
+            else:
+                raise NonRetriableError(f"Unsupported file type: {content_type}")
+
+            from google.cloud.speech_v2 import SpeechClient
+            from google.cloud.speech_v2.types import cloud_speech
+
+            client = SpeechClient()
+
+            features = cloud_speech.RecognitionFeatures(
+                enable_automatic_punctuation=True  # Enable automatic punctuation
+            )
+
+            # Configuration for Google Cloud Speech-to-Text
+            config = cloud_speech.RecognitionConfig(
+                auto_decoding_config=cloud_speech.AutoDetectDecodingConfig(),
+                language_codes=["en-US"],
+                model="latest_long",
+                features=features
+            )
+
+            # Create the RecognizeRequest using the bytes content
+            request = cloud_speech.RecognizeRequest(
+                recognizer=f"projects/sloth-ai/locations/global/recognizers/_",
+                config=config,
+                content=chunk_stream.read()
+            )
+
+            response = client.recognize(request=request)
+            transcript_text = ""
+            for result in response.results:
+                # return only the first transcript
+                transcript_text = transcript_text + result.alternatives[0].transcript
+        else:
+            raise NonRetriableError("Model must be one of 'whisper' or 'gc_speech'.")
+
         # split on words
-        words = transcript.text.split(" ")
+        words = transcript_text.split(" ")
         chunks = []
         current_chunk = []
 

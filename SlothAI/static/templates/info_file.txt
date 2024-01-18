@@ -1,10 +1,10 @@
 {# Use this template to drive a info processor that outputs file information. #}
 
 {# Define the input_fields used in this template #}
-input_fields = [{'name': "filename", 'type': "string"}]
+input_fields = [{'name': "filename", 'type': "string"},{'name': "content_type", 'type': "string"}]
 
 {# The output_fields expected from the node processor using this template %}
-output_fields = [{'name': "content_type", 'type': "strings"},{'name': "file_size_bytes", 'type': "ints"},{'name': "ttl", 'type': "ints"},{'name': "pdf_num_pages", 'type': "ints"}]]
+output_fields = [{'name': "mitta_uri", 'type': "strings"}]
 
 {# Define the info_file processor #}
-extras = {"processor": "info_file"}
+extras = {"processor": "info_file", "upload": True}

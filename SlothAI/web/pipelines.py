@@ -208,7 +208,8 @@ def ingest_post(pipeline_id):
             if not json_data:
                 json_data = request.form.get('json')
                 if not json_data:
-                    return jsonify({"error": "When using mixed mode POSTs, you must supply a 'json' or 'data' key with a JSON object."}), 400
+                    # no JSON data, so fake it
+                    json_data = "{}"
     
             json_data_dict = transform_single_items_to_lists(json.loads(json_data))
 

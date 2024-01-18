@@ -45,7 +45,7 @@
                             {% for node_id in pipeline.node_ids %}
                                 {% for node in nodes %}
                                     {% if node.node_id == node_id %}
-                                        <button class="btn button-node" title="{{ node.template_name }}<br/>{{node.processor}}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" class="btn btn-secondary button-node btn-sortable"><i class="fas fa-{% for processor_info in processors if processor_info.value == node.processor %}{{processor_info.icon }}{% endfor %}"></i><br/>{{ node.name }}</button>
+                                        <button class="btn button-node" title="{{ node.template_name }}<br/>{{node.processor}}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" data-pipe_id="{{pipeline.pipe_id}}" class="btn btn-secondary button-node btn-sortable"><i class="fas fa-{% for processor_info in processors if processor_info.value == node.processor %}{{processor_info.icon }}{% endfor %}"></i><br/>{{ node.name }}</button>
                                     {% endif %}
                                 {% endfor %}
                             {% endfor %}
@@ -92,7 +92,7 @@
         <hr/>
         <h4 class="mb-3">Video Guide</h4>
         <p>Get started by following along and building your first pipeline.</p>
-        <iframe width="560" height="315" src="https://www.youtube.com/embed/ntLqz38hC60?si=67DC_FEEnEwHNXhk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+        <iframe width="560" height="315" src="https://www.youtube.com/embed/CuALke2rQbQ?si=if7GJJnzP0C17s9b" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
     </div>
     {% endif %}
 </div>

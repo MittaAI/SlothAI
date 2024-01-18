@@ -6,7 +6,7 @@ input_fields = [{'name': 'filename', 'type': 'string'},{'name': 'texts', 'type':
 
 {# Output Fields #}
 {# Output the URL for the download. Access will require MittaAI token. #}
-output_fields = [{'name': 'uri', 'type': 'urls'}]
+output_fields = [{'name': 'mitta_uri', 'type': 'uris'}]
 
 {# Extras 'page_chunk_size' is used for .txt files only, to set page size #}
 extras = {"elevenlabs_token": None, "model": "eleven_multilingual_v2", "processor": "aispeech", "voice": "Nicole"}

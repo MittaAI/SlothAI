@@ -27,7 +27,7 @@
                     {% for node_id in pipeline.node_ids %}
                         {% for node in nodes %}
                             {% if node.node_id == node_id %}
-                                <li class="ui-state-default"><i style="position: absolute; bottom: 0;" class="fa fa-bars"></i><button title="{{node.processor}}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" class="btn btn-secondary btn-sortable"><i class="fas fa-{% for processor_info in processors if processor_info.value == node.processor %}{{processor_info.icon }}{% endfor %}"></i><br/>{{ node.name }}</button></li>
+                                <li class="ui-state-default"><i style="position: absolute; bottom: 0;" class="fa fa-bars"></i><button title="{{node.processor}}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" data-pipe_id="{{pipeline.pipe_id}}" class="btn btn-secondary btn-sortable"><i class="fas fa-{% for processor_info in processors if processor_info.value == node.processor %}{{processor_info.icon }}{% endfor %}"></i><br/>{{ node.name }}</button></li>
                             {% endif %}
                         {% endfor %}
                     {% endfor %}
@@ -42,7 +42,7 @@
         </div>
         <hr/>
         <h4>Send Data</h4>
-        <p>The pipeline is used by POST'ing data to the task ingestion endpoint:</p>
+        <p>The pipeline is used by POST'ing data to the task ingestion endpoint. Files uploaded or created by a pipeline <strong>will be deleted after 48 hours</strong>.</p>
 
         <ul class="nav nav-tabs" id="codeTabs" role="tablist">
             {% if (nodes[0].processor == 'jinja2' or nodes[0].processor == 'info_file') and nodes[0].extras.get('upload') %}
@@ -116,8 +116,14 @@
             </div>
             <div class="tab-pane fade" id="upload" role="tabpanel" aria-labelledby="record-tab">
                 <p></p>
-                <p>You may upload single audio files (<strong>.mp3, .mp3, .mp3, .mp3, .mp3, .wav, .webm, .mp4, .m4a, .m4a, .wav</strong>) to this pipeline. To upload multiple files, please use the code examples.</p>
-                <input type="file" id="fileInput" style="display: none;" accept=".mp3, .mp3, .mp3, .mp3, .mp3, .wav, .webm, .mp4, .m4a, .m4a, .wav">
+                {% if 'gc_speech' in nodes[0].extras.model %}
+                <p>You may upload single audio files (<strong>.l16, .flac, .mp3, .wav, .ogg, .amr, .amr-wb, .spx, .webm</strong>) to this pipeline. To upload multiple files, please use the code examples.</p>
+                <input type="file" id="fileInput" style="display: none;" accept=".l16, .flac, .mp3, .webm, .wav, .ogg, .amr, .amr-wb, .spx, .webm">
+                {% elif 'whisper' in nodes[0].extras.model %}
+                <p>You may upload single audio files (<strong>.mp3, .webm, .mp4, .m4a, .wav</strong>) to this pipeline. To upload multiple files, please use the code examples.</p>
+                <input type="file" id="fileInput" style="display: none;" accept=".mp3, .wav, .webm, .mp4, .m4a, .wav">
+                {% endif %}
+
                 <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
             </div>
             {% endif %}

@@ -36,6 +36,11 @@ form, label {
   flex-wrap: wrap; /* Adjust this if you don't want wrapping */
 }
 
+/* Custom margin for the failed count */
+#failed_count.ml-2 {
+    margin-left: 40px; /* Adjust as needed */
+}
+
 .button-node {
   flex: 0 0 auto; /* Do not grow, do not shrink, and is automatically sized based on content */
   width: 83px; /* Fixed width */
@@ -246,6 +251,29 @@ nav h2 a:hover {
   height: 20px;
 }
 
+.task-container {
+  display: inline-block;
+  position: relative;
+}
+
+.task-container i {
+  margin-right: 5px;
+}
+
+.task-container span {
+  position: relative;
+  margin-right: 10px;
+}
+
+/* Apply custom styles to badges within the task container */
+.task-badge {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+  font-size: 0.8em;
+  height: 20px;
+}
+
 .homelead a {
   color: white;
 }
@@ -300,6 +328,9 @@ nav h2 a:hover {
   background-color: #444;
 }
 
+.task-badge {
+  overflow: visible !important; 
+}
 .navbar {
   background-color:  #484848;
 }

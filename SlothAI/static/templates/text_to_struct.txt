@@ -1,0 +1,18 @@
+{# Use this template to drive an OpenAI powered instructor processor! #}
+
+{# Define the input_fields used in this template: #}
+input_fields = [{'name': "chunks", 'type': "strings"}]
+
+{# The output_fields expected from the AI using this template #}
+{# "name" is a reserved 'name', so use something more descriptive like "entity_name" #}
+output_fields = [{'name': "keyterms", 'type': "stringset"}]
+
+{# Extras #}
+extras = {'openai_token': None, 'model': 'gpt-3.5-turbo-1106', 'processor': 'aistruct', 'num_keyterms': 5, 'iterate_field': "chunks", 'system_prompt': "You extract things from texts and return them as specified in variables."}
+
+{# show the AI the text to process #}
+1. Extract ({{num_keyterms}}) keyterms.
+
+"""
+{{ chunks[outer_index] }}
+"""

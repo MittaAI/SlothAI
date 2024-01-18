@@ -13,9 +13,9 @@
     <p class="lead">If you need assistance using or building a pipeline, be sure to pop into our <a href="https://discord.gg/SxwcVGQ8j9">Discord server</a>!</p>
 
     <h3 class="header">Getting Started Video</h3>
-    <p class="lead">If you would like to get familar with using MittaAI, follow along with the getting started guide to build a simple pipeline to generate words, make a callback, and write the results into the database.</p>
+    <p class="lead">If you would like to get familar with using MittaAI, follow along with the getting started guide to build a simple pipeline to simulate a pirate's brain.</p>
     <div class="video-responsive">
-        <iframe width="560" height="315" src="https://www.youtube.com/embed/ntLqz38hC60?si=67DC_FEEnEwHNXhk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+        <iframe width="560" height="315" src="https://www.youtube.com/embed/CuALke2rQbQ?si=if7GJJnzP0C17s9b" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
     </div>
 
     <hr id="pdf-indexing" style="padding-bottom: 40px;"/>
@@ -26,7 +26,7 @@
             <div class="card" style="width: 18rem;">
               <img class="card-img-top" src="/static/images/indexing.png" alt="PDF Indexing" style="width: 100%;">
               <div class="card-body">
-                <h5 class="card-title">PDF Indexing Pipeline</h5>
+                <h3 class="card-title">PDF Indexing Pipeline</h3>
                 <p class="card-text">Keyterm extraction and text embeddings are used to index a set of documents and make them ready for search. Uploads are limited in size to 25MB.</p>
                 <a href="/cookbooks/rag/pipeline_index.json" class="btn btn-download btn-outline-dark"><i class="fas fa-download"></i> Download</a>
                 <a href="https://github.com/MittaAI/mitta-community/tree/main/cookbooks/rag" class="btn btn-outline-dark"><i class="fab fa-github"></i></a>       
@@ -37,7 +37,7 @@
             <div class="card" style="width: 18rem;">
               <img class="card-img-top" src="/static/images/querying.png" alt="PDF Querying" style="width: 100%;">
               <div class="card-body">
-                <h5 class="card-title">PDF Query Pipeline</h5>
+                <h3 class="card-title">PDF Query Pipeline</h3>
                 <p class="card-text">This pipeline embeds a user query and then conducts a search for matching fragments from the indexed documents. The results are used to form an answer.</p>
                 <a href="/cookbooks/rag/pipeline_query.json" class="btn btn-download btn-outline-dark"><i class="fas fa-download"></i> Download</a>
                 <a href="https://github.com/MittaAI/mitta-community/tree/main/cookbooks/rag" class="btn btn-outline-dark"><i class="fab fa-github"></i></a> 
@@ -46,9 +46,13 @@
         </div>
     </div>
 
-    <h3 class="header">RAG Video</h3>
-    <div class="video-responsive">
-        <iframe width="560" height="315" src="https://www.youtube.com/embed/nlnFbU88sdg?si=HhHORSe4BcjXRH4z" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+    <h3 class="header">Video</h3>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="video-responsive">
+                <iframe width="560" height="315" src="https://www.youtube.com/embed/nlnFbU88sdg?si=HhHORSe4BcjXRH4z" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            </div>
+        </div>
     </div>
 
     <hr id="pirate-bot" style="padding-bottom: 40px;"/>
@@ -59,7 +63,7 @@
             <div class="card" style="width: 18rem;">
               <img class="card-img-top" src="/static/images/pirate.png" alt="PDF Indexing" style="width: 100%;">
               <div class="card-body">
-                <h5 class="card-title">Pirate Bot</h5>
+                <h3 class="card-title">Pirate Bot</h3>
                 <p class="card-text">Queries database for older memories, assembles a new prompt for ChatGPT-X, saves the user's query to memories, and runs a callback.</p>
                 <a href="/cookbooks/piratebot/pipeline_bot.json" class="btn btn-download btn-outline-dark"><i class="fas fa-download"></i> Download</a>
                 <a href="https://github.com/MittaAI/mitta-community/tree/main/cookbooks/piratebot" class="btn btn-outline-dark"><i class="fab fa-github"></i></a> 
@@ -70,7 +74,7 @@
             <div class="card" style="width: 18rem;">
               <img class="card-img-top" src="/static/images/piratememories.png" alt="PDF Querying" style="width: 100%;">
               <div class="card-body">
-                <h5 class="card-title">Pirate Bot Memories</h5>
+                <h3 class="card-title">Pirate Bot Memories</h3>
                 <p class="card-text">Uses uses a Jinja2 processor to transform the bot's response before storing it to the database for use in a subsequent query from Discord.</p>
                 <a href="/cookbooks/piratebot/pipeline_memory.json" class="btn btn-download btn-outline-dark"><i class="fas fa-download"></i> Download</a>
                 <a href="https://github.com/MittaAI/mitta-community/tree/main/cookbooks/piratebot" class="btn btn-outline-dark"><i class="fab fa-github"></i></a> 
@@ -78,10 +82,43 @@
             </div>
         </div>
     </div>
-    <h3 class="header">Pirate Bot Video</h3>
-    <div class="video-responsive">
-        <iframe width="560" height="315" src="https://www.youtube.com/embed/VNqnvoCx9Wg?si=LseWsDeKqHh0ifhI" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+    
+    <h3 class="header">Video</h3>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="video-responsive">
+                <iframe width="560" height="315" src="https://www.youtube.com/embed/VNqnvoCx9Wg?si=LseWsDeKqHh0ifhI" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            </div>
+        </div>
     </div>
+
+    <hr id="pirate-bot" style="padding-bottom: 40px;"/>
+    <h2 class="header">Getting Started...with Pirates!</h2>
+    <p class="lead">The Pirate Dreams cookbook provides a pipeline which synthesizes a pirate's mind using a chat processor. It then extracts objects from the pirate's thoughts using a dictionary extraction processor, and passes the objects and the story into an image generation processor. This is also a perfect video for getting started with MittaAI.</p>
+    <div class="row" style="padding-bottom: 20px">
+        <div class="col-md-4">
+            <div class="card" style="width: 18rem;">
+              <img class="card-img-top" src="/static/images/05mjRjlgp8I2g9xE.png" alt="Pirate Dreams" style="width: 100%;">
+              <div class="card-body">
+                <h3 class="card-title">Pirate Dreams</h3>
+                <p class="card-text">Synthesizes pirate and islander things, then outputs an image.</p>
+                <a href="/cookbooks/piratedreams/pipeline_dreams.json" class="btn btn-download btn-outline-dark"><i class="fas fa-download"></i> Download</a>
+                <a href="https://github.com/MittaAI/mitta-community/tree/main/cookbooks/piratedreams" class="btn btn-outline-dark"><i class="fab fa-github"></i></a> 
+              </div>
+            </div>
+        </div>
+    </div>
+
+
+    <h3 class="header">Video</h3>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="video-responsive">
+                <iframe src="https://www.youtube.com/embed/CuALke2rQbQ?si=if7GJJnzP0C17s9b" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            </div>
+        </div>
+    </div>
+
 
     <hr id="hackerbot" style="padding-bottom: 40px;"/>
     <h2 class="header">Hacker Bot</h2>
@@ -91,7 +128,7 @@
             <div class="card" style="width: 18rem;">
               <img class="card-img-top" src="/static/images/hn.png" alt="HackerBot" style="width: 100%;">
               <div class="card-body">
-                <h5 class="card-title">Hacker Bot</h5>
+                <h3 class="card-title">Hacker Bot</h3>
                 <p class="card-text">Streamlines the process of browsing and interacting with Hacker News. Could be added to the <strong>Pirate Bot</strong> pipeline for posting to Discord.</p>
                 <a href="/cookbooks/hackerbot/pipeline_hn.json" class="btn btn-download btn-outline-dark"><i class="fas fa-download"></i> Download</a>
                 <a href="https://github.com/MittaAI/mitta-community/tree/main/cookbooks/hackerbot" class="btn btn-outline-dark"><i class="fab fa-github"></i></a>       
@@ -99,11 +136,17 @@
             </div>
         </div>
     </div>
-    <h3 class="header">Hacker News Bot Video</h3>
-    <div class="video-responsive">
-        <iframe width="560" height="315" src="https://www.youtube.com/embed/laG-HJhhqus?si=mETTnt57jN7ByghP" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+
+    <h3 class="header">Video</h3>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="video-responsive">
+                <iframe width="560" height="315" src="https://www.youtube.com/embed/laG-HJhhqus?si=mETTnt57jN7ByghP" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            </div>
+        </div>
     </div>
 </div>
+
 <!-- end docs container -->
 
 {% endblock %}

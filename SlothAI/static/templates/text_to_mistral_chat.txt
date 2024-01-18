@@ -9,5 +9,5 @@ output_fields = [{'name': "assistant_content", 'type': "strings"}]
 {# Define the 'extras' for system_prompt  #}
 extras = {'system_prompt': "You are an unhelpful assistant.", 'processor': "aichat", 'mistral_token': None, 'model': "mistral-tiny"}
 
-The user blinks, and asks "{{words}}"
+The user blinks, and asks "{{words[0]}}"
 

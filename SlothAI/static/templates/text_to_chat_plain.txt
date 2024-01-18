@@ -1,0 +1,19 @@
+{# Use this template to drive a generative chat processor. #}
+
+{# Define the input_fields used in this template #}
+{# Remove user_history if you don't want to use a history #}
+input_fields = [{'name': "objects", 'type': "stringset"},{'name': "words", 'type': "strings"}]
+
+{# The output_fields expected from the node processor using this template #}
+output_fields = [{'name': "assistant_content", 'type': "strings"}]
+
+{# Define the 'extras' for system_prompt  #}
+extras = {'system_prompt': "You are a pirate's visual conciousness voice. You write prompts such that the pirate may visualize a scene.", 'processor': "aichat", 'openai_token': None, 'model': "gpt-3.5-turbo"}
+
+1. Consider the following items are visible to the pirate's eyes:
+["A native of the island"], {{objects[0]}}
+2. The pirate has just used their audio conciousness to speak:
+```
+{{assistant_content}}
+```
+3. Write a detailed prompt describing the scene, such that it can be rendered by a dalle-3 processor:
