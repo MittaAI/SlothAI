@@ -39,3 +39,4 @@ pandas==2.1.2
 mistralai==0.0.8
 elevenlabs==0.2.27
 instructor==0.4.5
+htmlmin==0.1.12

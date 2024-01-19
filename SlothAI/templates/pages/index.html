@@ -12,17 +12,12 @@
     <div class="background"  style="margin-top: 125px;">
       <div class="container">
         <div class="row align-items-center justify-content-center">
-          <div class="col-md-6">
-            <img src="/images/brain.png" class="rounded img-fluid" style="border: 8px solid white; max-width: 100%;">
-
-          </div>
-          <div class="col-md-6 text-left">
-            <h1 style="font-family: Roboto; font-weight: 700; font-size: 32px; opacity: 100%; padding-top: 23px;">AI for Your <span id="data">Documents</span></h1>
-            <p class="lead">MittaAI empowers you to swiftly prototype and deploy AI solutions. This open-source framework, compatible with a wide range of AI models, lets you seamlessly transition from concept to production. Utilize its serverless Jinja2-powered pipeline to efficiently process diverse data types, accelerating your development journey from initial idea to real-world application.</p>
+          <div class="col-md-12">
+            <h1>Build <strong class="gradient-text">Strong AI</strong> Pipelines</h1>
+            <p class="lead">MittaAI provides intelligent, low code document transforming pipelines for developers.</p>
             <a href="/pipelines" class="btn btn-outline-light btn-bottoms" type="button">{% if username != 'anonymous' %}Dashboard{% else %}Try Now{% endif %}</a>
             <a href="https://calendar.app.google/fAtRr7WV3E1Wh4PKA" class="btn btn-outline-light btn-bottoms" type="button"><i class="fa fa-calendar"></i> Book a Demo</a>
             <a href="https://github.com/MittaAI/SlothAI" class="btn btn-outline-light btn-bottoms" type="button"><i class="fab fa-github"></i> Code</a>
-            </div>
           </div>
         </div>
       </div>
@@ -34,20 +29,20 @@
   	  <div style="max-width: 900px;" class="container">
   	    <div class="row">
   	      <div style="padding-right: 100px;" class="col-lg-12">
-  	        <h1 style="font-size: 38px; opacity: 100%;">Build <strong>Strong</strong> AI Applications</h1>
-            <p class="lead">MittaAI is an open-source framework engineered for the seamless transition from rapid prototyping to production. It supports a wide range of AI models and is equipped with a versatile array of AI APIs, ensuring compatibility and ease of integration. Powered by <a href="https://palletsprojects.com/p/jinja/">Jinja2</a>, this serverless AI prompt pipeline framework excels in processing and querying various document types — from bot memories (chat logs) to images, PDFs, CSV files, JSON, and even audio files.</p>
-            <p class="lead">With its integrated SQL engine and vector store, MittaAI not only accelerates development but also guarantees high-speed search functionality, making it a robust solution for advancing AI agents from concept to reality efficiently.</p>
-            <p class="lead">MittaAI is <a href="https://github.com/MittaAI/SlothAI">100% Open Source</a>, granting you complete control to tailor solutions for any use case. It's a a system built on trust and transparency, seamlessly allowing you to integrate with leading AI services for rapid protyping and scaling document processing.</p>
+  	        <h2 class="headings"><strong class="gradient-text">Transform</strong> Your AI Workflows</h2>
+            <p class="lead">MittaAI, an <a href="https://github.com/MittaAI/SlothAI">open-source framework</a>, revolutionizes the way AI applications are built and scaled. It's designed for a smooth transition from rapid prototyping to production, supporting a wide range of AI models. This framework stands out with its compatibility and integration ease, facilitated by a suite of AI APIs and a crazy fast, serverless AI prompt pipeline powered by <a href="https://jinja.palletsprojects.com/en/3.1.x/">Jinja2</a>.</p>
+
+            <img src="/images/screenshot.png" style="border-radius: 10px; max-width: 100%; height: auto; margin: 20px 0 30px 0;" />
+
             <p class="lead">With MittaAI, documents and their contents may be deseralized and transformed by the system in parallel during processing using task queues and containers for scale and speed. {{brand.get('name')}} supports calls to <a href="https://platform.openai.com/docs/api-reference">OpenAI</a>, <a href="https://mistral.ai/">MistralAI</a>, <a href="https://deepmind.google/technologies/gemini/">Google Gemini</a>, <a href="https://api.together.xyz/">TogetherAI</a>, <a href="https://www.perplexity.ai/">Perplexity</a>, <a href="https://elevenlabs.io">ElevenLabs</a> speech models, and Google's <a href="https://cloud.google.com/document-ai?hl=en">Document and Vision</a> APIs, and more.</p>
+
             <h3 style="padding-top: 30px;">Need assistance?</h3>
             <p class="lead">
               If you need support, or encounter any issues using the system, we encourage you to reach out by <a href="https://github.com/MittaAI/SlothAI/issues">opening a ticket</a> or joining the conversation on our <a href="{{brand.get('discord_url')}}">Discord</a> server.
             </p>
 
-            <img src="/images/screenshot.png" style="border-radius: 10px; max-width: 100%; height: auto; margin: 20px 0 30px 0;" />
-
             <h2 style="padding-top: 30px;">Videos</h2>
-            <p class="lead">Get started with MittaAI by building a simple pipeline simulate a pirate's brain.</p>
+            <p class="lead">Get started with MittaAI by building a simple pipeline to simulate a pirate's brain.</p>
             <div class="video-responsive">
               <iframe width="560" height="315" src="https://www.youtube.com/embed/CuALke2rQbQ?si=if7GJJnzP0C17s9b" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
             </div>
@@ -90,7 +85,25 @@
 <script src="{{ url_for('site.static', filename='js/trianglify.bundle.js') }}"></script>
 
 <script type="text/javascript">
-$(document).ready(function(){
+$(document).ready(function() {
+    function hexToRgb(hex) {
+        var bigint = parseInt(hex.slice(1), 16);
+        return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
+    }
+
+    var startRgb = hexToRgb("#3355FF");
+    var endRgb = hexToRgb("#ff33ff");
+    var diffRgb = [endRgb[0] - startRgb[0], endRgb[1] - startRgb[1], endRgb[2] - startRgb[2]];
+
+    $(".gradient-text").each(function() {
+        var word = $(this).text();
+        $(this).empty();
+        for (var i = 0; i < word.length; i++) {
+            var progress = i / (word.length - 1);
+            var rgb = `rgb(${Math.round(startRgb[0] + diffRgb[0] * progress)},${Math.round(startRgb[1] + diffRgb[1] * progress)},${Math.round(startRgb[2] + diffRgb[2] * progress)})`;
+            $(this).append($("<span>").text(word[i]).css("color", rgb));
+        }
+    });
 
     var words = [
       'Data', 'PDFs', "Images", "CSVs", 'Websites', 'Bots', 'Books', 'Docs', 'Startup',

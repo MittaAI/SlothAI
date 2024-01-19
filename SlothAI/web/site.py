@@ -2,6 +2,7 @@ import json
 import datetime
 import io
 import requests
+import htmlmin
 
 from google.cloud import ndb
 
@@ -519,7 +520,6 @@ def node_detail(node_id=None, template_id=None):
         'pages/node.html', username=username, email=email, brand=get_brand(app), dev=app.config['DEV'], node=node, template=template, processors=processors, pipelines=pipelines, filtered_pipelines=filtered_pipelines
     )
 
-
 @site.route('/templates')
 @flask_login.login_required
 def templates():
@@ -531,9 +531,11 @@ def templates():
     if not templates:
         return redirect(url_for('site.template_detail'))  # Adjust 'template_detail' to your route name
 
-    return render_template(
+    rendered_html = render_template(
         'pages/templates.html', username=username, email=email, brand=get_brand(app), templates=templates, processors=processors
     )
+    minified_html = htmlmin.minify(rendered_html, remove_empty_space=True)
+    return Response(minified_html, mimetype='text/html')
 
 
 @site.route('/templates/new')
