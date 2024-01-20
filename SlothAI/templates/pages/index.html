@@ -10,11 +10,11 @@
 
 {% block content %}
     <div class="background"  style="margin-top: 125px;">
-      <div class="container">
+      <div class="container container_home">
         <div class="row align-items-center justify-content-center">
           <div class="col-md-12">
             <h1>Build <strong class="gradient-text">Strong AI</strong> Pipelines</h1>
-            <p class="lead">MittaAI provides intelligent, low code document transforming pipelines for developers.</p>
+            <p class="lead">Intelligent, low code, document tranformation pipelines for developers.</p>
             <a href="/pipelines" class="btn btn-outline-light btn-bottoms" type="button">{% if username != 'anonymous' %}Dashboard{% else %}Try Now{% endif %}</a>
             <a href="https://calendar.app.google/fAtRr7WV3E1Wh4PKA" class="btn btn-outline-light btn-bottoms" type="button"><i class="fa fa-calendar"></i> Book a Demo</a>
             <a href="https://github.com/MittaAI/SlothAI" class="btn btn-outline-light btn-bottoms" type="button"><i class="fab fa-github"></i> Code</a>
@@ -22,11 +22,12 @@
         </div>
       </div>
     </div>
+    3
 
     <div style="padding-top: 79px;"></div>
 
   	<div style="background-color: #EEE; border-top: 2px dotted #BBB; border-bottom: 2px dotted #BBB; padding-bottom: 83px;">
-  	  <div style="max-width: 900px;" class="container">
+  	  <div style="max-width: 900px;" class="container container_home">
   	    <div class="row">
   	      <div style="padding-right: 100px;" class="col-lg-12">
   	        <h2 class="headings"><strong class="gradient-text">Transform</strong> Your AI Workflows</h2>
@@ -161,7 +162,7 @@ $(document).ready(function() {
       return stepsHex;
   }
 
-  let gradient = generateGradient("#ffffff", "{{ brand.get('color') }}", 255);
+  let gradient = generateGradient("#dddddd", "{{ brand.get('color') }}", 255);
 
   function tri() {
     // Create the Trianglify pattern

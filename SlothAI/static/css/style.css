@@ -307,7 +307,10 @@ nav h2 a {
 
 /* Style the link to be overlined on hover */
 nav h2 a:hover {
-  text-decoration: overline;
+  color: inherit; /* This makes the text color the same as it normally is */
+  text-decoration: none; /* This removes any text decoration like underlines */
+  background-color: transparent; /* This ensures no background change occurs */
+  outline: none
 }
 
 .selected-node {
@@ -383,15 +386,6 @@ nav h2 a:hover {
 
 .json-document {
   padding: 0.6em 2em !important;
-}
-
-.background {
-  background-color: #444;
-  color: white;
-  text-align: center;
-  padding-top: 13px;
-  padding-bottom: 83px;
-  background-color: rgba(68, 68, 68, 0.45);
 }
 
 /* Navbar and sidebar */
@@ -489,20 +483,14 @@ span.log-expand {
   /* Add any other styling you desire for the callout here */
 }
 
-#site {
-  color: white;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 36px;
-  font-family: 'Orbitron' !important;
-}
-
-
 .site {
   font-family: 'Orbitron' !important;
-  font-size: 1.5rem;
-  font-weight: 300;
-  line-height: 1.0;
+  font-size: 2rem;
+  font-weight: 500;
+}
+
+.site a{
+  text-decoration: none;
 }
 
 #templateText {
@@ -518,7 +506,18 @@ span.log-expand {
   color: white !important;
 }
 
-.container {
+.container_home {
+  margin-top: 80px;
+}
+
+.background {
+  color: blue;
+  text-align: center;
+  padding-top: 13px;
+  padding-bottom: 83px;
+}
+
+.container_dashboard {
   max-width: 85%;
   margin-left: 158px;
 }
@@ -610,7 +609,7 @@ span.log-expand {
 
 @media only screen and (max-width: 768px) {
   body {
-    background-size: cover;
+
   }
   .hide-on-small {
     display: none;
