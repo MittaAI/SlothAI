@@ -1,75 +1,23 @@
 /* Fonts */
-@font-face {
-  font-family: 'Silka Regular';
-  src: url('/static/fonts/silka-regular-webfont.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-}
+@font-face {font-family: 'Silka Regular'; src: url('/static/fonts/silka-regular-webfont.ttf') format('truetype'); font-weight: 400; font-style: normal; }
+@font-face {font-family: 'Silka Bold'; src: url('/static/fonts/silka-bold-webfont.ttf') format('truetype'); font-weight: 700; font-style: normal; }
+@font-face {font-family: 'Silka ExtraLight'; src: url('/static/fonts/silka-extralight-webfont.ttf') format('truetype'); font-weight: 100; font-style: normal; }
+@font-face {font-family: 'Orbitron'; src: url('/static/fonts/Orbitron-Black.ttf') format('truetype'); font-weight: 900; /* Adjust as needed */ font-style: normal; }
+@font-face {font-family: 'Orbitron'; src: url('/static/fonts/Orbitron-Bold.ttf') format('truetype'); font-weight: 700; /* Bold */ font-style: normal; }
+@font-face {font-family: 'Orbitron'; src: url('/static/fonts/Orbitron-ExtraBold.ttf') format('truetype'); font-weight: 800; /* Extra Bold */ font-style: normal; }
+@font-face {font-family: 'Orbitron'; src: url('/static/fonts/Orbitron-Medium.ttf') format('truetype'); font-weight: 500; /* Medium */ font-style: normal; }
+@font-face {font-family: 'Orbitron'; src: url('/static/fonts/Orbitron-Regular.ttf') format('truetype'); font-weight: 400; /* Regular */ font-style: normal; }
+@font-face {font-family: 'Orbitron'; src: url('/static/fonts/Orbitron-SemiBold.ttf') format('truetype'); font-weight: 600; /* Semi Bold */ font-style: normal; }
 
-@font-face {
-  font-family: 'Silka Bold';
-  src: url('/static/fonts/silka-bold-webfont.ttf') format('truetype');
-  font-weight: 700;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'Silka ExtraLight';
-  src: url('/static/fonts/silka-extralight-webfont.ttf') format('truetype');
-  font-weight: 100;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'Orbitron';
-  src: url('/static/fonts/Orbitron-Black.ttf') format('truetype');
-  font-weight: 900; /* Adjust as needed */
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'Orbitron';
-  src: url('/static/fonts/Orbitron-Bold.ttf') format('truetype');
-  font-weight: 700; /* Bold */
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'Orbitron';
-  src: url('/static/fonts/Orbitron-ExtraBold.ttf') format('truetype');
-  font-weight: 800; /* Extra Bold */
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'Orbitron';
-  src: url('/static/fonts/Orbitron-Medium.ttf') format('truetype');
-  font-weight: 500; /* Medium */
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'Orbitron';
-  src: url('/static/fonts/Orbitron-Regular.ttf') format('truetype');
-  font-weight: 400; /* Regular */
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'Orbitron';
-  src: url('/static/fonts/Orbitron-SemiBold.ttf') format('truetype');
-  font-weight: 600; /* Semi Bold */
-  font-style: normal;
-}
-
+/* page styles */
 body {
-  margin: 0;
+  background-color: #101010;
   font-family: 'Silka', 'Roboto', sans-serif;
   font-size: 1rem;
   line-height: 1.5;
-  color: #444;
+  color: #d9d9e3;
   text-align: left;
-  background-color: #fff;
+  caret-color: transparent;
 }
 
 html, body {
@@ -80,7 +28,6 @@ html, body {
 
 h1 {
   font-weight: 700;
-  font-family: 'Silka Bold', sans-serif;
   font-size: 64px; 
   opacity: 90%; 
   font-family: 'Orbitron';
@@ -163,15 +110,6 @@ form, label {
   animation: pulseGlow 1.5s infinite ease-in-out;
 }
 
-@keyframes pulseGlow {
-  0%, 100% {
-    box-shadow: 0 0 5px gray, 0 0 10px gray;
-  }
-  50% {
-    box-shadow: 0 0 15px gray, 0 0 20px gray;
-  }
-}
-
 .button-pipeline {
   flex: 0 0 auto; /* Do not grow, do not shrink, and is automatically sized based on content */
   width: 103px; /* Fixed width */
@@ -185,10 +123,6 @@ form, label {
 
 :focus {
   outline: 0;
-}
-
-.rotate {
-  transform: rotate(180deg); /* Rotate the character 180 degrees */
 }
 
 /* Editor styles */
@@ -313,6 +247,17 @@ nav h2 a:hover {
   outline: none
 }
 
+.hero {
+  background-color: #101010;
+  background: radial-gradient(circle at center center, rgba(128, 128, 128, 0.2) 0%, rgba(128, 128, 128, 0) 800px);
+  background-size: cover;
+  color: #f4f4f4;
+  font-color: #eee;
+  padding-top: 135px;
+  text-align: center;
+  height: 270px;
+}
+
 .selected-node {
   margin-bottom: 10px;
 }
@@ -323,20 +268,6 @@ nav h2 a:hover {
   max-width: 200px;
   font-size: 0.8em;
   height: 20px;
-}
-
-.task-container {
-  display: inline-block;
-  position: relative;
-}
-
-.task-container i {
-  margin-right: 5px;
-}
-
-.task-container span {
-  position: relative;
-  margin-right: 10px;
 }
 
 /* Apply custom styles to badges within the task container */
@@ -396,8 +327,9 @@ nav h2 a:hover {
 .task-badge {
   overflow: visible !important; 
 }
+
 .navbar {
-  background-color:  #484848;
+  background-color:  #404040;
 }
 
 /* Content styles */
@@ -510,24 +442,9 @@ span.log-expand {
   margin-top: 80px;
 }
 
-.background {
-  color: blue;
-  text-align: center;
-  padding-top: 13px;
-  padding-bottom: 83px;
-}
-
 .container_dashboard {
   max-width: 85%;
   margin-left: 158px;
-}
-
-.container-interior {
-  margin-top: 20px;
-}
-
-.container_legal {
-  margin-bottom: 60px;
 }
 
 /* Sidebar styles */

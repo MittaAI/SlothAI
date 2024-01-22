@@ -9,73 +9,65 @@
 {% endblock %}
 
 {% block content %}
-    <div class="background"  style="margin-top: 125px;">
-      <div class="container container_home">
-        <div class="row align-items-center justify-content-center">
-          <div class="col-md-12">
-            <h1>Build <strong class="gradient-text">Strong AI</strong> Pipelines</h1>
-            <p class="lead">Intelligent, low code, document tranformation pipelines for developers.</p>
-            <a href="/pipelines" class="btn btn-outline-light btn-bottoms" type="button">{% if username != 'anonymous' %}Dashboard{% else %}Try Now{% endif %}</a>
-            <a href="https://calendar.app.google/fAtRr7WV3E1Wh4PKA" class="btn btn-outline-light btn-bottoms" type="button"><i class="fa fa-calendar"></i> Book a Demo</a>
-            <a href="https://github.com/MittaAI/SlothAI" class="btn btn-outline-light btn-bottoms" type="button"><i class="fab fa-github"></i> Code</a>
-          </div>
-        </div>
+
+<div class="hero">
+  <div class="row align-items-center justify-content-center">
+    <div class="col-md-12">
+      <h1>Build <strong class="gradient-text">Strong AI</strong> Pipelines</h1>
+      <p class="lead">Intelligent, low code, document transforming pipelines for developers.</p>
+      <a href="/pipelines" class="btn btn-outline-light btn-bottoms" type="button">{% if username != 'anonymous' %}Dashboard{% else %}Try Now{% endif %}</a>
+      <a href="https://calendar.app.google/fAtRr7WV3E1Wh4PKA" class="btn btn-outline-light btn-bottoms" type="button"><i class="fa fa-calendar"></i> Book a Demo</a>
+      <a href="https://github.com/MittaAI/SlothAI" class="btn btn-outline-light btn-bottoms" type="button"><i class="fab fa-github"></i> Code</a>
+    </div>
+  </div>
+</div>
+
+<div class="hero">
+  <div class="row">
+    <div style="padding-right: 100px;" class="col-lg-12">
+      <h2 class="headings"><strong class="gradient-text">Transform</strong> Your AI Workflows</h2>
+      <p class="lead">{{brand.get('name')}}, an <a href="https://github.com/MittaAI/SlothAI">open-source framework</a>, revolutionizes the way AI applications are built and scaled. It's designed for a smooth transition from rapid prototyping to production, supporting a wide range of AI models. This framework stands out with its compatibility and integration ease, facilitated by a suite of AI APIs and a crazy fast, serverless AI prompt pipeline powered by <a href="https://jinja.palletsprojects.com/en/3.1.x/">Jinja2</a>.</p>
+
+      <img src="/images/screenshot.png" style="border-radius: 10px; max-width: 100%; height: auto; margin: 20px 0 30px 0;" />
+
+      <p class="lead">With {{brand.get('name')}}, documents and data may be deseralized and transformed by the system during processing using task queues and containers for scale and speed. {{brand.get('name')}} supports calls to <a href="https://platform.openai.com/docs/api-reference">OpenAI</a>, <a href="https://mistral.ai/">MistralAI</a>, <a href="https://deepmind.google/technologies/gemini/">Google Gemini</a>, <a href="https://api.together.xyz/">TogetherAI</a>, <a href="https://www.perplexity.ai/">Perplexity</a>, <a href="https://elevenlabs.io">ElevenLabs</a> speech models, and Google's <a href="https://cloud.google.com/document-ai?hl=en">Document and Vision</a> APIs, and more.</p>
+
+      <h3 style="padding-top: 30px;">Need assistance?</h3>
+      <p class="lead">
+        If you need support, or encounter any issues using the system, we encourage you to reach out by <a href="https://github.com/MittaAI/SlothAI/issues">opening a ticket</a> or joining the conversation on our <a href="{{brand.get('discord_url')}}">Discord</a> server.
+      </p>
+
+      <h2 style="padding-top: 30px;">Videos</h2>
+      <p class="lead">Get started with {{brand.get('name')}} by building a simple pipeline to simulate a pirate's brain.</p>
+      <div class="video-responsive">
+        <iframe width="560" height="315" src="https://www.youtube.com/embed/CuALke2rQbQ?si=if7GJJnzP0C17s9b" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+      </div>
+
+      <h3 style="padding-top: 30px;">Integrated Storage</h3>
+      <p class="lead">{{brand.get('name')}} utilizes a single managed database, <a href="https://www.featurebase.com/cloud">FeatureBase Cloud</a>, which handles in-memory set operations, vector storage and search, and point lookups for AI workloads. <a href="https://featurebase.com">FeatureBase</a> can execute complex SQL queries against analytical, tabular, or vector data. These queries can also be generated using AI models.  Secure support for file storage is provided by <a href="https://cloud.google.com/">Google Cloud</a>.</p>
+
+      <h3 style="padding-top: 30px;">Retrieval Augmented Generation</h3>
+      <p class="lead">{{brand.get('name')}}'s' framework can be used to build customized <a href="https://research.ibm.com/blog/retrieval-augmented-generation-RAG">RAG</a>-based pipelines. It also provides tools for chunking PDFs, text files, and other types of documents, like images. Use OpenAI's <a href="https://platform.openai.com/docs/guides/embeddings">text-embedding-ada-002</a> embeddings or our free embeddings powered by <a href="https://instructor-embedding.github.io/">Instructor</a> to make your content AI-ready.</p>
+      <a href="/cookbooks#pdf-indexing" class="btn btn-outline-dark"><i class="fas fa-code-branch"></i> View Cookbook</a>
+  
+      <h3 style="padding-top: 30px;">Innovative Bot Building</h3>
+      <p class="lead">{{brand.get('name')}} provides a platform for building AI bots, offering document and webpage indexing and querying, and integrating these into AI prompts with vector search. Key features include real-time web content retrieval, efficient document storage, advanced indexing, and agent memory operations, addressing developers' needs for up-to-date information and organized data management in bot development.</p>
+      <a href="/cookbooks#pirate-bot" class="btn btn-outline-dark"><i class="fas fa-code-branch"></i> View Cookbook</a>
+
+      <h3 style="padding-top: 30px;">Grounded Storytelling</h3>
+      <p class="lead">{{brand.get('name')}} enables the creation of AI agents by allowing users to index and query various document media, and incorporate these fragments into prompt templates for discussions using vector search. These agents become more effective with access to up-to-date data or web content retrieval capabilities. {{brand.get('name')}} offers features like real-time web content retrieval, document storage, indexing, and agent memory operations.</p>
+      <a href="/cookbooks#hackerbot" class="btn btn-outline-dark"><i class="fas fa-code-branch"></i> View Cookbook</a>
+
+      <div style="padding-top: 43px; padding-bottom: 23px;">
+        {% if uid != "anonymous" %}
+        <a class="btn btn-outline-dark" href="/pipelines">Build Now</a>
+        {% else %}
+        <a class="btn btn-outline-dark" href="/pipelines">Build Now</a>
+        {% endif %}
       </div>
     </div>
-    3
-
-    <div style="padding-top: 79px;"></div>
-
-  	<div style="background-color: #EEE; border-top: 2px dotted #BBB; border-bottom: 2px dotted #BBB; padding-bottom: 83px;">
-  	  <div style="max-width: 900px;" class="container container_home">
-  	    <div class="row">
-  	      <div style="padding-right: 100px;" class="col-lg-12">
-  	        <h2 class="headings"><strong class="gradient-text">Transform</strong> Your AI Workflows</h2>
-            <p class="lead">MittaAI, an <a href="https://github.com/MittaAI/SlothAI">open-source framework</a>, revolutionizes the way AI applications are built and scaled. It's designed for a smooth transition from rapid prototyping to production, supporting a wide range of AI models. This framework stands out with its compatibility and integration ease, facilitated by a suite of AI APIs and a crazy fast, serverless AI prompt pipeline powered by <a href="https://jinja.palletsprojects.com/en/3.1.x/">Jinja2</a>.</p>
-
-            <img src="/images/screenshot.png" style="border-radius: 10px; max-width: 100%; height: auto; margin: 20px 0 30px 0;" />
-
-            <p class="lead">With MittaAI, documents and their contents may be deseralized and transformed by the system in parallel during processing using task queues and containers for scale and speed. {{brand.get('name')}} supports calls to <a href="https://platform.openai.com/docs/api-reference">OpenAI</a>, <a href="https://mistral.ai/">MistralAI</a>, <a href="https://deepmind.google/technologies/gemini/">Google Gemini</a>, <a href="https://api.together.xyz/">TogetherAI</a>, <a href="https://www.perplexity.ai/">Perplexity</a>, <a href="https://elevenlabs.io">ElevenLabs</a> speech models, and Google's <a href="https://cloud.google.com/document-ai?hl=en">Document and Vision</a> APIs, and more.</p>
-
-            <h3 style="padding-top: 30px;">Need assistance?</h3>
-            <p class="lead">
-              If you need support, or encounter any issues using the system, we encourage you to reach out by <a href="https://github.com/MittaAI/SlothAI/issues">opening a ticket</a> or joining the conversation on our <a href="{{brand.get('discord_url')}}">Discord</a> server.
-            </p>
-
-            <h2 style="padding-top: 30px;">Videos</h2>
-            <p class="lead">Get started with MittaAI by building a simple pipeline to simulate a pirate's brain.</p>
-            <div class="video-responsive">
-              <iframe width="560" height="315" src="https://www.youtube.com/embed/CuALke2rQbQ?si=if7GJJnzP0C17s9b" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-            </div>
-
-            <h3 style="padding-top: 30px;">Integrated Storage</h3>
-            <p class="lead">{{brand.get('name')}} utilizes a single managed database, <a href="https://www.featurebase.com/cloud">FeatureBase Cloud</a>, which handles in-memory set operations, vector storage and search, and point lookups for AI workloads. <a href="https://featurebase.com">FeatureBase</a> can execute complex SQL queries against analytical, tabular, or vector data. These queries can also be generated using AI models.  Secure support for file storage is provided by <a href="https://cloud.google.com/">Google Cloud</a>.</p>
-
-            <h3 style="padding-top: 30px;">Retrieval Augmented Generation</h3>
-            <p class="lead">{{brand.get('name')}}'s' framework can be used to build customized <a href="https://research.ibm.com/blog/retrieval-augmented-generation-RAG">RAG</a>-based pipelines. It also provides tools for chunking PDFs, text files, and other types of documents, like images. Use OpenAI's <a href="https://platform.openai.com/docs/guides/embeddings">text-embedding-ada-002</a> embeddings or our free embeddings powered by <a href="https://instructor-embedding.github.io/">Instructor</a> to make your content AI-ready.</p>
-            <a href="/cookbooks#pdf-indexing" class="btn btn-outline-dark"><i class="fas fa-code-branch"></i> View Cookbook</a>
-        
-            <h3 style="padding-top: 30px;">Innovative Bot Building</h3>
-            <p class="lead">Bots, or artificial intelligence powered agents, can be built with {{brand.get('name')}} by creating indexing and querying pipelines for documents, webpages, or other types of document media and then referencing those document fragments in prompt templates built for discussion using vector search. AI agents are more useful when their data is up-to-date, or they have the ability to reference material found on the Web, through searching. {{brand.get('name')}} provides real-time web content retrieval, document storage, indexing, agent history (memory) operations, and more.</p>
-            <a href="/cookbooks#pirate-bot" class="btn btn-outline-dark"><i class="fas fa-code-branch"></i> View Cookbook</a>
-
-            <h3 style="padding-top: 30px;">Grounded Storytelling</h3>
-            <p class="lead">Stories based on historic customer data and interactions can be used to tell a more efficient and dynamic story about the health of a business and its customers. Take data from dashboards, PDFs, Slack, and more and use AI to make things more explainable to more people. Analyze alerting systems for faster time to resolution, create dynamic content for websites, instructions for use of a product, summarize Slack conversations, get in front of outage issues, or even build dynamic blurbs for homepages, like this one.</p>
-            <a href="/cookbooks#hackerbot" class="btn btn-outline-dark"><i class="fas fa-code-branch"></i> View Cookbook</a>
-
-  	        <div style="padding-top: 43px; padding-bottom: 23px;">
-  	          {% if uid != "anonymous" %}
-  	          <a class="btn btn-outline-dark" href="/pipelines">Build Now</a>
-  	          {% else %}
-  	          <a class="btn btn-outline-dark" href="/pipelines">Build Now</a>
-  	          {% endif %}
-  	        </div>
-  	      </div>
-  	    </div>
-  	  </div>
-  	</div>
-
-    <div style="padding-top: 79px;"></div>
+  </div>
+</div>
 
 {% endblock %}
 
@@ -83,8 +75,6 @@
 {% endblock %}
 
 {% block javascript %}
-<script src="{{ url_for('site.static', filename='js/trianglify.bundle.js') }}"></script>
-
 <script type="text/javascript">
 $(document).ready(function() {
     function hexToRgb(hex) {
@@ -92,8 +82,8 @@ $(document).ready(function() {
         return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
     }
 
-    var startRgb = hexToRgb("#3355FF");
-    var endRgb = hexToRgb("#ff33ff");
+    var startRgb = hexToRgb("#00ff00");
+    var endRgb = hexToRgb("#5300dd");
     var diffRgb = [endRgb[0] - startRgb[0], endRgb[1] - startRgb[1], endRgb[2] - startRgb[2]];
 
     $(".gradient-text").each(function() {
@@ -106,92 +96,6 @@ $(document).ready(function() {
         }
     });
 
-    var words = [
-      'Data', 'PDFs', "Images", "CSVs", 'Websites', 'Bots', 'Books', 'Docs', 'Startup',
-      'Documents', 'Research', 'Innovation', 'Strategies', 'Dragons', 'Wizards', 'Prompts',
-      'Ideas', 'Projects', 'Dreams', 'Journeys', 'Challenges', 'Code',
-      'Adventures', 'Discoveries', 'Mysteries', 'Quests', 'Treasures',
-      'Stories', 'Futures', 'Visions', 'Realms', 'Expedition'
-    ];
-
-    var counter = 0;
-    var maxCount = words.length * 2; // Run through the list twice
-    var elem = $("#data");
-    var interval = setInterval(change, 2000);
-
-    function change() {
-        elem.fadeOut(function(){
-            elem.html(words[counter % words.length]); // Use modulo to loop through words
-            counter++;
-            if(counter >= maxCount) {
-              clearInterval(interval); // Cancel the interval after two full cycles
-            }
-            elem.fadeIn();
-        });
-    }
-
-  function generateGradient(startColor, endColor, steps) {
-      let start = {
-          'r': parseInt(startColor.slice(1, 3), 16),
-          'g': parseInt(startColor.slice(3, 5), 16),
-          'b': parseInt(startColor.slice(5, 7), 16)
-      };
-
-      let end = {
-          'r': parseInt(endColor.slice(1, 3), 16),
-          'g': parseInt(endColor.slice(3, 5), 16),
-          'b': parseInt(endColor.slice(5, 7), 16)
-      };
-
-      let diff = {
-          'r': end.r - start.r,
-          'g': end.g - start.g,
-          'b': end.b - start.b
-      };
-
-      let stepsHex = [];
-
-      for (let i = 0; i <= steps; i++) {
-          let r = Math.round(start.r + (diff.r / steps) * i).toString(16).padStart(2, '0');
-          let g = Math.round(start.g + (diff.g / steps) * i).toString(16).padStart(2, '0');
-          let b = Math.round(start.b + (diff.b / steps) * i).toString(16).padStart(2, '0');
-
-          stepsHex.push(`#${r}${g}${b}`);
-      }
-
-      return stepsHex;
-  }
-
-  let gradient = generateGradient("#dddddd", "{{ brand.get('color') }}", 255);
-
-  function tri() {
-    // Create the Trianglify pattern
-    const width = document.documentElement.clientWidth || window.innerWidth;
-    const height = document.documentElement.clientHeight || window.innerHeight;
-
-    const pattern = trianglify({
-        width: width,
-        height: height+2000,
-        xColors: gradient,
-        yColors: 'match'
-    });
-    $('#f1f2f3').remove();
-
-    // Serialize the SVG object to a String
-    var m = new XMLSerializer().serializeToString(pattern.toSVG());
-
-    // Perform the base64 encoding of the String
-    var k = window.btoa(m);
-
-    // Set the background image property, including the encoding type header
-    $("body").css("background-image", 'url("data:image/svg+xml;base64,' + k + '")');
-  }
-
-  // build and maintain image background
-  tri();
-  $(window).resize(function() {
-    tri();
-  });
 });
 </script>
 {% endblock %}

@@ -6,27 +6,19 @@
 {% endblock %}
 
 {% block content %}
-<div id="#top" class="container container_api container_legal">
-    <h1 class="header">Cookbooks</h1>
-    <p class="lead">The cookbooks listed below offer ready-to-use reference pipelines for MittaAI. You can import them into your MittaAI account from the <a href="/pipelines">pipelines page</a> and then use or edit them to suit your use case.</p>
+<div id="#top" class="container container_home" style="margin-bottom: 83px;">
+    <h1 class="headings"><strong class="gradient-text">Cookbooks</strong></h1>
+    <p class="lead">Cookbooks are ready-to-use reference pipelines for {{brand.get('name')}}.</p>
     
     <p class="lead">If you need assistance using or building a pipeline, be sure to pop into our <a href="https://discord.gg/SxwcVGQ8j9">Discord server</a>!</p>
 
-    <h3 class="header">Getting Started Video</h3>
-    <p class="lead">If you would like to get familar with using MittaAI, follow along with the getting started guide to build a simple pipeline to simulate a pirate's brain.</p>
-    <div class="video-responsive">
-        <iframe width="560" height="315" src="https://www.youtube.com/embed/CuALke2rQbQ?si=if7GJJnzP0C17s9b" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-    </div>
-
-    <hr id="pdf-indexing" style="padding-bottom: 40px;"/>
     <h2 class="header">PDF Indexing and Querying</h2>
-    <p class="lead">PDF indexing is useful for building applications which use <a href="https://research.ibm.com/blog/retrieval-augmented-generation-RAG">RAG</a> (Retrieval Augmented Generation) for interactions with users. These two pipelines are used together to query documents to generate grounded responses to a user's input.</p>
-    <div class="row" style="padding-bottom: 20px">
+    <div class="row" style="padding-bottom: 20px; gap: 20px;">
         <div class="col-md-4">
-            <div class="card" style="width: 18rem;">
+            <div class="card" style="width: 100%;">
               <img class="card-img-top" src="/static/images/indexing.png" alt="PDF Indexing" style="width: 100%;">
               <div class="card-body">
-                <h3 class="card-title">PDF Indexing Pipeline</h3>
+                <h3 class="card-title">Index Pipeline</h3>
                 <p class="card-text">Keyterm extraction and text embeddings are used to index a set of documents and make them ready for search. Uploads are limited in size to 25MB.</p>
                 <a href="/cookbooks/rag/pipeline_index.json" class="btn btn-download btn-outline-dark"><i class="fas fa-download"></i> Download</a>
                 <a href="https://github.com/MittaAI/mitta-community/tree/main/cookbooks/rag" class="btn btn-outline-dark"><i class="fab fa-github"></i></a>       
@@ -34,10 +26,10 @@
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card" style="width: 18rem;">
+            <div class="card" style="width: 100%;">
               <img class="card-img-top" src="/static/images/querying.png" alt="PDF Querying" style="width: 100%;">
               <div class="card-body">
-                <h3 class="card-title">PDF Query Pipeline</h3>
+                <h3 class="card-title">Query Pipeline</h3>
                 <p class="card-text">This pipeline embeds a user query and then conducts a search for matching fragments from the indexed documents. The results are used to form an answer.</p>
                 <a href="/cookbooks/rag/pipeline_query.json" class="btn btn-download btn-outline-dark"><i class="fas fa-download"></i> Download</a>
                 <a href="https://github.com/MittaAI/mitta-community/tree/main/cookbooks/rag" class="btn btn-outline-dark"><i class="fab fa-github"></i></a> 
@@ -46,7 +38,6 @@
         </div>
     </div>
 
-    <h3 class="header">Video</h3>
     <div class="row">
         <div class="col-md-6">
             <div class="video-responsive">
@@ -74,7 +65,7 @@
             <div class="card" style="width: 18rem;">
               <img class="card-img-top" src="/static/images/piratememories.png" alt="PDF Querying" style="width: 100%;">
               <div class="card-body">
-                <h3 class="card-title">Pirate Bot Memories</h3>
+                <h3 class="card-title">Bot Memories</h3>
                 <p class="card-text">Uses uses a Jinja2 processor to transform the bot's response before storing it to the database for use in a subsequent query from Discord.</p>
                 <a href="/cookbooks/piratebot/pipeline_memory.json" class="btn btn-download btn-outline-dark"><i class="fas fa-download"></i> Download</a>
                 <a href="https://github.com/MittaAI/mitta-community/tree/main/cookbooks/piratebot" class="btn btn-outline-dark"><i class="fab fa-github"></i></a> 
@@ -93,8 +84,8 @@
     </div>
 
     <hr id="pirate-bot" style="padding-bottom: 40px;"/>
-    <h2 class="header">Getting Started...with Pirates!</h2>
-    <p class="lead">The Pirate Dreams cookbook provides a pipeline which synthesizes a pirate's mind using a chat processor. It then extracts objects from the pirate's thoughts using a dictionary extraction processor, and passes the objects and the story into an image generation processor. This is also a perfect video for getting started with MittaAI.</p>
+    <h2 class="header">Get Started with Pirates!</h2>
+    <p class="lead">The Pirate Dreams cookbook provides a pipeline which synthesizes a pirate's mind using a chat processor. It then extracts objects from the pirate's thoughts using a dictionary extraction processor, and passes the objects and the story into an image generation processor.</p>
     <div class="row" style="padding-bottom: 20px">
         <div class="col-md-4">
             <div class="card" style="width: 18rem;">
@@ -153,6 +144,27 @@
 
 {% block javascript %}
 <script type="text/javascript">
+$(document).ready(function() {
+    function hexToRgb(hex) {
+        var bigint = parseInt(hex.slice(1), 16);
+        return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
+    }
+
+    var startRgb = hexToRgb("#00eeFF");
+    var endRgb = hexToRgb("#ee00ee");
+    var diffRgb = [endRgb[0] - startRgb[0], endRgb[1] - startRgb[1], endRgb[2] - startRgb[2]];
+
+    $(".gradient-text").each(function() {
+        var word = $(this).text();
+        $(this).empty();
+        for (var i = 0; i < word.length; i++) {
+            var progress = i / (word.length - 1);
+            var rgb = `rgb(${Math.round(startRgb[0] + diffRgb[0] * progress)},${Math.round(startRgb[1] + diffRgb[1] * progress)},${Math.round(startRgb[2] + diffRgb[2] * progress)})`;
+            $(this).append($("<span>").text(word[i]).css("color", rgb));
+        }
+    });
+});
+
 $(document).on('click', 'a.btn-download', function(e) {
     e.preventDefault();
     var url = $(this).attr('href');
