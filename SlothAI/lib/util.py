@@ -1,5 +1,7 @@
 import re
 import random
+import json
+import requests
 import string
 import secrets
 import socket
@@ -74,6 +76,7 @@ def sms_user(phone_e164, message="Just saying Hi!"):
 def email_user(email, subject="subject", html_content="content"):
     if app.config['DEV'] == "True":
         response = {'status': "success", 'message': "sending code via dev console"}
+        print(f"would email {email}")
     else:
         response = {'status': "success", 'message': "sending code via sendmail"}
         message = Mail(
@@ -601,7 +604,37 @@ def compress_text(text):
     compressed_bytes = zlib.compress(text.encode('utf-8'))
     return base64.b64encode(compressed_bytes).decode('utf-8')
 
+
 def decompress_text(compressed_text):
     compressed_bytes = base64.b64decode(compressed_text.encode('utf-8'))
     decompressed_bytes = zlib.decompress(compressed_bytes)
     return decompressed_bytes.decode('utf-8')
+
+
+def get_raw_content_from_github(url):
+    raw_url = url.replace("github.com", "raw.githubusercontent.com").replace("/tree/", "/")
+
+    response = requests.get(raw_url)
+    if response.status_code == 200:
+        return response.text
+    else:
+        return None
+
+
+def github_cookbooks(repo, path):
+    api_url = f"https://api.github.com/repos/{repo}/contents/{path}"
+    response = requests.get(api_url)
+
+    cookbooks = []
+    if response.status_code == 200:
+        contents = response.json()
+        for content in contents:
+            try:
+                url = f"{content.get('html_url')}/mitta_config.json"
+                json_content = json.loads(get_raw_content_from_github(url))
+                if json_content:
+                    cookbooks.append(json_content)
+            except Exception as ex:
+                pass
+
+    return cookbooks

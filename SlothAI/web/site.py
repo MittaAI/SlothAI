@@ -7,7 +7,7 @@ import htmlmin
 from google.cloud import ndb
 
 from flask import Blueprint, render_template, jsonify, send_from_directory
-from flask import redirect, url_for, abort
+from flask import redirect, url_for, abort, flash
 from flask import request, send_file, Response
 from flask import current_app as app
 
@@ -16,7 +16,7 @@ from flask_login import current_user
 
 from google.cloud import storage
 
-from SlothAI.lib.util import random_name, gpt_dict_completion, build_mermaid, load_template, load_from_storage, merge_extras, should_be_service_token, callback_extras
+from SlothAI.lib.util import email_user, random_name, gpt_dict_completion, build_mermaid, github_cookbooks, load_template, load_from_storage, merge_extras, should_be_service_token, callback_extras
 from SlothAI.web.models import Pipeline, Node, Log, User, Token
 
 site = Blueprint('site', __name__, static_folder='static')
@@ -31,7 +31,7 @@ processors = [
     {"value": "read_file", "label": "Read Processor (File)", "icon": "book-reader"},
     {"value": "read_uri", "label": "Read Processor (URI)", "icon": "globe"},
     {"value": "aigrub", "label": "Read Processor (URI)", "icon": "desktop"},
-    {"value": "aiffmpeg", "label": "Ffmpeg Processor", "icon": "photo-video"},
+    {"value": "aiffmpeg", "label": "FFmpeg Processor", "icon": "photo-video"},
     {"value": "info_file", "label": "Info Processor (File)", "icon": "info"},
     {"value": "read_fb", "label": "Read Processor (FeatureBase)", "icon": "database"},
     {"value": "split_task", "label": "Split Task Processor", "icon": "columns"},
@@ -220,7 +220,57 @@ def home():
     except:
         username = "anonymous"
         email = "anonymous"
-    return render_template('pages/index.html', username=username, email=email, brand=get_brand(app))
+    return render_template('pages/index.html', username=username, email=email, brand=get_brand(app), dev=app.config['DEV'])
+
+
+@site.route('/pro', methods=['GET'])
+def pro():
+    try:
+        username = current_user.name
+        email = current_user.email
+    except:
+        username = "anonymous"
+        email = "anonymous"
+    return render_template('pages/pro.html', username=username, email=email, brand=get_brand(app), dev=app.config['DEV'])
+
+
+@site.route('/pro', methods=['POST'])
+def postpro():
+    # get form fields, if any
+    email = request.form.get('email')
+    name = request.form.get('name')
+    company = request.form.get('company')
+    phone = request.form.get('phone')
+    why = request.form.get('why')
+
+    message = ""
+
+    if email != "" and name != "" and company != "" and phone != "" and why != "":
+        message = message + "<div>email: %s</div>" % email
+        message = message + "<div>name: %s</div>" % name
+        message = message + "<div>company: %s</div>" % company
+        message = message + "<div>phone: %s</div>" % phone
+        message = message + "<div>why: %s</div>" % why
+
+        email_user("kord@mitta.ai", subject="pro request", html_content=message)
+        return render_template(
+            'pages/donepro.html',
+            brand=get_brand(app),
+            dev=app.config['DEV']
+        )
+    else:
+        flash("We need all these fields filed out, please.")
+
+    return render_template(
+        'pages/pro.html',
+        email=email,
+        name=name,
+        company=company,
+        phone=phone,
+        why=why,
+        brand=get_brand(app), 
+        dev=app.config['DEV']
+    )
 
 
 @site.route('/legal', methods=['GET'])
@@ -246,8 +296,35 @@ def about():
 
     return render_template('pages/about.html', username=username, email=email, dev=app.config['DEV'], brand=get_brand(app))
 
+
+@site.route('/pricing', methods=['GET'])
+def pricing():
+    try:
+        username = current_user.name
+        email = current_user.email
+    except:
+        username = "anonymous"
+        email = "anonymous"
+    return render_template('pages/pricing.html', username=username, email=email, dev=app.config['DEV'], brand=get_brand(app))
+
+
 @site.route('/cookbooks', methods=['GET'])
 def cookbooks():
+    cookbooks = github_cookbooks("MittaAI/mitta-community", "cookbooks")
+
+    for cookbook in cookbooks:
+        for card in cookbook['cookbook_cards']:
+            # Update image src
+            github_base_url = card['links']['github']['href'].replace('/tree/', '/')
+            card['image']['src'] = github_base_url + '/' + card['image']['src']
+
+            # Update install href
+            card['links']['install']['href'] = github_base_url + '/' + card['links']['install']['href']
+
+            # Transform URLs to raw content URLs
+            card['image']['src'] = card['image']['src'].replace("github.com", "raw.githubusercontent.com").replace("/tree/", "/")
+            card['links']['install']['href'] = card['links']['install']['href'].replace("github.com", "raw.githubusercontent.com").replace("/tree/", "/")
+
     try:
         username = current_user.name
         email = current_user.email
@@ -255,7 +332,7 @@ def cookbooks():
         username = "anonymous"
         email = "anonymous"
 
-    return render_template('pages/cookbooks.html', username=username, email=email, dev=app.config['DEV'], brand=get_brand(app))
+    return render_template('pages/cookbooks.html', username=username, email=email, dev=app.config['DEV'], brand=get_brand(app), cookbooks=cookbooks)
 
 
 @site.route('/pipelines', methods=['GET'])
@@ -639,21 +716,32 @@ def settings():
         'pages/settings.html', username=username, email=email, brand=get_brand(app), api_token=api_token, dbid=dbid, tokens=tokens
     )
 
-# image serving
-@site.route('/d/<name>/<filename>')
-@flask_login.login_required
-def serve(name, filename):
-    if name != current_user.name:
-        abort(404) 
 
-    user = User.get_by_uid(current_user.uid)
-    if not user:
+# image serving with token or non-decorator based flask_login
+@site.route('/d/<name>/<filename>')
+def serve(name, filename):
+    token = request.args.get('token')
+    user = None
+
+    if token:
+        # If a token is present, attempt to authenticate using the token
+        user = User.get_by_token(token)
+    else:
+        # If no token is provided, use the current_user from flask_login
+        if current_user.is_authenticated and current_user.name == name:
+            user = User.get_by_uid(current_user.uid)
+        else:
+            # If the current_user is not authenticated or the name doesn't match, abort with 404
+            abort(404)
+
+    if not user or name != user.get('name'):
+        # If no user is found with the token or the name doesn't match the user's name, abort with 404
         abort(404)
 
     # set up bucket on google cloud
     gcs = storage.Client()
     bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
-    blob = bucket.blob("%s/%s" % (current_user.uid, filename))
+    blob = bucket.blob("%s/%s" % (user.get('uid'), filename))
     
     buffer = io.BytesIO()
     blob.download_to_file(buffer)

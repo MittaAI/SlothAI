@@ -74,6 +74,29 @@ def node_to_pipeline(pipe_id):
             'error': 'Invalid request format, JSON expected.'
         }), 400
 
+@pipeline.route('/pipeline/<pipe_id>/rename', methods=['POST'])
+@flask_login.login_required
+def update_name(pipe_id):
+    # Parse the JSON data from the request
+    try:
+        json_data = request.get_json()
+        new_name = json_data["pipeline"]["name"]
+    except Exception as e:
+        return jsonify({"error": "Invalid JSON data"}), 400
+
+    # Check if the user has permission to update the node
+    pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
+    if not pipeline:
+        return jsonify({"error": "Pipeline not found"}), 404
+
+    # Update the node's name with the new name
+    updated_node = Pipeline.rename(current_user.uid, pipe_id, new_name)
+
+    if updated_node:
+        return jsonify({"message": "Pipeline renamed successfully"}), 200
+    else:
+        return jsonify({"error": "Failed to rename pipeline"}), 500
+
 
 @pipeline.route('/pipeline/<pipe_id>', methods=['POST'])
 @flask_login.login_required
@@ -221,6 +244,7 @@ def ingest_post(pipeline_id):
         except Exception as ex:
             return jsonify({"error": f"Error getting or transforming JSON data."}), 400
     else:
+        print(request.get_json())
         # If it's not a file upload, try to read JSON data
         try:
             json_data_dict = transform_single_items_to_lists(request.get_json())

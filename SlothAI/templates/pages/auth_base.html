@@ -29,38 +29,36 @@
   <meta name="twitter:image" content="/images/sloth.png" />
 
   <link rel="shortcut icon" href="/images/favicon.ico">
-  <link rel="stylesheet" href="/css/style.css">
 
   <link rel="stylesheet" href="/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/css/style.css">
   
   {% block style %}
   {% endblock %}
   
   <script src="/js/jquery.min.js"></script>
-
 </head>
 
 <body>
-  <div id="body">
-    {% block content %}
-    {% endblock %}
-    {% block footer %}
-    {% endblock %}
-  </div>
+
+{% block content %}
+{% endblock %}
+
+<script type="text/javascript">
+  $(document).ready(function(){
+    // redirect to https
+    if ("{{dev}}"=="True") {
+      console.log("developer logs");
+    } else {
+      if (location.protocol!=='https:') {
+        location.replace(`https:${location.href.substring(location.protocol.length)}`);
+      }
+    }
+  });
+</script>
 
 {% block javascript %}
-  <script type="text/javascript">
-    $(document).ready(function(){
-      // redirect to https
-      if ("{{dev}}"=="True") {
-        console.log("developer logs");
-      } else {
-        if (location.protocol!=='https:') {
-          location.replace(`https:${location.href.substring(location.protocol.length)}`);
-        }
-      }
-    });
-  </script>
 {% endblock %}
+
 </body>
 </html>

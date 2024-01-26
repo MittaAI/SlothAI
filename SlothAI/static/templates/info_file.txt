@@ -3,7 +3,8 @@
 {# Define the input_fields used in this template #}
 input_fields = [{'name': "filename", 'type': "string"},{'name': "content_type", 'type': "string"}]
 
-{# The output_fields expected from the node processor using this template %}
+{# The info_file processor auto outputs 'txt_num_lines', 'pdf_num_pages', 'file_size_bytes' and 'ttl' #}
+{# If you specify an output field here, it will be used instead of 'mitta_uri' to store the URL of the file. #}
 output_fields = [{'name': "mitta_uri", 'type': "strings"}]
 
 {# Define the info_file processor #}

@@ -1,4 +1,4 @@
-{% extends "pages/page_base.html" %}
+{% extends "pages/app_base.html" %}
 
 {% block title %}
 <title>Templates | {{brand.get('name')}}</title>
@@ -7,64 +7,73 @@
 
 {% block content %}
 <!-- Main Content -->
-<div class="container_dashboard mt-5 pt-4">
-    <h2 class="page_heading">Templates</h2>
-
-    <p>The following templates are available to create nodes.</p>
-    <div class="text-left">
-        <a href="/templates/new" class="btn btn-success"><i class="fas fa-plus"></i> Create Template</a>
-    </div>
-    <p></p>
-    <table id="templatesTable"  style="display: none;" class="stripe hover">
-        <thead>
-            <tr>
+<div class="container-fluid dashboard">
+  <div class="row">
+    <div class="col col-lg-12">
+      <h3>Templates</h3>
+      <hr/>
+      <p>The following templates are available to create nodes.</p>
+      <div class="row">
+        <div class="col col-lg-12">       
+          <a href="/templates/new" class="btn btn-success create"><i class="fas fa-plus"></i> Create Template</a>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col col-lg-12">
+          <table id="templatesTable" class="stripe hover">
+            <thead>
+              <tr>
                 <th>Template</th>
                 <th>Type</th>
                 <th>Extras</th>
                 <th>Inputs</th>
                 <th>Outputs</th>
                 <th></th>
-            </tr>
-        </thead>
-        <tbody id="templateTable">
-            {% for template in templates %}
-            <tr id="tr_{{template.template_id}}">
-                <td><button class="btn btn-secondary min-button" onclick="location.href='/templates/{{ template.template_id }}'"><i class="fas fa-file"></i><br/>{{ template.name }}</button></td>
-                <td><a tabindex="1" role="button" data-placement="left" class="btn btn-secondary min-button processors" title="{{ template.name }}" data-content="{{ processors | selectattr('value', 'equalto', template.processor) | map(attribute='label') | first }}" disabled data-trigger="focus"><i class="fas fa-{% for processor_info in processors if processor_info.value == template.processor %}{{processor_info.icon }}{% endfor %}"></i><br/>{{ template.processor }}</a></td>
-                <td>
-                    {% if template.extras %}
-                        {% for key, value in template.extras.items() %}
-                            <span>
-                                {{ generate_extra_badge(key, value) }}
-                            </span>
-                            <br>
-                        {% endfor %}
-                    {% endif %}
-                </td>
-                <td>
-                    {% if template is not none and template.get('input_fields') is not none %}
-                        {% for input_field in template['input_fields'] %}
-                            {{ generate_regular_badge(input_field.name, input_field.type) }}
-                        {% endfor %}
-                    {% endif %}
-                </td>
-                <td>
-                    {% if template is not none and template.get('output_fields') is not none %}
-                        {% for output_field in template.get('output_fields') %}
-                            {{ generate_regular_badge(output_field.name, output_field.type) }}
-                        {% endfor %}
-                    {% endif %}
-                </td>
-                <td>
-                    <button class="delete-button btn btn-danger btn-sm" data-template-id="{{ template.template_id }}"><i class="fas fa-trash-alt"></i></button>
-                    <div class="spinner-border spinner-border-sm text-danger" role="status" style="display: none; margin-left: 10px;">
-                        <span class="sr-only"></span>
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+              </tr>
+            </thead>
+            <tbody id="templateTable">
+                {% for template in templates %}
+                <tr id="tr_{{template.template_id}}">
+                    <td><button class="btn btn-secondary min-button" onclick="location.href='/templates/{{ template.template_id }}'"><i class="fas fa-file"></i><br/>{{ template.name }}</button></td>
+                    <td><a tabindex="1" role="button" data-placement="left" class="btn btn-secondary min-button processors" title="{{ template.name }}" data-content="{{ processors | selectattr('value', 'equalto', template.processor) | map(attribute='label') | first }}" disabled data-trigger="focus"><i class="fas fa-{% for processor_info in processors if processor_info.value == template.processor %}{{processor_info.icon }}{% endfor %}"></i><br/>{{ template.processor }}</a></td>
+                    <td>
+                        {% if template.extras %}
+                            {% for key, value in template.extras.items() %}
+                                <span>
+                                    {{ generate_extra_badge(key, value) }}
+                                </span>
+                                <br>
+                            {% endfor %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if template is not none and template.get('input_fields') is not none %}
+                            {% for input_field in template['input_fields'] %}
+                                {{ generate_regular_badge(input_field.name, input_field.type) }}
+                            {% endfor %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if template is not none and template.get('output_fields') is not none %}
+                            {% for output_field in template.get('output_fields') %}
+                                {{ generate_regular_badge(output_field.name, output_field.type) }}
+                            {% endfor %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button class="delete-button btn btn-danger btn-sm" data-template-id="{{ template.template_id }}"><i class="fas fa-trash-alt"></i></button>
+                        <div class="spinner-border spinner-border-sm text-danger" role="status" style="display: none; margin-left: 10px;">
+                            <span class="sr-only"></span>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
@@ -230,7 +239,6 @@ $(document).ready(function() {
         "columnDefs": [
             { "orderable": false, "targets": [2,3,4,5] },
             { "className": "hide-on-medium", "targets": [1] },
-            { "className": "hide-on-nmns", "targets": [1,3] },
             { "className": "hide-on-small", "targets": [1,3,4] },
         ],
         "order": [[0, "asc"]],

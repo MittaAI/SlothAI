@@ -1,4 +1,4 @@
-{% extends "pages/page_base.html" %}
+{% extends "pages/app_base.html" %}
 
 {% block title %}
 <title> Logs | {{ brand.get('name') }}</title>
@@ -6,45 +6,50 @@
 {% endblock %}
 
 {% block content %}
-<div class="content container mt-5 pt-4">
-    <h2 class="page_heading">Callback Logs</h2>
-
-    <div class="rounded-lg border p-3 table-responsive">
-        <h4 class="mb-3">Your Logs</h4>
-        <p>Use of the default callback will log the pipeline document here. Click the <strong>document date</strong> to <strong>copy</strong> the JSON data.</p><p>Data and logs <strong>clear after 1 hour</strong>. Any files stored on the system will be <strong>removed after 48 hours</strong>.</p>
-        <div class="text-left">
-            <button onclick="location.reload()" type="button" class="reload-button btn btn-success">
-                <i class="fas fa-sync-alt"></i> Reload
-            </button>
-            {% if logs %}
-            <button id="clearCompleted" type="button" data-toggle="tooltip" data-placement="top" title="Clear logs." class="btn btn-secondary">
-                <i class="fas fa-ban"></i> Logs
-            </button>
-            {% endif %}
-        </div>
-        <p></p>  
-
-        {% if logs %}
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th style="width: 200px;">Date</th>
-                    <th>Log</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for log in logs %}
-                <tr>
-                    <td class="log-dates">
-                        <button class="badge badge-dark">{{ log.created }}</button>
-                    </td>
-                    <td data-log="{{ log.line }}"></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% endif %}
+<div class="container-fluid dashboard">
+  <div class="row">
+    <div class="col col-lg-12">
+      <h3>Callback Logs</h3>
+      <hr/>
+      <p>Use of the default callback will log the pipeline document here. Click the <strong>document date</strong> to <strong>copy</strong> the JSON data.</p><p>Data and logs <strong>clear after 1 hour</strong>. Any files stored on the system will be <strong>removed after 48 hours</strong>.</p>
     </div>
+
+    <div class="col col-lg-12">
+      <button onclick="location.reload()" type="button" class="reload-button btn btn-success">
+        <i class="fas fa-sync-alt"></i> Reload
+      </button>
+      {% if logs %}
+      <button id="clearCompleted" type="button" data-toggle="tooltip" data-placement="top" title="Clear logs." class="btn btn-secondary">
+        <i class="fas fa-ban"></i> Logs
+      </button>
+      {% endif %}
+    </div>
+  </div>
+  
+  {% if logs %}
+  <div class="row">
+    <div class="col col-lg-12">
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th style="width: 200px;">Date</th>
+            <th>Log</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr>
+            <td class="log-dates">
+              <button class="badge badge-dark">{{ log.created }}</button>
+            </td>
+            <td data-log="{{ log.line }}"></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}
 
@@ -54,83 +59,83 @@
 
 <script type="text/javascript">
 $(document).ready(function() {
-    $('.reload-button').on('click', function() {
-      window.location.reload();
+  $('.reload-button').on('click', function() {
+    window.location.reload();
+  });
+
+  $(document).ready(function() {
+    $('.badge').click(function() {
+      // 'this' refers to the clicked badge element
+      var logData = $(this).closest('td').next('td').data('log');
+
+      // Copy logData to clipboard
+      navigator.clipboard.writeText(logData).then(() => {
+        toastr.info('Copied to clipboard.');
+      }).catch(err => {
+        console.error('Error in copying text: ', err);
+      });
     });
+  });
 
-    $(document).ready(function() {
-        $('.badge').click(function() {
-            // 'this' refers to the clicked badge element
-            var logData = $(this).closest('td').next('td').data('log');
+  $("table tbody tr").each(function() {
+    var tdLog = $(this).find("td[data-log]");
+    var rawData = tdLog.data('log');
 
-            // Copy logData to clipboard
-            navigator.clipboard.writeText(logData).then(() => {
-                toastr.info('Copied to clipboard.');
-            }).catch(err => {
-                console.error('Error in copying text: ', err);
-            });
-        });
-    });
+    // Brute force cleaning of the data
+    var cleanedData = rawData.slice(2, -1)
+      .replace(/\\n/g, " ")
+      .replace(/\\\'|\\\"|\\'/g, "'")
+      .replace(/\\/g, "");
 
-    $("table tbody tr").each(function() {
-        var tdLog = $(this).find("td[data-log]");
-        var rawData = tdLog.data('log');
+    var jsonDataObj;
 
-        // Brute force cleaning of the data
-        var cleanedData = rawData.slice(2, -1)
-            .replace(/\\n/g, " ")
-            .replace(/\\\'|\\\"|\\'/g, "'")
-            .replace(/\\/g, "");
-
-        var jsonDataObj;
-
-        try {
-            jsonDataObj = JSON.parse(cleanedData);
-            for (var key in jsonDataObj) {
-                if (key.toLowerCase().includes('token')) {
-                    delete jsonDataObj[key];
-                }
-            }
-        } catch (error) {
-            toastr.error("Error parsing JSON. Showing in plain format.")
-            jsonDataObj = { "ParsingError": "Error parsing JSON" };
+    try {
+      jsonDataObj = JSON.parse(cleanedData);
+      for (var key in jsonDataObj) {
+        if (key.toLowerCase().includes('token')) {
+          delete jsonDataObj[key];
         }
-
-        // Initialize jsonViewer with all items collapsed
-        tdLog.empty(); 
-        var jsonViewer = $('<pre>').appendTo(tdLog);
-        jsonViewer.jsonViewer(jsonDataObj, {collapsed: true, withQuotes: true});
-    });
-
-
-    $('td pre.json-document > a.json-toggle').each(function() {
-        $(this).click();
-    });
-
-    $('#clearCompleted').click(function() {
-        // Send the DELETE request to the server.
-        $.ajax({
-            url: '/logs',
-            type: 'DELETE',
-            success: function(response) {
-                toastr.success("Logs cleared.");
-                window.location.reload();
-            },
-            error: function(xhr, status, error) {
-                toastr.error("Error clearing logs.");
-            }
-        });
-    });
-
-    var initialLogCount = "0";
-    function checkForChanges() {
-        var currentLogCount = $("#log_count").text();
-        if (currentLogCount !== initialLogCount) { location.reload(); }
+      }
+    } catch (error) {
+      toastr.error("Error parsing JSON. Showing in plain format.")
+      jsonDataObj = { "ParsingError": "Error parsing JSON" };
     }
-    setTimeout(function() {
-        initialLogCount = $("#log_count").text();
-        setInterval(checkForChanges, 5000);
-    }, 3000);
+
+    // Initialize jsonViewer with all items collapsed
+    tdLog.empty(); 
+    var jsonViewer = $('<pre>').appendTo(tdLog);
+    jsonViewer.jsonViewer(jsonDataObj, {collapsed: true, withQuotes: true});
+  });
+
+
+  $('td pre.json-document > a.json-toggle').each(function() {
+    $(this).click();
+  });
+
+  $('#clearCompleted').click(function() {
+    // Send the DELETE request to the server.
+    $.ajax({
+      url: '/logs',
+      type: 'DELETE',
+      success: function(response) {
+        toastr.success("Logs cleared.");
+        window.location.reload();
+      },
+      error: function(xhr, status, error) {
+        toastr.error("Error clearing logs.");
+      }
+    });
+  });
+
+  var initialLogCount = "0";
+  function checkForChanges() {
+    var currentLogCount = $("#log_count").text();
+    if (currentLogCount !== initialLogCount) { location.reload(); }
+  }
+  setTimeout(function() {
+    initialLogCount = $("#log_count").text();
+    setInterval(checkForChanges, 5000);
+  }, 3000);
 
 });
 </script>

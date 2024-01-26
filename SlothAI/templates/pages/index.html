@@ -10,92 +10,151 @@
 
 {% block content %}
 
-<div class="hero">
-  <div class="row align-items-center justify-content-center">
-    <div class="col-md-12">
+<div class="container-fluid hero">
+  <div class="row">
+    <div class="col col-lg-12">
       <h1>Build <strong class="gradient-text">Strong AI</strong> Pipelines</h1>
-      <p class="lead">Intelligent, low code, document transforming pipelines for developers.</p>
-      <a href="/pipelines" class="btn btn-outline-light btn-bottoms" type="button">{% if username != 'anonymous' %}Dashboard{% else %}Try Now{% endif %}</a>
-      <a href="https://calendar.app.google/fAtRr7WV3E1Wh4PKA" class="btn btn-outline-light btn-bottoms" type="button"><i class="fa fa-calendar"></i> Book a Demo</a>
+      <p>Intelligent Document Transforms for Data Scientists, Developers, and Creators.</p>
+      <a href="/pipelines" class="btn btn-outline-light btn-bottoms" type="button">{% if username != 'anonymous' %}Dashboard{% else %}Sign Up{% endif %}</a>
       <a href="https://github.com/MittaAI/SlothAI" class="btn btn-outline-light btn-bottoms" type="button"><i class="fab fa-github"></i> Code</a>
     </div>
-  </div>
+  </div>  
 </div>
 
-<div class="hero">
+<div class="container-fluid demos">
   <div class="row">
-    <div style="padding-right: 100px;" class="col-lg-12">
-      <h2 class="headings"><strong class="gradient-text">Transform</strong> Your AI Workflows</h2>
-      <p class="lead">{{brand.get('name')}}, an <a href="https://github.com/MittaAI/SlothAI">open-source framework</a>, revolutionizes the way AI applications are built and scaled. It's designed for a smooth transition from rapid prototyping to production, supporting a wide range of AI models. This framework stands out with its compatibility and integration ease, facilitated by a suite of AI APIs and a crazy fast, serverless AI prompt pipeline powered by <a href="https://jinja.palletsprojects.com/en/3.1.x/">Jinja2</a>.</p>
+    <div class="col-lg-9">
+      <h2><span class="gradient-text">Take a Test Drive</span></h2>
+    </div>
+    <div class="col-lg-9">
+      <h3>Transform an Image in Under 30 Seconds</h3>
+      <p>Transform an image file smaller than 32MB into another file type with conversational language. Do it now.</p>
+      <img src="/images/ffmpeg_pipe_1.png"/>
+      <div class="input-group mb-3">
+        <input id="instructions" type="text" class="form-control" value="Convert to a 640 wide black and white gif" aria-label="instructions" aria-describedby="convert">
+        <div class="input-group-append">
+          <button class="btn btn-primary" id="convert">Convert</span>
+        </div>
+      </div>
+      <button class="btn btn-outline-light" id="convertMedia">Convert Other Media Types</button>
+    </div>
+  </div>
 
-      <img src="/images/screenshot.png" style="border-radius: 10px; max-width: 100%; height: auto; margin: 20px 0 30px 0;" />
+  <!-- coming soon
+  <div class="row">
+    <div class="col-lg-9">
+      <h3>Grab a New Hacker News Post About AI</h3>
+      <p>Visits a recent post to Hacker News about AI. Provides page summary and then takes you there.</p>
+      <img src="/images/hn_pipe_1.png"/>
+      <div class="input-group mb-3">
+        <input type="text" class="form-control" placeholder="Take me to a new story about AI." aria-label="instructions" aria-describedby="news">
+        <div class="input-group-append">
+          <span class="input-group-text" id="news">See News</span>
+        </div>
+      </div>
+      <button class="btn btn-outline-light" id="crawlSite">Crawl Another Site</button>
+    </div>
+  </div>
 
-      <p class="lead">With {{brand.get('name')}}, documents and data may be deseralized and transformed by the system during processing using task queues and containers for scale and speed. {{brand.get('name')}} supports calls to <a href="https://platform.openai.com/docs/api-reference">OpenAI</a>, <a href="https://mistral.ai/">MistralAI</a>, <a href="https://deepmind.google/technologies/gemini/">Google Gemini</a>, <a href="https://api.together.xyz/">TogetherAI</a>, <a href="https://www.perplexity.ai/">Perplexity</a>, <a href="https://elevenlabs.io">ElevenLabs</a> speech models, and Google's <a href="https://cloud.google.com/document-ai?hl=en">Document and Vision</a> APIs, and more.</p>
+  <div class="row">
+    <div class="col-lg-9">
+      <h3>Generate a Pirate's Dream</h3>
+      <p>Arr! We conjure in our mind pirate images bold and grand. Cross us, and ye face the cannon's roar!</p>
+      <img src="/images/pirate_pipe_1.png"/>
+      <div class="input-group mb-3">
+        <input type="text" class="form-control" placeholder="Show me a pirate digging up treasure." aria-label="instructions" aria-describedby="dream">
+        <div class="input-group-append">
+          <span class="input-group-text" id="dream">I Dream of Pirates</span>
+        </div>
+      </div>
+      <button class="btn btn-outline-light" id="addCannons">Add Cannons</button>
+    </div>
+  </div>
 
-      <h3 style="padding-top: 30px;">Need assistance?</h3>
-      <p class="lead">
-        If you need support, or encounter any issues using the system, we encourage you to reach out by <a href="https://github.com/MittaAI/SlothAI/issues">opening a ticket</a> or joining the conversation on our <a href="{{brand.get('discord_url')}}">Discord</a> server.
+  <div class="row">
+    <div class="col-lg-9">
+      <h3>Ask Faraday About Electricity</h3>
+      <p>Ask the discoverer of the electric motor a question about electricity, even though he's unfortunately dead.</p>
+      <img src="/images/grub_pipe.png"/>
+      <div class="input-group mb-3">
+        <input type="text" class="form-control" placeholder="What causes bismuth to turn in a magnetic field?" aria-label="instructions" aria-describedby="basic-addon2">
+        <div class="input-group-append">
+          <span class="input-group-text" id="basic-addon2">Ask Michael</span>
+        </div>
+      </div>
+      <button class="btn btn-outline-light">Index Documents</button>
+    </div>
+  </div>
+  -->
+</div>
+
+<div class="container-fluid offering">
+  <div class="row">
+    <div class="col-lg-9">
+      <h2 class="headings"><strong class="gradient-text">Transform</strong> AI Workflows</h2>
+      <p>Mitta is an <a href="https://github.com/MittaAI/SlothAI">open-source framework</a>, created, written, and run as a SaaS service by one of the founders of <a href="https://loggly.com">Loggly</a>. Mitta revolutionizes the way AI applications are built and scaled, and it's designed for a smooth transition from rapid prototyping to production. Mitta supports a wide range of AI models and leverages <a href="https://jinja.palletsprojects.com/en/3.1.x/">Jinja2</a> templates to make it a snap to write complex prompts for pipelines in minutes.</p>
+
+      <p>With Mitta, documents and data may be deseralized and transformed by the system during processing using task queues and containers for scale and serverless speed. Mitta supports calls to <a href="https://platform.openai.com/docs/api-reference">OpenAI</a>, <a href="https://mistral.ai/">MistralAI</a>, <a href="https://deepmind.google/technologies/gemini/">Google Gemini</a>, <a href="https://api.together.xyz/">TogetherAI</a>, <a href="https://www.perplexity.ai/">Perplexity</a>, <a href="https://elevenlabs.io">ElevenLabs</a> speech models, Google's <a href="https://cloud.google.com/document-ai?hl=en">Document and Vision</a> APIs, and more.</p>
+
+      <p>Don't waste your time with hard to use AI frameworks. <a href="/login">Get started</a> building with Mitta today!</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-9">
+      <h3>Need assistance?</h3>
+      <p>
+        If you need support, or encounter any issues using the system, we encourage you to reach out by <a href="https://github.com/MittaAI/SlothAI/issues">opening a ticket</a> or joining the conversation on our <a href="{{brand.get('slack_url')}}">Slack</a>.
       </p>
 
-      <h2 style="padding-top: 30px;">Videos</h2>
-      <p class="lead">Get started with {{brand.get('name')}} by building a simple pipeline to simulate a pirate's brain.</p>
-      <div class="video-responsive">
-        <iframe width="560" height="315" src="https://www.youtube.com/embed/CuALke2rQbQ?si=if7GJJnzP0C17s9b" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-      </div>
-
-      <h3 style="padding-top: 30px;">Integrated Storage</h3>
-      <p class="lead">{{brand.get('name')}} utilizes a single managed database, <a href="https://www.featurebase.com/cloud">FeatureBase Cloud</a>, which handles in-memory set operations, vector storage and search, and point lookups for AI workloads. <a href="https://featurebase.com">FeatureBase</a> can execute complex SQL queries against analytical, tabular, or vector data. These queries can also be generated using AI models.  Secure support for file storage is provided by <a href="https://cloud.google.com/">Google Cloud</a>.</p>
-
-      <h3 style="padding-top: 30px;">Retrieval Augmented Generation</h3>
-      <p class="lead">{{brand.get('name')}}'s' framework can be used to build customized <a href="https://research.ibm.com/blog/retrieval-augmented-generation-RAG">RAG</a>-based pipelines. It also provides tools for chunking PDFs, text files, and other types of documents, like images. Use OpenAI's <a href="https://platform.openai.com/docs/guides/embeddings">text-embedding-ada-002</a> embeddings or our free embeddings powered by <a href="https://instructor-embedding.github.io/">Instructor</a> to make your content AI-ready.</p>
-      <a href="/cookbooks#pdf-indexing" class="btn btn-outline-dark"><i class="fas fa-code-branch"></i> View Cookbook</a>
-  
-      <h3 style="padding-top: 30px;">Innovative Bot Building</h3>
-      <p class="lead">{{brand.get('name')}} provides a platform for building AI bots, offering document and webpage indexing and querying, and integrating these into AI prompts with vector search. Key features include real-time web content retrieval, efficient document storage, advanced indexing, and agent memory operations, addressing developers' needs for up-to-date information and organized data management in bot development.</p>
-      <a href="/cookbooks#pirate-bot" class="btn btn-outline-dark"><i class="fas fa-code-branch"></i> View Cookbook</a>
-
-      <h3 style="padding-top: 30px;">Grounded Storytelling</h3>
-      <p class="lead">{{brand.get('name')}} enables the creation of AI agents by allowing users to index and query various document media, and incorporate these fragments into prompt templates for discussions using vector search. These agents become more effective with access to up-to-date data or web content retrieval capabilities. {{brand.get('name')}} offers features like real-time web content retrieval, document storage, indexing, and agent memory operations.</p>
-      <a href="/cookbooks#hackerbot" class="btn btn-outline-dark"><i class="fas fa-code-branch"></i> View Cookbook</a>
-
-      <div style="padding-top: 43px; padding-bottom: 23px;">
-        {% if uid != "anonymous" %}
-        <a class="btn btn-outline-dark" href="/pipelines">Build Now</a>
-        {% else %}
-        <a class="btn btn-outline-dark" href="/pipelines">Build Now</a>
-        {% endif %}
+      <p">Ready to learn how to build a simple pipeline to simulate a pirate's brain?</p>
+      <div class="video">
+        <iframe width="530" height="315" src="https://www.youtube.com/embed/CuALke2rQbQ?si=if7GJJnzP0C17s9b" title="YouTube video player" frameborder="1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
       </div>
     </div>
   </div>
 </div>
-
-{% endblock %}
-
-{% block footer %}
 {% endblock %}
 
 {% block javascript %}
 <script type="text/javascript">
 $(document).ready(function() {
-    function hexToRgb(hex) {
-        var bigint = parseInt(hex.slice(1), 16);
-        return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
-    }
+  $('#convertMedia').click(function() {
+    console.log("whut");
+    window.open('https://github.com/MittaAI/mitta-community/tree/main/cookbooks/conversion', '_blank');
+  });
 
-    var startRgb = hexToRgb("#00ff00");
-    var endRgb = hexToRgb("#5300dd");
-    var diffRgb = [endRgb[0] - startRgb[0], endRgb[1] - startRgb[1], endRgb[2] - startRgb[2]];
+  $('#crawlSite').click(function() {
+    window.open('https://github.com/MittaAI/mitta-community/tree/main/cookbooks/hackerbot', '_blank');
+  });
 
-    $(".gradient-text").each(function() {
-        var word = $(this).text();
-        $(this).empty();
-        for (var i = 0; i < word.length; i++) {
-            var progress = i / (word.length - 1);
-            var rgb = `rgb(${Math.round(startRgb[0] + diffRgb[0] * progress)},${Math.round(startRgb[1] + diffRgb[1] * progress)},${Math.round(startRgb[2] + diffRgb[2] * progress)})`;
-            $(this).append($("<span>").text(word[i]).css("color", rgb));
-        }
+  $('#addCannons').click(function() {
+    window.open('https://github.com/MittaAI/mitta-community/tree/main/cookbooks/piratedreams', '_blank');
+  });
+
+  $('#convertForm').submit(function(event) {
+  });
+
+  $('#convert').click(function() {
+    var conversionInstructions = $('#instructions').val();
+    console.log(conversionInstructions)
+    // Create a form element
+    var form = $('<form>', {
+      'action': 'https://ai.mitta.ai/convert', // The URL
+      'method': 'POST', 
+      'target': '_self'
     });
 
+    var instructionsInput = $('<input>', {
+      'type': 'hidden',
+      'name': 'instructions',
+      'value': conversionInstructions
+    });
+    console.log(instructionsInput);
+    form.append(instructionsInput);
+    $('body').append(form);
+    form.submit();
+  });
 });
 </script>
 {% endblock %}

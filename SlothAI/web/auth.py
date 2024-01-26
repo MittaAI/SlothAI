@@ -109,7 +109,8 @@ def login():
         app_id = random_string(9),
         transaction_id = transaction_id,
         next=next_url,
-        brand=get_brand(app)
+        brand=get_brand(app),
+        dev=app.config['DEV']
     )
     
 
@@ -468,7 +469,7 @@ def token():
             flash("Incorrect token entered. Try again.")
             return redirect(url_for('auth.login', **options))
     else:
-        return render_template('pages/token.html', config=app.config, op=op, next=next_url, brand=get_brand(app))
+        return render_template('pages/token.html', config=app.config, op=op, next=next_url, brand=get_brand(app), dev=app.config['DEV'])
 
 
 # verify code from emails

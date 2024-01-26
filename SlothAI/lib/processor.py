@@ -358,11 +358,6 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
     user = User.get_by_uid(uid=task.user_id)
     uid = user.get('uid')
 
-    # Box selection for embeddings and AIFFMPEG processing
-    defer, selected_box = box_required()
-    if defer:
-        raise RetriableError("Sloth virtual machine is being started to run ffmpeg.")
-
     # inputs
     input_fields = template.get('input_fields')
 
@@ -378,7 +373,7 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
     output_file = task.document.get('output_file')
 
     # Construct the AIFFMPEG service URL using the selected box details
-    ffmpeg_url = f"http://sloth:{app.config['SLOTH_TOKEN']}@{selected_box.get('ip_address')}:5454/convert"
+    ffmpeg_url = f"{app.config['FFMPEG_URL']}/convert"
 
     # Identify the target pipeline for the output
     target_pipeline = task.document.get('pipeline')
@@ -396,6 +391,9 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
         raise NonRetriableError("The `aiffmpeg` processor or requires a `ffmpeg_request` key with the request to run.")
 
     # File URL to process (get just the first one)
+    if not task.document.get('mitta_uri'):
+        raise NonRetriableError("The `aiffmpeg` processor expects a `mitta_uri` key in the input fields.")
+
     mitta_uri = task.document.get('mitta_uri')[0]
 
     if not mitta_uri:
@@ -444,30 +442,36 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
 
     # Prepare data for AIFFMPEG service
     ffmpeg_data = {
+        "ffmpeg_token": app.config['FFMPEG_TOKEN'],
         "uid": uid,
         "mitta_uri": mitta_uri,
         "callback_url": callback_url,
         "ffmpeg_command": ai_dict.get('ffmpeg_command'),
-        "output_file": ai_dict.get('output_file')
+        "output_file": ai_dict.get('output_file'),
+        "input_file": task.document.get('filename')[0]
     }
 
     # Post request to AIFFMPEG service
-    ffmpeg_response = requests.post(
-        ffmpeg_url,
-        json = ffmpeg_data,
-        timeout = 10
-    )
+    try:
+        ffmpeg_response = requests.post(
+            ffmpeg_url,
+            json = ffmpeg_data,
+            timeout = 10
+        )
+    except:
+        raise NonRetriableError("The request to the 'ffmpeg' backend failed. Try another task.")
 
     if ffmpeg_response:
         ffmpeg_response = ffmpeg_response.json()
-    
+        
     # Handle response
     if "result" in ffmpeg_response:
         if ffmpeg_response.get('result') == "success":
             task.document['aiffmpeg_status'] = "started"
         else:
-            raise NonRetriableError("Processing failed. Check the file URL or try another file.")
+            raise NonRetriableError("Processing failed. Check the file URL, try another file, or reword the request.")
     else:
+        print(ffmpeg_response)
         raise NonRetriableError("Processing failed with no result. Check the file URL or try another file.")
 
     return task
@@ -484,7 +488,7 @@ def info_file(node: Dict[str, any], task: Task) -> Task:
 
     # can't do anything without this input
     if 'filename' not in task.document:
-        raise NonRetriableError("A 'filename' key must be present in the document. Use a string or an array of strings.")
+        raise NonRetriableError("A 'filename' key must be present in the document. Use a string or an array of strings, or throw a local callback in front of this node to debug.")
     else:
         filename = task.document.get('filename')
 
@@ -498,9 +502,9 @@ def info_file(node: Dict[str, any], task: Task) -> Task:
     output_fields = template.get('output_fields')
 
     # use the first output field, or set one
-    try:
+    if len(output_fields) == 1:
         output_field = output_fields[0].get('name')
-    except:
+    else:
         output_field = "mitta_uri"
 
     # outputs

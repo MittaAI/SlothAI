@@ -2,22 +2,29 @@
 @font-face {font-family: 'Silka Regular'; src: url('/static/fonts/silka-regular-webfont.ttf') format('truetype'); font-weight: 400; font-style: normal; }
 @font-face {font-family: 'Silka Bold'; src: url('/static/fonts/silka-bold-webfont.ttf') format('truetype'); font-weight: 700; font-style: normal; }
 @font-face {font-family: 'Silka ExtraLight'; src: url('/static/fonts/silka-extralight-webfont.ttf') format('truetype'); font-weight: 100; font-style: normal; }
-@font-face {font-family: 'Orbitron'; src: url('/static/fonts/Orbitron-Black.ttf') format('truetype'); font-weight: 900; /* Adjust as needed */ font-style: normal; }
-@font-face {font-family: 'Orbitron'; src: url('/static/fonts/Orbitron-Bold.ttf') format('truetype'); font-weight: 700; /* Bold */ font-style: normal; }
-@font-face {font-family: 'Orbitron'; src: url('/static/fonts/Orbitron-ExtraBold.ttf') format('truetype'); font-weight: 800; /* Extra Bold */ font-style: normal; }
-@font-face {font-family: 'Orbitron'; src: url('/static/fonts/Orbitron-Medium.ttf') format('truetype'); font-weight: 500; /* Medium */ font-style: normal; }
-@font-face {font-family: 'Orbitron'; src: url('/static/fonts/Orbitron-Regular.ttf') format('truetype'); font-weight: 400; /* Regular */ font-style: normal; }
-@font-face {font-family: 'Orbitron'; src: url('/static/fonts/Orbitron-SemiBold.ttf') format('truetype'); font-weight: 600; /* Semi Bold */ font-style: normal; }
+@font-face {font-family: 'Orbitron Black'; src: url('/static/fonts/Orbitron-Black.ttf') format('truetype'); font-weight: 900; /* Adjust as needed */ font-style: normal; }
+@font-face {font-family: 'Orbitron Bold'; src: url('/static/fonts/Orbitron-Bold.ttf') format('truetype'); font-weight: 700; /* Bold */ font-style: normal; }
+@font-face {font-family: 'Orbitron Extra Bold'; src: url('/static/fonts/Orbitron-ExtraBold.ttf') format('truetype'); font-weight: 800; /* Extra Bold */ font-style: normal; }
+@font-face {font-family: 'Orbitron Medium'; src: url('/static/fonts/Orbitron-Medium.ttf') format('truetype'); font-weight: 500; /* Medium */ font-style: normal; }
+@font-face {font-family: 'Orbitron Regular'; src: url('/static/fonts/Orbitron-Regular.ttf') format('truetype'); font-weight: 400; /* Regular */ font-style: normal; }
+@font-face {font-family: 'Orbitron Semi Bold'; src: url('/static/fonts/Orbitron-SemiBold.ttf') format('truetype'); font-weight: 600; /* Semi Bold */ font-style: normal; }
 
 /* page styles */
 body {
   background-color: #101010;
-  font-family: 'Silka', 'Roboto', sans-serif;
+  font-family: 'Silka Regular', 'Roboto', sans-serif;
   font-size: 1rem;
   line-height: 1.5;
-  color: #d9d9e3;
   text-align: left;
   caret-color: transparent;
+}
+
+input, textarea {
+  caret-color: auto;
+}
+
+body.app {
+  background-color:  white;
 }
 
 html, body {
@@ -26,18 +33,51 @@ html, body {
   padding: 0;
 }
 
+h1,h2,h3 {
+  opacity: 90%;
+  font-family: 'Orbitron Bold';
+  text-transform: uppercase;
+}
+
+h4,h5 {
+  opacity: 90%;
+  font-family: 'Silka Regular', Roboto;
+  text-transform: uppercase;
+}
+
 h1 {
   font-weight: 700;
   font-size: 64px; 
-  opacity: 90%; 
-  font-family: 'Orbitron';
 }
 
-h2,h3,h4,h5 {
-   font-weight: 360;
-   font-family: 'Silka Bold', sans-serif;
-   text-transform: uppercase;
-   opacity: 90%;
+h2 {
+  font-weight: 600;
+  font-size: 48px;
+}
+
+h3 {
+  font-weight: 500;
+  font-size: 36px;
+}
+
+h4 {
+  font-weight: 400;
+  font-size: 24px;
+}
+
+h5 {
+  font-weight: 400;
+  font-size: 18px;
+}
+
+h6 {
+  font-weight: 400;
+  font-size: 16px;
+}
+
+footer h5 {
+  font-family: 'Orbitron Medium';
+  color: #444444;
 }
 
 element-selector {
@@ -48,6 +88,135 @@ element-selector {
 form, label {
   margin: 0;
   padding: 0;
+}
+
+/* Button styles */
+button {
+  -webkit-appearance: none;
+  border-radius: 0;
+}
+
+button.btn-sortable {
+  border-radius: 0 !important;
+}
+
+footer {
+  position: fixed;
+  left: 0px;
+  bottom: 0px;
+  height: 300px;
+  width: 100%;
+  padding-top: 80px;
+  background: #EEE;
+  border-top: 2px dashed #222222; 
+}
+
+table {
+  margin-top: 14px;
+}
+
+table.dataTable.no-footer {
+  border-bottom: 0px;
+}
+
+table.dataTable thead th,table.dataTable thead td {
+  padding: 10px 18px;
+  border-bottom: 1px solid #111
+}
+
+table.dataTable.stripe tr.odd {
+  background-color: rgba(0,0,0,.05)!important;
+}
+
+/* Link styles */
+a:hover {
+  text-decoration: none;
+  color: #96c9ff;
+  text-decoration: overline;
+}
+
+/* Flash message */
+div.flash {
+  color: red;
+}
+
+/* Login form */
+div.login_form {
+  margin-top: 160px;
+}
+
+div.login_form h2 {
+  font-size: 48px;
+  font-weight: 700;
+}
+
+nav h3 {
+    margin-bottom: 0px;
+}
+
+nav h3 a {
+  color: white;
+  text-decoration: none;
+  transition: text-decoration 0.2s;
+}
+
+/* header style */
+nav h3 a:hover {
+  color: white;
+  text-decoration: none;
+  background-color: transparent;
+  outline: none;
+}
+
+/* code and pre styles */
+code, pre {
+  position: relative;
+  display: block;
+  padding: 20px;
+  background: #f2f2f2;
+  color: #555755;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+span.command-copy {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  opacity: .6;
+  font-size: 20px;
+  color: #555755;
+  cursor: pointer;
+}
+
+span.log-expand {
+  opacity: .6;
+  font-size: 20px;
+  color: #555755;
+  cursor: pointer;
+}
+
+button.navbar-toggler {
+  color: #d9d9e3;
+}
+
+#buttonSortable, #buttonSortable li {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  background-color: transparent;
+  border: none;
+}
+
+.greater-than {
+  color: #0adf1c;
+}
+
+.link-icons {
+  color: #aaaaaa;
+  padding-left: 6px;
 }
 
 .btn-group {
@@ -68,6 +237,449 @@ form, label {
   margin-top: 4px;
   color: white;
   transition: box-shadow 0.3s; /* Smooth transition for box-shadow */
+}
+
+.button-node:hover {
+  /* Keep the pulse glow effect, remove any bounce effect */
+  box-shadow: 0 0 5px gray, 0 0 10px gray;
+  color: white;
+  animation: pulseGlow 1.5s infinite ease-in-out;
+}
+
+.button-pipeline {
+  flex: 0 0 auto; /* Do not grow, do not shrink, and is automatically sized based on content */
+  width: 103px; /* Fixed width */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 4px;
+  color: white;
+}
+
+:focus {
+  outline: 0;
+}
+
+/* Editor styles */
+#editor {
+  height: 50vw;
+  font-size: 13px;
+}
+
+#pipelineTable_wrapper {
+  padding-top: 16px;
+}
+
+.btn-bottoms {
+  margin-bottom: 4px;
+}
+
+.btn-group {
+  flex-wrap: wrap;
+}
+
+#buttonSortable li {
+  margin: 0;
+  padding-bottom: 18px;
+  background-color: transparent;
+  border: none;
+}
+
+#buttonSortable li i.fa {
+  color: rgba(0, 0, 0, 0);
+  transition: color 0.2s;
+}
+
+#buttonSortable li:hover i.fa {
+  color: rgba(0, 0, 0, 0.25);
+}
+
+#fileUpload:hover {
+  background-color: #007bff;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+#uploadPipeline {
+  float: left;
+}
+
+#createPipeline {
+  margin-left: 4px;
+  float: left;
+}
+
+#fileInput, #pipelineTable, #nodesTable, #templateTable, #tasksTable {
+  display: none;
+}
+
+.hero {
+  background-size: cover;
+  color: #f4f4f4;
+  font-color: #eee;
+  padding-top: 193px;
+  padding-bottom: 135px;
+  text-align: center;
+  border-bottom: 2px dashed #222222; 
+}
+
+.hero, .offering{
+  background: radial-gradient(circle at center center, rgba(128, 128, 128, 0.3) 0%, rgba(128, 128, 128, 0) 500px);
+}
+
+.auth, .about, .pricing, .legal, .cookbooks {
+  background: radial-gradient(circle at center center, rgba(128, 128, 128, 0.3) 0%, rgba(128, 128, 128, 0) 800px);
+}
+
+.about, .pricing, .legal, .cookbooks {
+  background-size: cover;
+  color: #f4f4f4;
+  font-color: #d9d9e3;
+  padding-top: 53px;
+  padding-bottom: 54px;
+  text-align: left;
+}
+
+.pricing, .about{
+  min-height: 999px;
+}
+
+/* Custom styles for cards within the 'cookbooks' container */
+.cookbooks .card {
+  width: auto; /* Adjust width as needed */
+  float: left; /* Aligns cards to the left */
+}
+
+.cookbook-cards .card-body p {
+  min-height: 90px;
+}
+
+/* Clearfix for floated elements */
+.cookbooks::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.cookbooks .row {
+  display: block;
+}
+
+.offering, .demos {
+  padding-top: 30px;
+  padding-left: 30px;
+  padding-bottom: 30px;
+  text-align: left;
+  color: #d9d9e3;
+}
+
+.demos .input-group {
+  max-width: 640px;
+}
+
+.pricing button {
+  width: 100%;
+}
+
+.pricing #login {
+  color:  #444444;
+}
+
+.demos {
+  border-bottom: 2px dashed #222222;
+}
+
+.demos h2, .demos h3, .offering h2, .offering h3, .about h2, .about h3, .pricing h2, .pricing h3, .legal h2, .legal h3, .dashboard h3, .cookbooks h3 {
+  font-family: 'Orbitron Bold';
+  padding-top: 10px;
+}
+
+.demos h3 {
+  font-size: 28px;
+}
+
+.legal h2 {
+  font-size: 36px;
+}
+.legal h3 {
+  font-size: 28px;
+}
+
+.card-header h2, .card-header h3, .card-body h2, .card-body h3, .card-body ul {
+  color:  #9999a3;
+}
+
+.card-header {
+  color:  #212529;
+}
+
+.demos h3, .cookbooks h3 {
+  text-decoration: underline;
+}
+
+h3.modal-title {
+  font-size: 24px;
+}
+
+.offering img, .demos img, .about img{
+  border-radius: 10px; 
+  max-width: 100%; 
+  height: auto; 
+  margin: 20px 0 20px 0;
+}
+
+.offering a, .about a, .pricing a, .legal a, a.dash_link, .cookbooks a {
+  color: #34608a;
+}
+
+.offering .btn {
+  color:  #f4f4f3;
+  cursor:  pointer;
+}
+
+#convert {
+  cursor:  pointer;
+}
+
+.offering .row, .demos .row, .about .row, .pricing .row, .legal .row, .cookbooks .row {
+  display: flex;
+  justify-content: center;
+  padding-bottom: 23px;
+  padding-top:  23px;
+}
+
+.cookbook-cards {
+  justify-content: flex-start !important;
+}
+
+.cookbook-cards p {
+  font-size: 13px;
+}
+
+.card-body {
+  color: #101010;
+}
+
+.card-col {
+  margin-right: 0px;
+}
+
+.cookbooks hr {
+  border-top: 1px solid #999999;
+}
+
+.auth {
+  background-size: cover;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #f4f4f4;
+}
+
+.auth h3 {
+  font-family: 'Orbitron Bold';
+}
+
+.dashboard {
+  background-color: white;
+  background-size: cover;
+  margin-top: 65px; /* same as navbar's height */
+  margin-left: 157px; /* same as sidebar's width */
+  width: 85%; /* adjust this based on the sidebar's width */
+  overflow-y: auto; /* for vertical scrolling */
+  padding-bottom: 53px;
+  transition: margin-left 0.6s ease;
+}
+
+.btn.create {
+  margin-bottom: 10px;
+}
+
+.selected-node {
+  margin-bottom: 10px;
+}
+
+.badge {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+  font-size: 0.8em;
+  height: 20px;
+}
+
+/* Apply custom styles to badges within the task container */
+.task-badge {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+  font-size: 0.8em;
+  height: 18px;
+}
+
+.badge-dark {
+  padding-top: 5px;
+  height: 24px;
+}
+
+.dropdown-menu {
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.text-muted {
+  margin-bottom: 14px;
+}
+
+.log-dates {
+  font-family: 'Courier New', Courier, monospace; /* Example of monospace font */
+  font-size:  14px;
+  display: inline-block; /* To ensure width is applied */
+  color: white;
+  padding: 5px 10px;
+  cursor: pointer;
+  border: none;
+  border-radius: 5px;
+  overflow: hidden; /* Prevents overflow of text */
+  text-overflow: ellipsis; /* Adds an ellipsis if the text overflows */
+  white-space: nowrap; /* Keeps the text in a single line */
+}
+
+.json-document {
+  padding: 0.6em 2em !important;
+}
+
+/* Navbar and sidebar */
+.sidebar {
+  background-color: #444444;
+}
+
+.task-badge {
+  overflow: visible !important; 
+}
+
+.navbar {
+  opacity:  90%;
+  background-color:  #444444;
+  border-bottom: 1px dotted #222222;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1030; /* high z-index to keep it above other elements */
+  padding: .3rem 1rem
+}
+
+.navbar h2, .navbar h3 {
+  font-family: Roboto,sans-serif; 
+  color: #ffffff; 
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  margin: 0;
+}
+
+/* Content styles */
+.content {
+  padding-left: 20px;
+}
+
+.video-responsive {
+  position: relative;
+  overflow: hidden;
+  padding-top: 56.25%; /* 16:9 Aspect Ratio */
+}
+
+.video-responsive iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.flash {
+  animation: flash 0.5s;
+}
+
+@keyframes flash {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Code block styles */
+.code-block {
+  background-color: #f5f5f5;
+  border-radius: 5px;
+  padding: 15px;
+  font-family: "Courier New", Courier, monospace;
+  white-space: pre-wrap;
+}
+
+.site {
+  font-family: 'Orbitron Medium';
+  font-size: 2rem;
+  font-weight: 500;
+}
+
+.site a{
+  text-decoration: none;
+}
+
+
+#templateText {
+  height: 60vh;
+  resize: none;
+}
+
+#templateName {
+  margin-right: 5px;
+}
+
+#userDropdown {
+  color: white !important;
+}
+
+/* Sidebar styles */
+.sidebar {
+  position: fixed;
+  top: 54px; /* Adjust this based on the actual height of your navbar */
+  left: 0;
+  width: 15%; /* or any width you prefer */
+  height: calc(100% - 50px); /* Full height minus the navbar height */
+  overflow-y: auto; /* for scrolling */
+  transition: width 0.3s;
+}
+
+.sidebar_list {
+  padding-top: 20px;
+}
+
+.sidebar a {
+  padding: 10px 15px;
+  text-decoration: none;
+  font-size: 15px;
+  color: #fff;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Hover effect for links */
+.sidebar a:hover {
+  font-weight: bold;
+}
+
+.highlighted-link {
+  background-color: #628395;
+}
+
+.sidebar, .container {
+  transition: width 0.5s ease, margin-left 0.5s ease;
 }
 
 @keyframes shake {
@@ -110,377 +722,13 @@ form, label {
   animation: pulseGlow 1.5s infinite ease-in-out;
 }
 
-.button-pipeline {
-  flex: 0 0 auto; /* Do not grow, do not shrink, and is automatically sized based on content */
-  width: 103px; /* Fixed width */
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  margin-top: 4px;
-  color: white;
-}
-
-
-:focus {
-  outline: 0;
-}
-
-/* Editor styles */
-#editor {
-  height: 50vw;
-  font-size: 13px;
-}
-
-#pipelineTable_wrapper {
-  padding-top: 16px;
-}
-
-/* Button styles */
-button {
-  -webkit-appearance: none;
-  border-radius: 0;
-}
-
-footer {
-  position: fixed;
-  left: 0px;
-  bottom: 0px;
-  height: 300px;
-  width: 100%;
-  padding-top: 80px;
-  background: #EEE;
-}
-
-.btn-bottoms {
-  margin-bottom: 4px;
-}
-
-.btn-group {
-  flex-wrap: wrap;
-}
-
-table.dataTable.no-footer {
-  border-bottom: 0px;
-}
-
-table.dataTable thead th,table.dataTable thead td {
-  padding: 10px 18px;
-  border-bottom: 1px solid #111
-}
-
-table.dataTable.stripe tr.odd {
-  background-color: rgba(0,0,0,.05)!important;
-}
-
-#buttonSortable, #buttonSortable li {
-  list-style-type: none;
-  margin: 0;
-  padding: 0;
-  background-color: transparent;
-  border: none;
-}
-
-button.btn-sortable {
-  border-radius: 0 !important;
-}
-
-#buttonSortable li {
-  margin: 0;
-  padding-bottom: 18px;
-  background-color: transparent;
-  border: none;
-}
-
-#buttonSortable li i.fa {
-  color: rgba(0, 0, 0, 0);
-  transition: color 0.2s;
-}
-
-#buttonSortable li:hover i.fa {
-  color: rgba(0, 0, 0, 0.25);
-}
-
-#fileUpload:hover {
-  background-color: #007bff;
-  color: #fff;
-  cursor: pointer;
-  transition: background-color 0.3s, color 0.3s;
-}
-
-table {
-  margin-top: 14px;
-}
-
-/* Link styles */
-a:hover {
-  text-decoration: none;
-  color: #96c9ff;
-  text-decoration: overline;
-}
-
-/* Flash message */
-div.flash {
-  color: red;
-}
-
-/* Login form */
-div.login_form {
-  margin-top: 160px;
-}
-
-div.login_form h2 {
-  font-size: 48px;
-  font-weight: 700;
-}
-
-nav h2 a {
-  color: white;
-  text-decoration: none;
-  transition: text-decoration 0.2s;
-}
-
-/* Style the link to be overlined on hover */
-nav h2 a:hover {
-  color: inherit; /* This makes the text color the same as it normally is */
-  text-decoration: none; /* This removes any text decoration like underlines */
-  background-color: transparent; /* This ensures no background change occurs */
-  outline: none
-}
-
-.hero {
-  background-color: #101010;
-  background: radial-gradient(circle at center center, rgba(128, 128, 128, 0.2) 0%, rgba(128, 128, 128, 0) 800px);
-  background-size: cover;
-  color: #f4f4f4;
-  font-color: #eee;
-  padding-top: 135px;
-  text-align: center;
-  height: 270px;
-}
-
-.selected-node {
-  margin-bottom: 10px;
-}
-
-.badge {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 200px;
-  font-size: 0.8em;
-  height: 20px;
-}
-
-/* Apply custom styles to badges within the task container */
-.task-badge {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 200px;
-  font-size: 0.8em;
-  height: 20px;
-}
-
-.homelead a {
-  color: white;
-}
-
-.lead {
-  font-size: 20px;
-}
-
-.badge-dark {
-  padding-top: 5px;
-  height: 24px;
-}
-
-.dropdown-menu {
-  max-height: 480px;
-  overflow-y: auto;
-}
-
-.text-muted {
-  margin-bottom: 14px;
-}
-
-.log-dates {
-  font-family: 'Courier New', Courier, monospace; /* Example of monospace font */
-  font-size:  14px;
-  display: inline-block; /* To ensure width is applied */
-  color: white;
-  padding: 5px 10px;
-  cursor: pointer;
-  border: none;
-  border-radius: 5px;
-  overflow: hidden; /* Prevents overflow of text */
-  text-overflow: ellipsis; /* Adds an ellipsis if the text overflows */
-  white-space: nowrap; /* Keeps the text in a single line */
-}
-
-.json-document {
-  padding: 0.6em 2em !important;
-}
-
-/* Navbar and sidebar */
-.sidebar {
-  background-color: #444;
-}
-
-.task-badge {
-  overflow: visible !important; 
-}
-
-.navbar {
-  background-color:  #404040;
-}
-
-/* Content styles */
-.content {
-  padding-left: 20px;
-}
-
-.video-responsive {
-  position: relative;
-  overflow: hidden;
-  padding-top: 56.25%; /* 16:9 Aspect Ratio */
-}
-
-.video-responsive iframe {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.page_heading {
-  padding-bottom: 14px;
-  color: #4e6b82;
-}
-
-/* Code and pre styles */
-code, pre {
-  position: relative;
-  display: block;
-  padding: 20px;
-  background: #f2f2f2;
-  color: #555755;
-  overflow: auto;
-  white-space: pre-wrap;
-  overflow: hidden;
-  margin-bottom: 12px;
-}
-
-.flash {
-  animation: flash 0.5s;
-}
-
-@keyframes flash {
+@keyframes pulseGlow {
   0%, 100% {
-    opacity: 1;
+    box-shadow: 0 0 5px gray, 0 0 10px gray;
   }
   50% {
-    opacity: 0;
+    box-shadow: 0 0 15px gray, 0 0 20px gray;
   }
-}
-
-span.command-copy {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  opacity: .6;
-  font-size: 20px;
-  color: #555755;
-  cursor: pointer;
-}
-
-span.log-expand {
-  opacity: .6;
-  font-size: 20px;
-  color: #555755;
-  cursor: pointer;
-}
-
-/* Code block styles */
-.code-block {
-  background-color: #f5f5f5;
-  border-radius: 5px;
-  padding: 15px;
-  font-family: "Courier New", Courier, monospace;
-  white-space: pre-wrap;
-}
-
-/* Callout styles */
-.card-callout {
-  font-weight: bold;
-  font-size: 1.75rem;
-  /* Add any other styling you desire for the callout here */
-}
-
-.site {
-  font-family: 'Orbitron' !important;
-  font-size: 2rem;
-  font-weight: 500;
-}
-
-.site a{
-  text-decoration: none;
-}
-
-#templateText {
-  height: 60vh;
-  resize: none;
-}
-
-#templateName {
-  margin-right: 5px;
-}
-
-#userDropdown {
-  color: white !important;
-}
-
-.container_home {
-  margin-top: 80px;
-}
-
-.container_dashboard {
-  max-width: 85%;
-  margin-left: 158px;
-}
-
-/* Sidebar styles */
-.sidebar {
-  background-color: #444;
-  height: 100%;
-  width: 15%;
-  max-width: 192px;
-  position: fixed;
-  left: 0;
-  padding-top: 23px;
-  transition: width 0.3s;
-}
-
-.sidebar a {
-  padding: 10px 15px;
-  text-decoration: none;
-  font-size: 15px;
-  color: #fff;
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Hover effect for links */
-.sidebar a:hover {
-  font-weight: bold;
-}
-
-.highlighted-link {
-  background-color: #628395;
-}
-
-.sidebar, .container {
-  transition: width 0.5s ease, margin-left 0.5s ease;
 }
 
 @media (max-width: 865px) {
@@ -501,9 +749,19 @@ span.log-expand {
   .navbar-collapse .dropdown {
     flex: 0 0 auto;
   }
-  .container {
-    margin-left: 64px;
-  }  
+  .dashboard {
+    margin-left: 64px; /* Match sidebar width */
+    width: calc(100% - 64px); /* Remaining width */
+  }
+  .cookbooks .card {
+    width: 100%; /* Full width on small screens */
+    float: none; /* Disable floating on small screens */
+    margin-right: 0; /* Reset margin */
+  }
+  .cookbooks .row {
+    display: flex;
+    flex-wrap: wrap;
+  }
 }
 
 @media (max-width: 999px) {
@@ -525,9 +783,6 @@ span.log-expand {
 }
 
 @media only screen and (max-width: 768px) {
-  body {
-
-  }
   .hide-on-small {
     display: none;
   }
