@@ -13,7 +13,7 @@
       <h3>{% if template %}Edit Template{% else %}New Template{% endif %}</h3>
       <hr/>
 
-      <p>You are {% if template %}editing a{% else %}creating a new{% endif %} template. {% if not template %}Use the <strong>cookbooks</strong> pulldown to select a template to get started.{% endif %} {% if nodes %}The {% set ns = namespace(counter=0) %}{% for node in nodes %}{% set ns.counter = ns.counter + 1 %}{% if ns.counter == 1 %}<a href="/nodes/{{ node.node_id }}">{{ node.name }}</a>{% elif ns.counter == pipelines|length %} and <a href="/nodes/{{ node.node_id }}">{{ node.name }}</a>{% else %}, <a href="/nodes/{{ node.node_id }}">{{ node.name }}</a>{% endif %}{% endfor %} node(s) are using this template.{% endif %}</p>
+      <p>You are {% if template %}editing a{% else %}creating a new{% endif %} template. {% if not template %}Use the <strong>cookbooks</strong> pull down to select a template to get started.{% endif %} {% if nodes %}The {% set ns = namespace(counter=0) %}{% for node in nodes %}{% set ns.counter = ns.counter + 1 %}{% if ns.counter == 1 %}<a href="/nodes/{{ node.node_id }}">{{ node.name }}</a>{% elif ns.counter == pipelines|length %} and <a href="/nodes/{{ node.node_id }}">{{ node.name }}</a>{% else %}, <a href="/nodes/{{ node.node_id }}">{{ node.name }}</a>{% endif %}{% endfor %} node(s) are using this template.{% endif %}</p>
     </div>
   </div>
   <div class="row">

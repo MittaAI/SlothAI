@@ -19,7 +19,7 @@
   <link rel="stylesheet" href="/css/toastr.min.css">
   <link rel="stylesheet" href="/css/jquery-ui.css">
   <link rel="stylesheet" href="/css/jquery.dataTables.min.css">
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/style.css?version=1.0">
   
   {% block style %}
   {% endblock %}
@@ -30,7 +30,7 @@
 <nav class="navbar navbar-expand-sm fixed-top">
   <h3>
     <a class="site" href="/"><span class="greater-than">&gt;</span> {{brand.get('name')}}</a>
-    <a href="{{brand.get('github_url')}}" target="_blank" class="link-icons"> <i class="fab fa-github"></i> </a>
+    <a href="{{brand.get('github_url')}}" target="_blank" class="link-icons hide-on-small"> <i class="fab fa-github"></i> </a>
     <a href="{{brand.get('slack_url')}}" target="_blank" class="link-icons"> <i class="fab fa-slack"></i> </a>
     <a href="{{brand.get('youtube_url')}}" target="_blank" class="link-icons"> <i class="fab fa-youtube"></i> </a>
   </h3>
@@ -44,7 +44,9 @@
       {% if username != "anonymous" %}
       <button class="btn btn-outline-light dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{email}}</button>
       <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton">
+        <!-- coming soon
         <a class="dropdown-item" href="/docs">Documentation</a>
+        -->
         <a class="dropdown-item" href="/cookbooks">Cookbooks</a>
         <a class="dropdown-item" href="/settings">Settings</a>
         <a class="dropdown-item" href="/logout">Logout</a>
@@ -117,6 +119,7 @@
 
 <script type="text/javascript">
 $(document).ready(function() {
+
   // Set toastr options globally
   toastr.options = {
     "positionClass": "toast-bottom-right",

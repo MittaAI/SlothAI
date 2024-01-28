@@ -10,26 +10,28 @@
   <div class="row">
     <div class="col-lg-12">
       <h3 class="site"><span class="greater-than">&gt;</span> {{brand.get('service')}}</h3>
-      <div class="input-group mb-3">
+      <div class="input-group mb-3 token">
 		    <form id="form" method="post">
-          <label>Enter the login token that was emailed to you.</label>
-          <input autofocus type="password" class="form-control" name="mail_token" placeholder="Paste the code in here and hit enter.">
-          {% if next %}
-          <input type="hidden" name="next" value="{{next}}">
-          {%endif%}
-          {% if op %} 
-          <input type="hidden" name="op" value="{{op}}">
-          {%endif%}
-          {% if email %} 
-          <input type="hidden" name="email" value="{{email}}">
-          {%endif%}
-          <small class="form-text text-muted">
-            {% for message in get_flashed_messages() %}
-            <div class="flash">{{ message }}</div>
-            {% endfor %}
-          </small>
-          <button type="submit" class="btn btn-outline-light" title="Use a token for login.">Verify</button>
-          <a class="btn btn-danger" title="Cancel" href="/">Cancel</a>
+          <div class="form-group token">
+            <label>Enter the login token.</label>
+            <input autofocus type="password" class="form-control" name="mail_token" placeholder="Paste the code in here and hit enter.">
+            {% if next %}
+            <input type="hidden" name="next" value="{{next}}">
+            {%endif%}
+            {% if op %} 
+            <input type="hidden" name="op" value="{{op}}">
+            {%endif%}
+            {% if email %} 
+            <input type="hidden" name="email" value="{{email}}">
+            {%endif%}
+            <small class="form-text text-muted">
+              {% for message in get_flashed_messages() %}
+              <div class="flash">{{ message }}</div>
+              {% endfor %}
+            </small>
+            <button type="submit" class="btn btn-outline-light" title="Use a token for login.">Verify</button>
+            <a class="btn btn-danger" title="Cancel" href="/">Cancel</a>
+          </div>
         </form>
       </div>
     </div>

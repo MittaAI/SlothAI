@@ -104,11 +104,15 @@ footer {
   position: fixed;
   left: 0px;
   bottom: 0px;
-  height: 300px;
   width: 100%;
-  padding-top: 80px;
   background: #EEE;
-  border-top: 2px dashed #222222; 
+  border-top: 2px dashed #222222;
+  padding-top: 5%;
+  padding-bottom: 5%;
+}
+
+.video-responsive {
+  max-width: 700px;
 }
 
 table {
@@ -430,7 +434,11 @@ h3.modal-title {
 }
 
 .offering a, .about a, .pricing a, .legal a, a.dash_link, .cookbooks a {
-  color: #34608a;
+  color: #7995b0;
+}
+
+.offering a:hover, .about a:hover, .pricing a:hover, .legal a:hover, a:hover.dash_link, .cookbooks a:hover {
+  color: #f4f4f3;
 }
 
 .offering .btn {
@@ -485,10 +493,9 @@ h3.modal-title {
 .dashboard {
   background-color: white;
   background-size: cover;
-  margin-top: 65px; /* same as navbar's height */
-  margin-left: 157px; /* same as sidebar's width */
-  width: 85%; /* adjust this based on the sidebar's width */
-  overflow-y: auto; /* for vertical scrolling */
+  margin-left: 157px; 
+  width: 85%; 
+  overflow-y: auto;
   padding-bottom: 53px;
   transition: margin-left 0.6s ease;
 }
@@ -560,7 +567,6 @@ h3.modal-title {
 }
 
 .navbar {
-  opacity:  90%;
   background-color:  #444444;
   border-bottom: 1px dotted #222222;
   position: fixed;
@@ -568,7 +574,7 @@ h3.modal-title {
   left: 0;
   width: 100%;
   z-index: 1030; /* high z-index to keep it above other elements */
-  padding: .3rem 1rem
+  padding: .3rem 1rem;
 }
 
 .navbar h2, .navbar h3 {
@@ -583,6 +589,17 @@ h3.modal-title {
   padding-left: 20px;
 }
 
+.navbar {
+  z-index: 1000; /* Ensure the navbar has a high z-index */
+}
+
+.dropdown-menu {
+  z-index: 1001; /* Dropdown menus should be higher than the navbar */
+}
+
+div.form-group.email, div.form-group.token {
+  min-width: 333px;
+}
 .video-responsive {
   position: relative;
   overflow: hidden;
@@ -629,7 +646,6 @@ h3.modal-title {
   text-decoration: none;
 }
 
-
 #templateText {
   height: 60vh;
   resize: none;
@@ -646,16 +662,16 @@ h3.modal-title {
 /* Sidebar styles */
 .sidebar {
   position: fixed;
-  top: 54px; /* Adjust this based on the actual height of your navbar */
+  top: auto;
+  height: 100%;
   left: 0;
-  width: 15%; /* or any width you prefer */
-  height: calc(100% - 50px); /* Full height minus the navbar height */
-  overflow-y: auto; /* for scrolling */
+  width: 15%;
+  overflow-y: auto;
   transition: width 0.3s;
 }
 
 .sidebar_list {
-  padding-top: 20px;
+  padding-top: 64px;
 }
 
 .sidebar a {
@@ -680,6 +696,10 @@ h3.modal-title {
 
 .sidebar, .container {
   transition: width 0.5s ease, margin-left 0.5s ease;
+}
+
+.container-fluid.dashboard {
+  padding-top: 54px;
 }
 
 @keyframes shake {
@@ -783,6 +803,18 @@ h3.modal-title {
 }
 
 @media only screen and (max-width: 768px) {
+  h1 {
+    font-size: 59px; 
+  }
+
+  h2 {
+    font-size: 43px;
+  }
+
+  h3 {
+    font-size: 31px;
+  }
+
   .hide-on-small {
     display: none;
   }

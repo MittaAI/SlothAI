@@ -24,11 +24,12 @@
 <div class="container-fluid demos">
   <div class="row">
     <div class="col-lg-9">
-      <h2><span class="gradient-text">Take a Test Drive</span></h2>
+      <h2><span class="gradient-text">Try A Pipeline</span></h2>
+      <p>The following pipelines are free for use and do not require a login.</p>
     </div>
     <div class="col-lg-9">
       <h3>Transform an Image in Under 30 Seconds</h3>
-      <p>Transform an image file smaller than 32MB into another file type with conversational language. Do it now.</p>
+      <p>This pipeline transforms any media file smaller than 32MB into another format with conversational language.</p>
       <img src="/images/ffmpeg_pipe_1.png"/>
       <div class="input-group mb-3">
         <input id="instructions" type="text" class="form-control" value="Convert to a 640 wide black and white gif" aria-label="instructions" aria-describedby="convert">
@@ -36,7 +37,8 @@
           <button class="btn btn-primary" id="convert">Convert</span>
         </div>
       </div>
-      <button class="btn btn-outline-light" id="convertMedia">Convert Other Media Types</button>
+      <button class="btn btn-outline-light" id="convertMedia"><i class="fab fa-github"></i> Repo</button>
+      <button class="btn btn-outline-light" id="convertMediaDocker"><i class="fab fa-docker"></i> Docker</button>
     </div>
   </div>
 
@@ -94,7 +96,7 @@
       <h2 class="headings"><strong class="gradient-text">Transform</strong> AI Workflows</h2>
       <p>Mitta is an <a href="https://github.com/MittaAI/SlothAI">open-source framework</a>, created, written, and run as a SaaS service by one of the founders of <a href="https://loggly.com">Loggly</a>. Mitta revolutionizes the way AI applications are built and scaled, and it's designed for a smooth transition from rapid prototyping to production. Mitta supports a wide range of AI models and leverages <a href="https://jinja.palletsprojects.com/en/3.1.x/">Jinja2</a> templates to make it a snap to write complex prompts for pipelines in minutes.</p>
 
-      <p>With Mitta, documents and data may be deseralized and transformed by the system during processing using task queues and containers for scale and serverless speed. Mitta supports calls to <a href="https://platform.openai.com/docs/api-reference">OpenAI</a>, <a href="https://mistral.ai/">MistralAI</a>, <a href="https://deepmind.google/technologies/gemini/">Google Gemini</a>, <a href="https://api.together.xyz/">TogetherAI</a>, <a href="https://www.perplexity.ai/">Perplexity</a>, <a href="https://elevenlabs.io">ElevenLabs</a> speech models, Google's <a href="https://cloud.google.com/document-ai?hl=en">Document and Vision</a> APIs, and more.</p>
+      <p>With Mitta, documents and data may be de-serialized and transformed by the system during processing using task queues and containers for scale and serverless speed. Mitta supports calls to <a href="https://platform.openai.com/docs/api-reference">OpenAI</a>, <a href="https://mistral.ai/">MistralAI</a>, <a href="https://deepmind.google/technologies/gemini/">Google Gemini</a>, <a href="https://api.together.xyz/">TogetherAI</a>, <a href="https://www.perplexity.ai/">Perplexity</a>, <a href="https://elevenlabs.io">ElevenLabs</a> speech models, Google's <a href="https://cloud.google.com/document-ai?hl=en">Document and Vision</a> APIs, and more.</p>
 
       <p>Don't waste your time with hard to use AI frameworks. <a href="/login">Get started</a> building with Mitta today!</p>
     </div>
@@ -108,7 +110,7 @@
       </p>
 
       <p">Ready to learn how to build a simple pipeline to simulate a pirate's brain?</p>
-      <div class="video">
+      <div class="video video-responsive">
         <iframe width="530" height="315" src="https://www.youtube.com/embed/CuALke2rQbQ?si=if7GJJnzP0C17s9b" title="YouTube video player" frameborder="1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
       </div>
     </div>
@@ -120,8 +122,11 @@
 <script type="text/javascript">
 $(document).ready(function() {
   $('#convertMedia').click(function() {
-    console.log("whut");
     window.open('https://github.com/MittaAI/mitta-community/tree/main/cookbooks/conversion', '_blank');
+  });
+
+  $('#convertMediaDocker').click(function() {
+    window.open('https://github.com/MittaAI/mitta-community/tree/main/cookbooks/conversion/docker', '_blank');
   });
 
   $('#crawlSite').click(function() {

@@ -32,7 +32,7 @@
     <link rel="stylesheet" href="/css/toastr.min.css">
     <link rel="stylesheet" href="/css/jquery-ui.css">
     <link rel="stylesheet" href="/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/style.css?version=1.0">
 
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=AW-11454464074">
@@ -75,7 +75,9 @@
       {% if username != "anonymous" %}
       <button class="btn btn-outline-light dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{email}}</button>
       <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton">
+        <!-- coming soon
         <a class="dropdown-item" href="/docs">Documentation</a>
+        -->
         <a class="dropdown-item" href="/cookbooks">Cookbooks</a>
         <a class="dropdown-item" href="/settings">Settings</a>
         <a class="dropdown-item" href="/logout">Logout</a>
@@ -90,13 +92,13 @@
 {% block content %}
 {% endblock %}
 
-<footer class="col-lg-12">
+<footer class="container-fluid col-lg-12">
   <div class="row justify-content-md-center">
-    <div class="col col-lg-3">
+    <div class="col-12 col-md-6 col-lg-3 mb-3">
       <h5 class="site"><span class="greater-than">&gt;</span> {{brand.get('service')}}</h5>
       <small class="rights">&copy; 2024. All rights reserved.</small>
     </div>
-    <div class="col col-lg-2">
+    <div class="col-12 col-md-6 col-lg-2">
       <h5>Company</h5>
       <ul class="list-unstyled text-small">
         <li><a class="text-muted" href="/pricing">Pricing</a></li>
@@ -105,7 +107,7 @@
         <li><a class="text-muted" href="https://twitter.com/mittacorp">Twitter</a></li>
       </ul>
     </div>
-    <div class="col col-lg-2">
+    <div class="col-12 col-md-6 col-lg-2">
       <h5>Support</h5>
       <ul class="list-unstyled text-small">
         <!-- coming soon
@@ -119,6 +121,7 @@
     </div>
   </div>
 </footer>
+
 
 <script type="text/javascript" charset="utf8" src="/js/jquery-3.6.0.min.js"></script>
 <script type="text/javascript" charset="utf8" src="/js/bootstrap.min.js"></script>

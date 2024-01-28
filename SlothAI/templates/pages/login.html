@@ -16,15 +16,15 @@
         {% else %}
         <form autocomplete="off" id="{{app_id}}" action="/login" method="post">
         {% endif %}
-          <div class="form-group">
+          <div class="form-group email">
           {% if op == "1" %}
-            <label>Enter your email address to get a registration token.</label>
+            <label>Enter your email to get a login token.</label>
           {% elif session %}
-            <label>Verify your email address, again.</label>
+            <label>Enter your email to get a login token.</label>
           {% elif email %}
-            <label>Hit enter or click submit to get a login token by email.</label>
+            <label>Enter your email to get a login token.</label>
           {% else %}
-            <label>Enter your email address to get a login token.</label>
+            <label>Enter your email to get a login token.</label>
           {% endif %}
             <input autofocus id="email-{{app_id}}" type="email" class="form-control" name="email" placeholder="example@gmail.com">
             <input id="password" type="password" class="form-control" name="password" placeholder="************">

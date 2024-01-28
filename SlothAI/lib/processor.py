@@ -19,7 +19,7 @@ from itertools import groupby
 
 from google.cloud import vision, storage, documentai
 from google.api_core.client_options import ClientOptions
-from SlothAI.lib.util import random_string, random_name, get_file_extension, upload_to_storage, upload_to_storage_requests, split_image_by_height, download_as_bytes, create_audio_chunks
+from SlothAI.lib.util import random_string, random_name, get_file_extension, upload_to_storage, upload_to_storage_requests, split_image_by_height, download_as_bytes
 from SlothAI.lib.template import Template
 
 from SlothAI.web.models import Token
@@ -358,6 +358,9 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
     user = User.get_by_uid(uid=task.user_id)
     uid = user.get('uid')
 
+    # user document
+    user_document = task.document.get('user_document', {})
+
     # inputs
     input_fields = template.get('input_fields')
 
@@ -373,7 +376,7 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
     output_file = task.document.get('output_file')
 
     # Construct the AIFFMPEG service URL using the selected box details
-    ffmpeg_url = f"{app.config['FFMPEG_URL']}/convert"
+    ffmpeg_url = f"{app.config['FFMPEG_URL']}"
 
     # Identify the target pipeline for the output
     target_pipeline = task.document.get('pipeline')
@@ -385,10 +388,13 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
             raise NonRetriableError("Pipeline not found.")
         pipe_id = pipeline.get('pipe_id')
 
-    # ffmpeg_string
+    # ffmpeg_request string 
     ffmpeg_string = task.document.get('ffmpeg_request')
     if not ffmpeg_string:
         raise NonRetriableError("The `aiffmpeg` processor or requires a `ffmpeg_request` key with the request to run.")
+    if isinstance(ffmpeg_string, list):
+        # rewrite as a string
+        task.document['ffmpeg_request'] = ffmpeg_string[0]
 
     # File URL to process (get just the first one)
     if not task.document.get('mitta_uri'):
@@ -443,7 +449,8 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
     # Prepare data for AIFFMPEG service
     ffmpeg_data = {
         "ffmpeg_token": app.config['FFMPEG_TOKEN'],
-        "uid": uid,
+        "user_id": uid,
+        "user_document": user_document,
         "mitta_uri": mitta_uri,
         "callback_url": callback_url,
         "ffmpeg_command": ai_dict.get('ffmpeg_command'),
@@ -469,9 +476,8 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
         if ffmpeg_response.get('result') == "success":
             task.document['aiffmpeg_status'] = "started"
         else:
-            raise NonRetriableError("Processing failed. Check the file URL, try another file, or reword the request.")
+            raise NonRetriableError("Processing failed. Check the file, try another file, or reword the request.")
     else:
-        print(ffmpeg_response)
         raise NonRetriableError("Processing failed with no result. Check the file URL or try another file.")
 
     return task
@@ -517,10 +523,13 @@ def info_file(node: Dict[str, any], task: Task) -> Task:
     # let's get to the chopper
     for index, file_name in enumerate(filename):
         # Get the file
-        gcs = storage.Client()
-        bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
-        blob = bucket.get_blob(f"{uid}/{file_name}")
-        file_content = download_as_bytes(uid, file_name)
+        try:
+            gcs = storage.Client()
+            bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
+            blob = bucket.get_blob(f"{uid}/{file_name}")
+            file_content = download_as_bytes(uid, file_name)
+        except:
+            raise NonRetriableError(f"Can't find the file '{file_name}' in storage, or failed to find it in the upload.")
 
         # Get the content type of the file from metadata
         try:
@@ -2415,10 +2424,6 @@ def aiaudio(node: Dict[str, any], task: Task) -> Task:
     max_original_file_size = 25 * 1024 * 1024  # 25 MB in bytes
     if file_size > max_original_file_size:
         raise NonRetriableError("Original file size exceeds the 25 MB limit.")
-
-    # removed this for now due to 32MB file size limit on appengine
-    # Process the audio: split the audio into chunks
-    # audio_chunks = create_audio_chunks(audio_file) # this might work if you use it
 
     # for now, just do one up to 25MB
     audio_chunks = [audio_file]

@@ -483,7 +483,7 @@ def nodes():
     email = current_user.email
 
     nodes = Node.fetch(uid=current_user.uid)
-
+   
     template_service = app.config['template_service']
     templates = template_service.fetch_template(user_id=current_user.uid)
 
@@ -583,6 +583,7 @@ def node_detail(node_id=None, template_id=None):
         pipeline_ids = []
 
     add_pipelines = Pipeline.fetch(uid=uid)
+    add_pipelines = sorted(add_pipelines, key=lambda x: x.get('name', ''))
 
     # Filter out pipelines already in `pipelines`, unless it's a callback
     if "callback" in node.get('processor') or not pipelines:

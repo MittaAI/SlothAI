@@ -214,46 +214,77 @@ def ingest_post(pipeline_id):
     if not pipeline:
         return jsonify({"response": f"pipeline with id {pipeline_id} not found"}), 404
 
+    # things we need to track
+    filenames, content_types, upload_uris = [], [], []
+
     # start looking for uploaded files in the payload
     file_field_names = request.files.keys()
 
-    # if we find any, we take the first one only and stick it in cloud storage
+    # upload any files to storage
     for field_name in file_field_names:
         uploaded_file = request.files[field_name]
         filename = secure_filename(uploaded_file.filename)
         bucket_uri = upload_to_storage(current_user.uid, filename, uploaded_file)
-        break
 
-    # Check if we have a file upload
-    if file_field_names:
-        try:
-            json_data = request.form.get('data')
-            if not json_data:
-                json_data = request.form.get('json')
-                if not json_data:
-                    # no JSON data, so fake it
-                    json_data = "{}"
-    
-            json_data_dict = transform_single_items_to_lists(json.loads(json_data))
-
-            if not isinstance(json_data_dict, dict):
-                return jsonify({"error": "The 'json' data is not a dictionary"}), 400
-
-            json_data_dict['filename'] = [filename]
-            json_data_dict['content_type'] = [uploaded_file.content_type]
-        except Exception as ex:
-            return jsonify({"error": f"Error getting or transforming JSON data."}), 400
+        # Check if the file is json_data.json
+        if filename == 'json_data.json':
+            try:
+                # try a decoded version first
+                uploaded_file.stream.seek(0)
+                json_data_file = uploaded_file.read().decode('utf-8')
+                json_data_file_dict = json.loads(json_data_file)
+            except Exception as ex:
+                if not json_data_file:
+                    return jsonify({"error": "The attached JSON file is empty. Check your code, or don't include the empty 'json_data.json' file in the payload."}), 400  
+                else:
+                    return jsonify({"error": "Can't read the attached JSON file. Try reformatting it."}), 400
+        else:
+            # add any files uploaded to the document, except json_data.json
+            filenames.append(filename)
+            content_types.append(uploaded_file.content_type)
+            upload_uris.append(f"https://{app.config.get('APP_DOMAIN')}/d/{current_user.name}/{filename}")
+            json_data_file_dict = {}
     else:
-        print(request.get_json())
-        # If it's not a file upload, try to read JSON data
-        try:
-            json_data_dict = transform_single_items_to_lists(request.get_json())
+        if not file_field_names:
+            json_data_file_dict = {}
 
+    # Check for JSON data from form
+    try:
+        form_json_data = request.form.get('data') or request.form.get('json')
+        if not form_json_data:
+            json_data_dict = request.get_json(silent=True) or {}
+        else:
+            json_data_dict = json.loads(form_json_data)
+
+        if json_data_dict:
             if not isinstance(json_data_dict, dict):
                 return jsonify({"error": "The JSON data is not a dictionary"}), 400
+            else:
+                if json_data_file_dict:
+                    json_data_dict.update(json_data_file_dict)
+        else:
+            if not json_data_file_dict:
+                if not file_field_names:
+                    # here we have no files and no JSON
+                    return jsonify({"error": "Wasn't able to find a JSON data payload or an upload file."}), 400
+            else:
+                json_data_dict = json_data_file_dict
+
+        # if we had files
+        if file_field_names:
+            json_data_dict['filename'] = filenames
+            json_data_dict['content_type'] = content_types
+            json_data_dict['access_uri'] = upload_uris
+
+        # Validate and transform JSON data
+        json_data = transform_single_items_to_lists(json_data_dict)
         
-        except Exception as ex:
-            return jsonify({"error": f"Error getting or transforming JSON data: {ex}"}), 400
+        # final check, probably never happens TODO remove
+        if not isinstance(json_data_dict, dict):
+            return jsonify({"error": "The transformed JSON data is not a dictionary"}), 400
+
+    except Exception as ex:
+        return jsonify({"error": f"Error getting or transforming JSON data: {ex}"}), 400
 
     # now we create the task
     task_id = random_string()
@@ -271,8 +302,8 @@ def ingest_post(pipeline_id):
     )
 
     # store and queue
-    task.document = json_data_dict
-
+    task.document = json_data
+    print(task.document)
     try:
         app.config['task_service'].create_task(task)
         return jsonify(task.to_dict()), 200

@@ -12,8 +12,7 @@
     <div class="col col-lg-12">
       <h3>Tasks</h3>
       <hr/>
-      <p>Task are started by sending data to a pipeline's ingestion endpoint. Tasks are cleared after an hour.</p><p>If there is an error in a node, the last node that ran is listed.</p>
-      <p>If you get a <strong>400 Task size too large</strong>, you will may need to add a <strong>split_task</strong> processor.</p>
+      <p>Task are started by sending data to a pipeline's ingestion endpoint. Tasks are cleared after an hour.</p>
     </div>
   </div>
   <div class="row">
@@ -56,7 +55,7 @@
         </tbody>
       </table>
       {% else %}
-      <p>There are no active tasks. Start ingestion to see tasks here.</p>
+      <p>Start ingestion on a pipeline to see tasks.</p>
       {% endif %}
     </div>
   </div>
