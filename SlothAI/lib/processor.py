@@ -474,7 +474,8 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
     # Handle response
     if "result" in ffmpeg_response:
         if ffmpeg_response.get('result') == "success":
-            task.document['aiffmpeg_status'] = "started"
+            task.document['ffmpeg_status'] = "started"
+            task.document['ffmpeg_command'] = ai_dict.get('ffmpeg_command')
         else:
             raise NonRetriableError("Processing failed. Check the file, try another file, or reword the request.")
     else:
@@ -815,11 +816,18 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
                 raise NonRetriableError(f"Exception talking to Mistral embedding: {ex}")
 
         elif "instructor" in model:
-            # Call box_required to get the selected box details
+            # check required services (GPU boxes)
             defer, selected_box = box_required()
-            if defer:
-                raise RetriableError("Sloth virtual machine is being started to run embeddings.")
 
+            if defer:
+                if selected_box:
+                    # Logic to start or wait for the box to be ready
+                    # Possibly setting up the box or waiting for it to transition from halted to active
+                    raise RetriableError("Sloth virtual machine is being started to run embeddings.")
+                else:
+                    # No box is available, raise a non-retriable error
+                    raise NonRetriableError("No available virtual machine to run embeddings.")
+     
             sloth_url = f"http://sloth:{app.config['SLOTH_TOKEN']}@{selected_box.get('ip_address')}:9898/embed"
 
             try:

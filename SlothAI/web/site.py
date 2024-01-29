@@ -24,6 +24,9 @@ site = Blueprint('site', __name__, static_folder='static')
 # client connection
 client = ndb.Client()
 
+# date for base pages cards
+current_date = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+00:00")
+
 # hard coded, for now
 processors = [
     {"value": "jinja2", "label": "Jinja2 Processor", "icon": "file"},
@@ -220,7 +223,7 @@ def home():
     except:
         username = "anonymous"
         email = "anonymous"
-    return render_template('pages/index.html', username=username, email=email, brand=get_brand(app), dev=app.config['DEV'])
+    return render_template('pages/index.html', username=username, email=email, brand=get_brand(app), dev=app.config['DEV'], current_date=current_date)
 
 
 @site.route('/pro', methods=['GET'])
@@ -269,7 +272,8 @@ def postpro():
         phone=phone,
         why=why,
         brand=get_brand(app), 
-        dev=app.config['DEV']
+        dev=app.config['DEV'],
+        current_date=current_date
     )
 
 
@@ -282,7 +286,7 @@ def legal():
         username = "anonymous"
         email = "anonymous"
 
-    return render_template('pages/privacy.html', username=username, email=email, dev=app.config['DEV'], brand=get_brand(app))
+    return render_template('pages/privacy.html', username=username, email=email, dev=app.config['DEV'], brand=get_brand(app), current_date=current_date)
 
 
 @site.route('/about', methods=['GET'])
@@ -294,7 +298,7 @@ def about():
         username = "anonymous"
         email = "anonymous"
 
-    return render_template('pages/about.html', username=username, email=email, dev=app.config['DEV'], brand=get_brand(app))
+    return render_template('pages/about.html', username=username, email=email, dev=app.config['DEV'], brand=get_brand(app), current_date=current_date)
 
 
 @site.route('/pricing', methods=['GET'])
@@ -305,7 +309,7 @@ def pricing():
     except:
         username = "anonymous"
         email = "anonymous"
-    return render_template('pages/pricing.html', username=username, email=email, dev=app.config['DEV'], brand=get_brand(app))
+    return render_template('pages/pricing.html', username=username, email=email, dev=app.config['DEV'], brand=get_brand(app), current_date=current_date)
 
 
 @site.route('/cookbooks', methods=['GET'])
@@ -332,7 +336,7 @@ def cookbooks():
         username = "anonymous"
         email = "anonymous"
 
-    return render_template('pages/cookbooks.html', username=username, email=email, dev=app.config['DEV'], brand=get_brand(app), cookbooks=cookbooks)
+    return render_template('pages/cookbooks.html', username=username, email=email, dev=app.config['DEV'], brand=get_brand(app), cookbooks=cookbooks, current_date=current_date)
 
 
 @site.route('/pipelines', methods=['GET'])
