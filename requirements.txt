@@ -32,7 +32,7 @@ email_validator==2.1.0
 twilio==8.10.2
 sendgrid==6.10.0
 slackclient==2.9.4
-Pillow==10.1.0
+Pillow==10.2.0
 pandas==2.1.2
 mistralai==0.0.8
 elevenlabs==0.2.27
