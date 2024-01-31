@@ -1,6 +1,8 @@
+import datetime
+
 import flask_login
 
-from flask import Flask, render_template, make_response, request, redirect
+from flask import Flask, render_template, make_response, request, redirect, session
 from flask_compress import Compress
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -78,7 +80,6 @@ def create_app(conf='dev'):
 
     scheduler.start()
 
-
     @login_manager.request_loader
     def load_request(request):
         # get a token, if there is one
@@ -130,6 +131,9 @@ def create_app(conf='dev'):
     @app.before_request
     def before_request():
         forwarded_proto = request.headers.get('X-Forwarded-Proto')
+        session.permanent = True
+        app.permanent_session_lifetime = datetime.timedelta(minutes=2880)
+        session.modified = True
 
         if app.config['DEV'] == "True":
             return

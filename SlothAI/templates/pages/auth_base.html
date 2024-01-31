@@ -26,41 +26,39 @@
   <meta name="twitter:site" content="{{ brand.get('twitter_handle') }}" /> <!-- Replace with your Twitter handle -->
   <meta name="twitter:title" content="{{ brand.get('name') }}" />
   <meta name="twitter:description" content="Blazing Fast AI Pipelines" />
-  <meta name="twitter:image" content="/images/sloth.png" />
+  <meta name="twitter:image" content="/images/home.png" />
 
   <link rel="shortcut icon" href="/images/favicon.ico">
-  <link rel="stylesheet" href="/css/style.css">
 
   <link rel="stylesheet" href="/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/css/style.css?version=1.0">
   
   {% block style %}
   {% endblock %}
   
   <script src="/js/jquery.min.js"></script>
-
 </head>
 
 <body>
-  <div id="body">
-    {% block content %}
-    {% endblock %}
-    {% block footer %}
-    {% endblock %}
-  </div>
+
+{% block content %}
+{% endblock %}
+
+<script type="text/javascript">
+  $(document).ready(function(){
+    // redirect to https
+    if ("{{dev}}"=="True") {
+      console.log("developer logs");
+    } else {
+      if (location.protocol!=='https:') {
+        location.replace(`https:${location.href.substring(location.protocol.length)}`);
+      }
+    }
+  });
+</script>
 
 {% block javascript %}
-  <script type="text/javascript">
-    $(document).ready(function(){
-      // redirect to https
-      if ("{{dev}}"=="True") {
-        console.log("developer logs");
-      } else {
-        if (location.protocol!=='https:') {
-          location.replace(`https:${location.href.substring(location.protocol.length)}`);
-        }
-      }
-    });
-  </script>
 {% endblock %}
+
 </body>
 </html>

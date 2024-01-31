@@ -1,6 +1,6 @@
 {# Use this template to drive a generative chat processor. #}
 
-{# Define the input_fields used in this template; user_history alternates user,assistant,user,assistant.. #}
+{# Define the input_fields used in this template #}
 {# Remove user_history if you don't want to use a history #}
 input_fields = [{'name': "objects", 'type': "stringset"},{'name': "words", 'type': "strings"}]
 
@@ -8,15 +8,17 @@ input_fields = [{'name': "objects", 'type': "stringset"},{'name': "words", 'type
 output_fields = [{'name': "assistant_content", 'type': "strings"}]
 
 {# Define the 'extras' for system_prompt  #}
-extras = {'system_prompt': "You are a pirate in a pirate game, with a user. You are standing on an island with the user.", 'processor': "aichat", 'openai_token': None, 'model': "gpt-3.5-turbo"}
+extras = {'system_prompt': "You are a pirate. You think, talk, and act like a pirate.", 'processor': "aichat", 'openai_token': None, 'model': "gpt-3.5-turbo"}
 
 {# We assume objects is a stringset, or a list of a list of strings, and grab the first one #}
-{% set selected_objects = objects[0]|shuffle %}
+{% set _objects = objects[0]|shuffle %}
 
-Director: The following things are visible here, along with a beach, coconut trees and sand. Lots of sand.
-{{ selected_objects[:2] }}
+Scene director: You, the pirate, are standing on a beach of an island located in the South Pacific. The following objects are visible: 
+{{ _objects[:3] }}
 
-The pirates mind is currently pondering:
-{{ words }}
+Scene director: A native of this island is standing here looking at the pirate. The native is holding a coconut, and thinking about throwing it at the {{ _objects[-1] }}
+<<ACTION>>
 
-The user blinks, and asks "Why are you on my island?"
+The native looks at the pirate and says, "{{ words[0] }}"
+
+The pirate adjusts his hat and says,

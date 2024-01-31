@@ -16,7 +16,7 @@ from werkzeug.utils import secure_filename
 
 from SlothAI.lib.tasks import Task, TaskState
 from SlothAI.web.models import Pipeline, Node, Token
-from SlothAI.lib.util import random_string, upload_to_storage, deep_scrub, transform_single_items_to_lists
+from SlothAI.lib.util import random_string, upload_to_storage, deep_scrub, transform_single_items_to_lists, gpt_dict_completion
 from SlothAI.lib.template import Template
 
 from SlothAI.web.nodes import node_create
@@ -74,6 +74,29 @@ def node_to_pipeline(pipe_id):
             'error': 'Invalid request format, JSON expected.'
         }), 400
 
+@pipeline.route('/pipeline/<pipe_id>/rename', methods=['POST'])
+@flask_login.login_required
+def update_name(pipe_id):
+    # Parse the JSON data from the request
+    try:
+        json_data = request.get_json()
+        new_name = json_data["pipeline"]["name"]
+    except Exception as e:
+        return jsonify({"error": "Invalid JSON data"}), 400
+
+    # Check if the user has permission to update the node
+    pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
+    if not pipeline:
+        return jsonify({"error": "Pipeline not found"}), 404
+
+    # Update the node's name with the new name
+    updated_node = Pipeline.rename(current_user.uid, pipe_id, new_name)
+
+    if updated_node:
+        return jsonify({"message": "Pipeline renamed successfully"}), 200
+    else:
+        return jsonify({"error": "Failed to rename pipeline"}), 500
+
 
 @pipeline.route('/pipeline/<pipe_id>', methods=['POST'])
 @flask_login.login_required
@@ -130,7 +153,7 @@ def pipeline_add():
         nodes = json_data.get('nodes', None)
 
         if not name or not nodes:
-            return jsonify({"error": "Invalid JSON Object", "message": "The request body must be valid JSON data and contain a 'name' and 'nodess' key."}), 400
+            return jsonify({"error": "Invalid JSON Object", "message": "Ensure you have added a valid node to the pipeline."}), 400
         
         if not isinstance(nodes, list):
             return jsonify({"error": "Invalid JSON Object", "message": f"The value of the 'nodes' key must be a list of node_ids. Got: {type(nodes)}"}), 400
@@ -191,41 +214,82 @@ def ingest_post(pipeline_id):
     if not pipeline:
         return jsonify({"response": f"pipeline with id {pipeline_id} not found"}), 404
 
+    # things we need to track
+    filenames, content_types, upload_uris = [], [], []
+
     # start looking for uploaded files in the payload
     file_field_names = request.files.keys()
 
-    # if we find any, we take the first one only and stick it in cloud storage
+    # upload any files to storage
     for field_name in file_field_names:
         uploaded_file = request.files[field_name]
         filename = secure_filename(uploaded_file.filename)
         bucket_uri = upload_to_storage(current_user.uid, filename, uploaded_file)
-        break
 
-    # Check if we have a file upload
-    if file_field_names:
-        try:
-            json_data = request.form.get('data')
-            if not json_data:
-                return jsonify({"error": "When using mixed mode POSTs, you must supply a 'json' key with a JSON object."}), 400
-            json_data_dict = transform_single_items_to_lists(json.loads(json_data))
-
-            if not isinstance(json_data_dict, dict):
-                return jsonify({"error": "The 'json' data is not a dictionary"}), 400
-
-            json_data_dict['filename'] = [filename]
-            json_data_dict['content_type'] = [uploaded_file.content_type]
-        except Exception as ex:
-            return jsonify({"error": f"Error getting or transforming JSON data."}), 400
+        # Check if the file is json_data.json
+        if filename == 'json_data.json':
+            try:
+                # try a decoded version first
+                uploaded_file.stream.seek(0)
+                json_data_file = uploaded_file.read().decode('utf-8')
+                json_data_file_dict = json.loads(json_data_file)
+            except Exception as ex:
+                if not json_data_file:
+                    return jsonify({"error": "The attached JSON file is empty. Check your code, or don't include the empty 'json_data.json' file in the payload."}), 400  
+                else:
+                    return jsonify({"error": "Can't read the attached JSON file. Try reformatting it."}), 400
+        else:
+            # add any files uploaded to the document, except json_data.json
+            filenames.append(filename)
+            content_types.append(uploaded_file.content_type)
+            upload_uris.append(f"https://{app.config.get('APP_DOMAIN')}/d/{current_user.name}/{filename}")
+            json_data_file_dict = {}
     else:
-        # If it's not a file upload, try to read JSON data
-        try:
-            json_data_dict = transform_single_items_to_lists(request.get_json())
+        if not file_field_names:
+            json_data_file_dict = {}
 
+    # Check for JSON data from form
+    try:
+        form_json_data = request.form.get('data') or request.form.get('json')
+        if not form_json_data:
+            json_data_dict = request.get_json(silent=True) or {}
+        else:
+            json_data_dict = json.loads(form_json_data)
+
+        if json_data_dict:
             if not isinstance(json_data_dict, dict):
                 return jsonify({"error": "The JSON data is not a dictionary"}), 400
+            else:
+                if json_data_file_dict:
+                    json_data_dict.update(json_data_file_dict)
+        else:
+            if not json_data_file_dict:
+                if not file_field_names:
+                    # here we have no files and no JSON
+                    return jsonify({"error": "Wasn't able to find a JSON data payload or an upload file."}), 400
+            else:
+                json_data_dict = json_data_file_dict
+
+        # if we had files
+        if file_field_names:
+            json_data_dict['filename'] = filenames
+            json_data_dict['content_type'] = content_types
+            json_data_dict['access_uri'] = upload_uris
+
+        # Validate and transform JSON data
+        json_data = transform_single_items_to_lists(json_data_dict)
         
-        except Exception as ex:
-            return jsonify({"error": f"Error getting or transforming JSON data: {ex}"}), 400
+        # final check, probably never happens TODO remove
+        if not isinstance(json_data_dict, dict):
+            return jsonify({"error": "The transformed JSON data is not a dictionary"}), 400
+
+    except Exception as ex:
+        return jsonify({"error": f"Error getting or transforming JSON data: {ex}"}), 400
+
+    # temp overload of document_id for uuid from grub cluster
+    # grub cluster needs to pass user_document for it to work correctly without
+    if request.args.get('document_id'):
+        json_data_dict['document_id'] = request.args.get('document_id')
 
     # now we create the task
     task_id = random_string()
@@ -243,7 +307,7 @@ def ingest_post(pipeline_id):
     )
 
     # store and queue
-    task.document = json_data_dict
+    task.document = json_data
 
     try:
         app.config['task_service'].create_task(task)
@@ -308,6 +372,57 @@ def pipelines_download(pipe_id):
 
     # Set the headers to force a file download with a custom filename
     response.headers["Content-Disposition"] = f"attachment; filename=pipeline_{pipeline.get('name')}.json"
+
+    return response
+
+
+@pipeline.route('/pipelines/<pipe_id>/describe', methods=['GET'])
+@flask_login.login_required
+def pipelines_describe(pipe_id):
+    # Get the user and their tables
+    username = current_user.name
+
+    # Retrieve the pipeline by pipe_id (you need to implement your Pipeline class)
+    pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipe_id)
+
+    if pipeline is None:
+        return jsonify({"error": "Pipeline not found"})
+
+    # Retrieve nodes for the pipeline (you need to implement your Nodes class)
+    node_ids = pipeline.get('node_ids')  # Assuming 'nodes' is a list of node IDs
+
+    nodes = []
+    for node_id in node_ids:
+        node = Node.get(uid=current_user.uid, node_id=node_id)
+
+        # Retrieve the template for each node
+        template_service = app.config['template_service']
+        template = template_service.get_template(user_id=current_user.uid, template_id=node.get('template_id'))
+
+        # Append the node and its associated template to the nodes list
+        nodes.append({
+            "node": node,
+            "template": template,
+        })
+
+    # Create a dictionary containing pipeline information, including pipe_id
+    pipeline_data = {
+        "pipe_id": pipe_id,
+        "name": pipeline.get('name'),
+        "nodes": nodes,
+    }
+
+    # scrub the data for secrets Response
+    deep_scrub(pipeline_data)
+
+    # Convert pipeline_data to a pretty formatted JSON string
+    json_data = json.dumps(pipeline_data, default=custom_serializer)
+
+    # get the description
+    result = gpt_dict_completion(document={"pipeline": json_data}, template="pipeline_description")
+
+    # Create a Response object with the pretty formatted JSON
+    return jsonify({"description": result.get('description'), "blurb": result.get('blurb')})
 
     return response
 

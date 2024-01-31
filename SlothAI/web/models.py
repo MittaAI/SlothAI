@@ -425,6 +425,14 @@ class Pipeline(ndb.Model):
 
     @classmethod
     @ndb_context_manager
+    def rename(cls, uid, pipe_id, new_name):
+        pipeline = cls.query(cls.uid == uid, cls.pipe_id == pipe_id).get()
+        pipeline.name = new_name
+        pipeline.put()
+        return pipeline.to_dict()
+
+    @classmethod
+    @ndb_context_manager
     def add_node(cls, uid, pipe_id, node_id):
         # Fetch the pipeline by pipe_id
         pipeline = cls.query(cls.pipe_id == pipe_id).get()
@@ -831,6 +839,12 @@ class Log(flask_login.UserMixin, ndb.Model):
         if entities:
             for entity in entities:
                 entity.key.delete()
+
+    @classmethod
+    @ndb_context_manager
+    def count(cls,user_id):
+        count = cls.query(cls.user_id == user_id).count()
+        return count
 
     @classmethod
     @ndb_context_manager

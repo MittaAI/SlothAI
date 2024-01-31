@@ -1,0 +1,10 @@
+{# Use this template to screenshot a set of URLs #}
+
+{# Input Fields #}
+input_fields = [{'name': "uri", 'type': "strings"}]
+
+{# Output Fields #}
+output_fields = [{'name': "mitta_uri", 'type': "strings"}]
+
+{# Define the pipeline to call with the screenshot #}
+extras = {'pipeline': None}

@@ -9,7 +9,7 @@ def split_pdf(file_path, output_prefix):
 
         while start_page < total_pages:
             writer = PyPDF2.PdfWriter()
-            end_page = min(start_page + 50, total_pages)
+            end_page = min(start_page + 10, total_pages)
 
             for page in range(start_page, end_page):
                 writer.add_page(reader.pages[page])
@@ -18,7 +18,7 @@ def split_pdf(file_path, output_prefix):
             with open(output_filename, 'wb') as output_file:
                 writer.write(output_file)
             
-            start_page += 50
+            start_page += 10
 
 if __name__ == "__main__":
     default_directory = os.path.expanduser("~/Desktop/mitta/")

@@ -2,11 +2,12 @@ import json
 import datetime
 import io
 import requests
+import htmlmin
 
 from google.cloud import ndb
 
 from flask import Blueprint, render_template, jsonify, send_from_directory
-from flask import redirect, url_for, abort
+from flask import redirect, url_for, abort, flash
 from flask import request, send_file, Response
 from flask import current_app as app
 
@@ -15,7 +16,7 @@ from flask_login import current_user
 
 from google.cloud import storage
 
-from SlothAI.lib.util import random_name, gpt_dict_completion, build_mermaid, load_template, load_from_storage, merge_extras, should_be_service_token, callback_extras
+from SlothAI.lib.util import email_user, random_name, gpt_dict_completion, build_mermaid, github_cookbooks, load_template, load_from_storage, merge_extras, should_be_service_token, callback_extras
 from SlothAI.web.models import Pipeline, Node, Log, User, Token
 
 site = Blueprint('site', __name__, static_folder='static')
@@ -23,17 +24,24 @@ site = Blueprint('site', __name__, static_folder='static')
 # client connection
 client = ndb.Client()
 
+# date for base pages cards
+current_date = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+00:00")
+
 # hard coded, for now
 processors = [
     {"value": "jinja2", "label": "Jinja2 Processor", "icon": "file"},
     {"value": "callback", "label": "Callback Processor", "icon": "ethernet"},
     {"value": "read_file", "label": "Read Processor (File)", "icon": "book-reader"},
-    {"value": "read_uri", "label": "Read Processor (URI)", "icon": "file-word"},
+    {"value": "read_uri", "label": "Read Processor (URI)", "icon": "globe"},
+    {"value": "aigrub", "label": "Read Processor (URI)", "icon": "desktop"},
+    {"value": "aiffmpeg", "label": "FFmpeg Processor", "icon": "photo-video"},
     {"value": "info_file", "label": "Info Processor (File)", "icon": "info"},
     {"value": "read_fb", "label": "Read Processor (FeatureBase)", "icon": "database"},
     {"value": "split_task", "label": "Split Task Processor", "icon": "columns"},
+    {"value": "halt_task", "label": "Halt Task Processor", "icon": "stop-circle"},
     {"value": "write_fb", "label": "Write Processor (FeatureBase)", "icon": "database"},
     {"value": "aidict", "label": "Generative Completion Processor", "icon": "code"},
+    {"value": "aistruct", "label": "Generative Structure Processor", "icon": "building"},
     {"value": "aichat", "label": "Generative Chat Processor", "icon": "comment-dots"},
     {"value": "aiimage", "label": "Generative Image Processor", "icon": "images"},
     {"value": "embedding", "label": "Embedding Vectors Processor", "icon": "table"},
@@ -44,9 +52,12 @@ processors = [
 
 # template examples
 template_examples = [
-    {"name": "Start with a callback", "template_name": "get_started_callback", "processor_type": "callback"},
     {"name": "Generate random words", "template_name": "get_started_random_word", "processor_type": "jinja2"},
+    {"name": "Generate sentence from words (OpenAI)", "template_name": "words_to_sentence", "processor_type": "aichat"},
+    {"name": "Return data with a callback", "template_name": "get_started_callback", "processor_type": "callback"},
     {"name": "Convert text to embedding", "template_name": "text_to_embedding", "processor_type": "embedding"},
+    {"name": "Convert text to a Gemini embedding", "template_name": "text_to_gemini_embedding", "processor_type": "embedding"},
+    {"name": "Convert text to a Mistral embedding", "template_name": "text_to_mistral_embedding", "processor_type": "embedding"},
     {"name": "Convert text to an OpenAI embedding", "template_name": "text_to_ada_embedding", "processor_type": "embedding"},
     {"name": "Write to table", "template_name": "write_table", "processor_type": "write_fb"},
     {"name": "Write file chunks to a table", "template_name": "chunks_embeddings_pages_to_table", "processor_type": "write_fb"},
@@ -60,23 +71,34 @@ template_examples = [
     {"name": "Deserialize a PDF to pages and convert to text", "template_name": "deserialized_pdf_to_text", "processor_type": "read_file"},
     {"name": "Download file from URI with GET", "template_name": "uri_to_file", "processor_type": "read_uri"},
     {"name": "POST data to URI", "template_name": "json_to_uri", "processor_type": "read_uri"},
+    {"name": "Screenshot a website", "template_name": "uri_to_image", "processor_type": "aigrub"},
+    {"name": "Convert images, sounds, movies", "template_name": "file_to_file", "processor_type": "aiffmpeg"},
     {"name": "Split a document into page numbers for split tasks", "template_name": "filename_to_splits", "processor_type": "jinja2"},
     {"name": "Convert page text into chunks", "template_name": "text_filename_to_chunks", "processor_type": "jinja2"},
     {"name": "Convert page text into chunks w/loop", "template_name": "text_filename_to_chunks_loop", "processor_type": "jinja2"},
-    {"name": "Split tasks", "template_name": "split_tasks", "processor_type": "split_task"},
+    {"name": "Split task", "template_name": "split_task", "processor_type": "split_task"},
+    {"name": "Halt task", "template_name": "halt_task", "processor_type": "halt_task"},
+    {"name": "Generate lists of keys from input", "template_name": "text_to_struct", "processor_type": "aistruct"},
     {"name": "Generate keyterms from text", "template_name": "text_to_keyterms", "processor_type": "aidict"},
     {"name": "Generate a question from text and keyterms", "template_name": "text_keyterms_to_question", "processor_type": "aidict"},
     {"name": "Generate a summary from text", "template_name": "text_to_summary", "processor_type": "aidict"},
     {"name": "Generate image prompt from words", "template_name": "words_to_prompt", "processor_type": "aidict"},
     {"name": "Generate text sentiment", "template_name": "text_to_sentiment", "processor_type": "aidict"},
     {"name": "Generate answers from chunks and a query", "template_name": "chunks_query_to_answer", "processor_type": "aidict"},
-    {"name": "Generate chat from texts", "template_name": "text_to_chat", "processor_type": "aichat"},
+    {"name": "Generate a pirate chat from texts (OpenAI)", "template_name": "text_to_chat", "processor_type": "aichat"},
+    {"name": "Generate a pirate thoughts from texts (OpenAI)", "template_name": "text_to_chat_plain", "processor_type": "aichat"},
+    {"name": "Generate chat from texts (Gemini)", "template_name": "text_to_chat_gemini", "processor_type": "aichat"},
+    {"name": "Generate chat from texts (Mistral)", "template_name": "text_to_mistral_chat", "processor_type": "aichat"},
+    {"name": "Generate chat from texts (Together)", "template_name": "text_to_together_chat", "processor_type": "aichat"},
+    {"name": "Generate chat from texts (Perplexity)", "template_name": "text_to_chat_perplexity", "processor_type": "aichat"},
     {"name": "Generate an image from text", "template_name": "text_to_image", "processor_type": "aiimage"},
     {"name": "Find objects in image (Google Vision)", "template_name": "image_to_objects", "processor_type": "aivision"},
     {"name": "Find text in image (Google Vision)", "template_name": "image_to_text", "processor_type": "aivision"},
+    {"name": "Generate scene text from image (Gemini)", "template_name": "image_to_text_gemini", "processor_type": "aivision"},
     {"name": "Generate scene text from image (OpenAI GPT)", "template_name": "image_to_scene", "processor_type": "aivision"},
     {"name": "Transcribe audio to text pages", "template_name": "audio_to_text", "processor_type": "aiaudio"},
-    {"name": "Convert text to speech audio", "template_name": "text_to_speech", "processor_type": "aispeech"},
+    {"name": "Convert text to speech (OpenAI)", "template_name": "text_to_speech", "processor_type": "aispeech"},
+    {"name": "Convert text to speech (ElevenLabs)", "template_name": "text_to_speech_el", "processor_type": "aispeech"},
 ]
 
 def get_brand(app):
@@ -90,6 +112,7 @@ def get_brand(app):
     brand['twitter_handle'] = app.config['BRAND_X_HANDLE']
     brand['github_url'] = app.config['BRAND_GITHUB_URL']
     brand['discord_url'] = app.config['BRAND_DISCORD_URL']
+    brand['slack_url'] = app.config['BRAND_SLACK_URL']
     brand['youtube_url'] = app.config['BRAND_YOUTUBE_URL']
     return brand
 
@@ -138,6 +161,47 @@ def serve_webfonts(filename):
     return response
 
 
+@site.route('/task_log/count')
+@flask_login.login_required
+def task_log_count():
+    log_count = Log.count(user_id=current_user.uid)
+
+    # doesn't work, so fix
+    # tasks = app.config['task_service'].fetch_tasks(user_id=current_user.uid, state="running")
+    tasks = app.config['task_service'].fetch_tasks(user_id=current_user.uid)
+
+    running_task_count = 0
+    failed_task_count = 0
+    active_nodes = []
+    for task in tasks:
+        if task.get('state') == 'running':
+            node_info = {
+                'node_id': task.get('current_node_id'),
+                'pipe_id': task.get('pipe_id')
+            }
+            active_nodes.append(node_info)
+
+            running_task_count += 1
+        if task.get('state') == 'failed':
+            failed_task_count += 1
+
+    # Format the numbers with commas
+    formatted_log_count = "{:,}".format(log_count)
+    formatted_running_task_count = "{:,}".format(running_task_count)
+    formatted_failed_task_count = "{:,}".format(failed_task_count)
+
+    # Create a dictionary with the formatted values
+    response_data = {
+        "log_count": formatted_log_count,
+        "task_count": formatted_running_task_count,
+        "failed_count": formatted_failed_task_count,
+        "active_nodes": active_nodes
+    }
+
+    # Use json.dumps to format the dictionary with commas
+    return jsonify(response_data)
+
+
 @site.route('/logs', methods=['GET'])
 @flask_login.login_required
 def logs():
@@ -159,7 +223,58 @@ def home():
     except:
         username = "anonymous"
         email = "anonymous"
-    return render_template('pages/index.html', username=username, email=email, brand=get_brand(app))
+    return render_template('pages/index.html', username=username, email=email, brand=get_brand(app), dev=app.config['DEV'], current_date=current_date)
+
+
+@site.route('/pro', methods=['GET'])
+def pro():
+    try:
+        username = current_user.name
+        email = current_user.email
+    except:
+        username = "anonymous"
+        email = "anonymous"
+    return render_template('pages/pro.html', username=username, email=email, brand=get_brand(app), dev=app.config['DEV'])
+
+
+@site.route('/pro', methods=['POST'])
+def postpro():
+    # get form fields, if any
+    email = request.form.get('email')
+    name = request.form.get('name')
+    company = request.form.get('company')
+    phone = request.form.get('phone')
+    why = request.form.get('why')
+
+    message = ""
+
+    if email != "" and name != "" and company != "" and phone != "" and why != "":
+        message = message + "<div>email: %s</div>" % email
+        message = message + "<div>name: %s</div>" % name
+        message = message + "<div>company: %s</div>" % company
+        message = message + "<div>phone: %s</div>" % phone
+        message = message + "<div>why: %s</div>" % why
+
+        email_user("kord@mitta.ai", subject="pro request", html_content=message)
+        return render_template(
+            'pages/donepro.html',
+            brand=get_brand(app),
+            dev=app.config['DEV']
+        )
+    else:
+        flash("We need all these fields filed out, please.")
+
+    return render_template(
+        'pages/pro.html',
+        email=email,
+        name=name,
+        company=company,
+        phone=phone,
+        why=why,
+        brand=get_brand(app), 
+        dev=app.config['DEV'],
+        current_date=current_date
+    )
 
 
 @site.route('/legal', methods=['GET'])
@@ -171,7 +286,7 @@ def legal():
         username = "anonymous"
         email = "anonymous"
 
-    return render_template('pages/privacy.html', username=username, email=email, dev=app.config['DEV'], brand=get_brand(app))
+    return render_template('pages/privacy.html', username=username, email=email, dev=app.config['DEV'], brand=get_brand(app), current_date=current_date)
 
 
 @site.route('/about', methods=['GET'])
@@ -183,10 +298,37 @@ def about():
         username = "anonymous"
         email = "anonymous"
 
-    return render_template('pages/about.html', username=username, email=email, dev=app.config['DEV'], brand=get_brand(app))
+    return render_template('pages/about.html', username=username, email=email, dev=app.config['DEV'], brand=get_brand(app), current_date=current_date)
+
+
+@site.route('/pricing', methods=['GET'])
+def pricing():
+    try:
+        username = current_user.name
+        email = current_user.email
+    except:
+        username = "anonymous"
+        email = "anonymous"
+    return render_template('pages/pricing.html', username=username, email=email, dev=app.config['DEV'], brand=get_brand(app), current_date=current_date)
+
 
 @site.route('/cookbooks', methods=['GET'])
 def cookbooks():
+    cookbooks = github_cookbooks("MittaAI/mitta-community", "cookbooks")
+
+    for cookbook in cookbooks:
+        for card in cookbook['cookbook_cards']:
+            # Update image src
+            github_base_url = card['links']['github']['href'].replace('/tree/', '/')
+            card['image']['src'] = github_base_url + '/' + card['image']['src']
+
+            # Update install href
+            card['links']['install']['href'] = github_base_url + '/' + card['links']['install']['href']
+
+            # Transform URLs to raw content URLs
+            card['image']['src'] = card['image']['src'].replace("github.com", "raw.githubusercontent.com").replace("/tree/", "/")
+            card['links']['install']['href'] = card['links']['install']['href'].replace("github.com", "raw.githubusercontent.com").replace("/tree/", "/")
+
     try:
         username = current_user.name
         email = current_user.email
@@ -194,7 +336,7 @@ def cookbooks():
         username = "anonymous"
         email = "anonymous"
 
-    return render_template('pages/cookbooks.html', username=username, email=email, dev=app.config['DEV'], brand=get_brand(app))
+    return render_template('pages/cookbooks.html', username=username, email=email, dev=app.config['DEV'], brand=get_brand(app), cookbooks=cookbooks, current_date=current_date)
 
 
 @site.route('/pipelines', methods=['GET'])
@@ -345,25 +487,13 @@ def nodes():
     email = current_user.email
 
     nodes = Node.fetch(uid=current_user.uid)
-
+   
     template_service = app.config['template_service']
     templates = template_service.fetch_template(user_id=current_user.uid)
-
-    template_lookup = {template['template_id']: template['name'] for template in templates}
 
     name_random = random_name(2).split('-')[1]
 
     tokens = Token.get_all_by_uid(current_user.uid)
-
-    """
-    # hide the tokens and passwords
-    for node in nodes:
-        extras = node.get('extras', None)  
-        if extras:
-            for key in extras.keys():
-                if 'token' in key or 'password' in key or 'secret' in key:
-                    extras[key] = f'[{key}]'
-    """
 
     # update the template names
     _nodes = []
@@ -457,6 +587,7 @@ def node_detail(node_id=None, template_id=None):
         pipeline_ids = []
 
     add_pipelines = Pipeline.fetch(uid=uid)
+    add_pipelines = sorted(add_pipelines, key=lambda x: x.get('name', ''))
 
     # Filter out pipelines already in `pipelines`, unless it's a callback
     if "callback" in node.get('processor') or not pipelines:
@@ -471,7 +602,6 @@ def node_detail(node_id=None, template_id=None):
         'pages/node.html', username=username, email=email, brand=get_brand(app), dev=app.config['DEV'], node=node, template=template, processors=processors, pipelines=pipelines, filtered_pipelines=filtered_pipelines
     )
 
-
 @site.route('/templates')
 @flask_login.login_required
 def templates():
@@ -483,9 +613,11 @@ def templates():
     if not templates:
         return redirect(url_for('site.template_detail'))  # Adjust 'template_detail' to your route name
 
-    return render_template(
+    rendered_html = render_template(
         'pages/templates.html', username=username, email=email, brand=get_brand(app), templates=templates, processors=processors
     )
+    minified_html = htmlmin.minify(rendered_html, remove_empty_space=True)
+    return Response(minified_html, mimetype='text/html')
 
 
 @site.route('/templates/new')
@@ -515,9 +647,14 @@ def template_detail(template_id="new"):
         nodes = []
 
     # get short name
-    for x in range(20):
-        name_random = random_name(2).split('-')[0]
-        if len(name_random) < 9:
+    while True:
+        for x in range(20):
+            name_random = random_name(2).split('-')[0]
+            if len(name_random) < 9:
+                break
+
+        # check the template name doesn't exist (finally fixing this weird issue)
+        if not template_service.get_template(user_id=current_user.uid, name=name_random):
             break
 
     empty_template = '{# This is a reference jinja2 processor template #}\n\n{# Input Fields #}\ninput_fields = [{"name": "input_key", "type": "strings"}]\n\n{# Output Fields #}\noutput_fields = [{"name": "output_key", "type": "strings"}]\n\n{# Extras are required. #}\nextras = {"processor": "jinja2", "static_value": "String for static value.", "dynamic_value": None, "referenced_value": "{{static_value}}"}\n\n{"dict_key": "{{dynamic_value}}"}'
@@ -584,21 +721,32 @@ def settings():
         'pages/settings.html', username=username, email=email, brand=get_brand(app), api_token=api_token, dbid=dbid, tokens=tokens
     )
 
-# image serving
-@site.route('/d/<name>/<filename>')
-@flask_login.login_required
-def serve(name, filename):
-    if name != current_user.name:
-        abort(404) 
 
-    user = User.get_by_uid(current_user.uid)
-    if not user:
+# image serving with token or non-decorator based flask_login
+@site.route('/d/<name>/<filename>')
+def serve(name, filename):
+    token = request.args.get('token')
+    user = None
+
+    if token:
+        # If a token is present, attempt to authenticate using the token
+        user = User.get_by_token(token)
+    else:
+        # If no token is provided, use the current_user from flask_login
+        if current_user.is_authenticated and current_user.name == name:
+            user = User.get_by_uid(current_user.uid)
+        else:
+            # If the current_user is not authenticated or the name doesn't match, abort with 404
+            abort(404)
+
+    if not user or name != user.get('name'):
+        # If no user is found with the token or the name doesn't match the user's name, abort with 404
         abort(404)
 
     # set up bucket on google cloud
     gcs = storage.Client()
     bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
-    blob = bucket.blob("%s/%s" % (current_user.uid, filename))
+    blob = bucket.blob("%s/%s" % (user.get('uid'), filename))
     
     buffer = io.BytesIO()
     blob.download_to_file(buffer)

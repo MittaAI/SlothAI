@@ -56,7 +56,6 @@ def get_template(template_id):
         "tokens": _tokens
     }
 
-    print(data)
     if template:
         return jsonify(data)
     else:
@@ -90,7 +89,10 @@ def template_update(template_id):
         if key in template_payload:
             template[key] = template_payload[key]
 
-    _template = Template.from_dict(template)
+    try:
+        _template = Template.from_dict(template)
+    except Exception as ex:
+        return jsonify({"error": "Update failed", "message": f"{ex}"}), 500
 
     nodes = Node.fetch(template_id=template_id)
     if nodes and not sorted(template.get('extras')) == sorted(_template.extras):
@@ -117,10 +119,19 @@ def template_update(template_id):
 @flask_login.login_required
 def generate_name():
     # get short name
-    for x in range(20):
-        name_random = random_name(2).split('-')[0]
-        if len(name_random) < 9:
+    while True:
+        for x in range(20):
+            name_random = random_name(2).split('-')[0]
+            if len(name_random) < 9:
+                break
+
+        template_service = app.config['template_service']
+        template = template_service.get_template(user_id=current_user.uid, name=name_random)
+        
+        # check if we have this name already
+        if not template:
             break
+
     return jsonify({"name": name_random})
 
 

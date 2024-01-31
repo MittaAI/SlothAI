@@ -72,7 +72,7 @@ class Task:
 			"state": self.state.value,
 			"split_status": self.split_status
 		}
-
+		
 	@classmethod
 	def from_dict(cls, task_dict: dict) -> 'Task':
 		"""
@@ -121,69 +121,30 @@ class Task:
 			self.nodes = []
 			return node
 
+	def jump_node(self, target_node_name):
+		"""
+		Jump to the specified target node in the pipeline using its name if it exists 
+		further down the line from the current node. Does not allow jumping 
+		ahead of the current node.
+
+		:param target_node_name: The name of the node to jump to.
+		:return: The name of the node that was jumped to, or None if the jump is not possible.
+		"""
+		for i, node_name in enumerate(self.nodes):
+			if node_name == target_node_name and i > 0:
+				self.nodes = self.nodes[i:]
+				return target_node_name
+		return None
+
 	def delete_task(self):
 		self.delete()
 		return True
+
 
 def delete_task(name):
 	# don't forget to add a delete task button in the UI!
 	pass
 
-# probaby not the best place for this, so welcome to agile!
-def box_required():
-	from ping3 import ping
-	from SlothAI.lib.util import check_webserver_connection
-
-	# get all boxes
-	boxes = Box.get_boxes() # change this to use the Box model TODO
-
-	_box_required = False
-
-	active_t4s = []
-	halted_t4s = []
-	if boxes:
-		for box in boxes:
-			# if the box is START, PROVISIONING, STAGING, RUNNING
-			if box.get('status') == "RUNNING" or box.get('status') == "START" or box.get('status') == "PROVISIONING" or box.get('status') == "STAGING":
-				# can we ping it?
-				response_time = ping(box.get('ip_address'), timeout=2.0)  # Set a 2-second timeout
-
-				if response_time and check_webserver_connection(box.get('ip_address'), 9898):
-					print("pinging", box.get('ip_address'), response_time, box.get('status'))
-					# ping worked and the server responded
-					active_t4s.append(box)
-				else:
-					print("box is not running")
-					halted_t4s.append(box)
-			else:
-				# box wasn't RUNNING or at START
-				halted_t4s.append(box)
-
-			if active_t4s:
-				# If there are active boxes, select one at random
-				selected_box = random.choice(active_t4s)
-				_box_required = False
-				break
-			else:
-				# pick a random startable box - this probably starts a lot of boxes, if we have em
-				alternate_box = random.choice(halted_t4s)
-
-				# start the box and set the new status
-				if alternate_box.get('status') != "START":
-					print("starting box ", alternate_box.get('box_id'))
-					box_start(alternate_box.get('box_id'), alternate_box.get('zone'))
-					Box.start_box(alternate_box.get('box_id'), "START") # sets status to 'START'
-				
-				selected_box = None
-				_box_required = True
-				
-				# return to ensure we don't start multiple boxes
-				break
-
-	else:
-		selected_box = None
-
-	return _box_required, selected_box
 
 def get_task_schema(data: Dict[str, any]) -> Tuple[Dict[str, str], str]:
 	'''
@@ -200,45 +161,46 @@ def get_task_schema(data: Dict[str, any]) -> Tuple[Dict[str, str], str]:
 
 	return schema, None
 
+
 def get_values_by_json_paths(json_paths, document):
-    results = {}
-    
-    for json_path in json_paths:
-        path_components = json_path.split('.')
-        current_location = document
-        
-        for key in path_components:
-            if key in current_location:
-                current_location = current_location[key]
-            else:
-                # If a key is not found, skip this path
-                break
-        else:
-            # This block executes if the loop completed without a 'break'
-            results[path_components[-1]] = current_location
-    
-    return results
+	results = {}
+	
+	for json_path in json_paths:
+		path_components = json_path.split('.')
+		current_location = document
+		
+		for key in path_components:
+			if key in current_location:
+				current_location = current_location[key]
+			else:
+				# If a key is not found, skip this path
+				break
+		else:
+			# This block executes if the loop completed without a 'break'
+			results[path_components[-1]] = current_location
+	
+	return results
 
 
 def auto_field_data(document):
-    # This will store the maximum length found
-    max_length = 0
+	# This will store the maximum length found
+	max_length = 0
 
-    # This will store the key-value pairs with the max length
-    results = {}
+	# This will store the key-value pairs with the max length
+	results = {}
 
-    # Iterate over the dictionary to find the max length and collect the key-value pairs
-    for key, value in document.items():
-        if isinstance(value, list):  # Ensure the value is a list
-            length = len(value)
-            if length > max_length:
-                max_length = length
-                results = {key: value}  # Start a new dict with this key-value pair
-            elif length == max_length:
-                results[key] = value  # Add the key-value pair to the existing dict
+	# Iterate over the dictionary to find the max length and collect the key-value pairs
+	for key, value in document.items():
+		if isinstance(value, list):  # Ensure the value is a list
+			length = len(value)
+			if length > max_length:
+				max_length = length
+				results = {key: value}  # Start a new dict with this key-value pair
+			elif length == max_length:
+				results[key] = value  # Add the key-value pair to the existing dict
 
-    # Now results contains all key-value pairs with the longest list lengths
-    return results
+	# Now results contains all key-value pairs with the longest list lengths
+	return results
 
 
 def process_data_dict_for_insert(data, column_type_map, table):
@@ -273,7 +235,7 @@ def process_data_dict_for_insert(data, column_type_map, table):
 	# columns = ['_id', 'text', 'value']
 	# records = ["('abc123','Record 1',42)", "('def456','Record 2',57)"]
 	"""
-    
+	
 	records = []
 	columns = list(data.keys())
 
@@ -308,104 +270,100 @@ def process_data_dict_for_insert(data, column_type_map, table):
 
 	return columns, records
 
+
 from itertools import groupby
 def all_equal(iterable):
 	g = groupby(iterable)
 	return next(g, True) and not next(g, False)
 
+
 def validate_dict_structure(keys_list, input_dict):
-    for key in keys_list:
-        keys = key.get('name').split('.')
-        current_dict = input_dict
+	for key in keys_list:
+		keys = key.get('name').split('.')
+		current_dict = input_dict
 
-        for k in keys:
-            if k not in current_dict:
-                return key
-            current_dict = current_dict[k]
+		for k in keys:
+			if k not in current_dict:
+				return key
+			current_dict = current_dict[k]
 
-    return None
+	return None
 
 
 def transform_data(output_keys, data):
-    out = {}
+	out = {}
 
-    if len(output_keys) == 1 and output_keys[0] == 'data':
-        # Special case: If the output key is 'data', wrap the data in a single key
-        out['data'] = data
-    else:
-        for key_name in output_keys:
-            if key_name in data:
-                out[key_name] = data[key_name]
-            else:
-                raise KeyError(f"Key not found: {key_name}")
+	if len(output_keys) == 1 and output_keys[0] == 'data':
+		# Special case: If the output key is 'data', wrap the data in a single key
+		out['data'] = data
+	else:
+		for key_name in output_keys:
+			if key_name in data:
+				out[key_name] = data[key_name]
+			else:
+				raise KeyError(f"Key not found: {key_name}")
 
-    return out
+	return out
 
 
+# check boxes and start if needed
 def box_required():
-	box_required = False
-	selected_box = None
+	boxes = Box.get_boxes()  # Retrieve all boxes
 
-	boxes = Box.get_boxes()
+	if not boxes:
+		return False, None  # Indicates no box is available
+
 	active_t4s = []
 	halted_t4s = []
-	if boxes:
-		for box in boxes:
-			# if the box is START, PROVISIONING, STAGING, RUNNING
-			if box.get('status') == "RUNNING" or box.get('status') == "START" or box.get('status') == "PROVISIONING" or box.get('status') == "STAGING":
-				# boxes with these states should have ip addr but for some
-				# reason they don't always
-				box_ip = box.get('ip_address')
-				if not box_ip:
-					halted_t4s.append(box)
-					continue
-				
-				# can we ping it?
-				response_time = ping(box_ip, timeout=2.0)  # Set a 2-second timeout
 
-				if response_time and check_webserver_connection(box_ip, 9898):
-					print("pinging", box_ip, response_time, box.get('status'))
-					# ping worked and the server responded
-					active_t4s.append(box)
-				else:
-					print("box is not running")
-					halted_t4s.append(box)
+	for box in boxes:
+		status = box.get('status')
+		box_ip = box.get('ip_address')
+
+		# Check for active boxes
+		if status == "RUNNING":
+			if box_ip and ping(box_ip, timeout=2.0) and check_webserver_connection(box_ip, 9898):
+				active_t4s.append(box)
 			else:
-				# box wasn't RUNNING or at START
 				halted_t4s.append(box)
 
+		# Add boxes in START, PROVISIONING, STAGING to halted_t4s
+		elif status in ["START", "PROVISIONING", "STAGING"]:
+			halted_t4s.append(box)
+
+	# Return a random active box if available
 	if active_t4s:
-		# If there are active boxes, select one at random
-		selected_box = random.choice(active_t4s)
-		box_required = False
-	else:
-		# pick a random startable box
+		return False, random.choice(active_t4s)
+
+	# No active boxes, attempt to start a halted box
+	if halted_t4s:
 		alternate_box = random.choice(halted_t4s)
-
-		# start the box and set the new status
-		if box.get('status') != "START":
-			print("starting box ", box.get('box_id'))
+		if alternate_box.get('status') != "START":
+			print("Starting box", alternate_box.get('box_id'))
 			box_start(alternate_box.get('box_id'), alternate_box.get('zone'))
-			Box.start_box(alternate_box.get('box_id'), "START") # sets status to 'START'
-		
-		selected_box = None
-		box_required = True
+			Box.start_box(alternate_box.get('box_id'), "START")
+		return True, alternate_box
 
-	return box_required, selected_box
+	# No boxes available to start
+	return False, None
 
 
 class RetriableError(Exception):
 	def __init__(self, message):
 		super().__init__(message)
+
 class NonRetriableError(Exception):
 	def __init__(self, message):
 		super().__init__(message)
+
 class ResourceNotFoundError(NonRetriableError):
 	def __init__(self, message):
 		super().__init__(message)
+
 class PipelineNotFoundError(ResourceNotFoundError):
 	def __init__(self, pipeline_id):
 		super().__init__(f"pipeline with id {pipeline_id} not found.")
+
 class UserNotFoundError(ResourceNotFoundError):
 	def __init__(self, user_id):
 		super().__init__(f"user with id {user_id} not found.")
@@ -425,6 +383,7 @@ class TemplateNotFoundError(ResourceNotFoundError):
 class MissingFieldError(NonRetriableError):
 	def __init__(self, message):
 		super().__init__(message)
+
 class MissingInputFieldError(MissingFieldError):
 	def __init__(self, field, node):
 		super.__init__(f"task document is missing required input field {field} for node {node}")

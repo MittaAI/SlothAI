@@ -109,7 +109,8 @@ def login():
         app_id = random_string(9),
         transaction_id = transaction_id,
         next=next_url,
-        brand=get_brand(app)
+        brand=get_brand(app),
+        dev=app.config['DEV']
     )
     
 
@@ -134,7 +135,7 @@ def login_post():
         print(ex)
         # reset the offer
         flash("Need to validate an email address.")
-        return redirect(url_for('auth.email'))
+        return redirect(url_for('auth.login'))
 
     # handle bots filling out forms
     transaction_id = request.form.get('transaction_id')
@@ -277,18 +278,26 @@ def login_post():
         <html>
         <head>
         <style>
-        button {
-            padding: 10px 24px !important;
-            outline: none !important;
-            border: none !important;
-            border-radius: 24px !important;
-            background-color: #437ef6 !important;
-            font-size:14px!important;
-            color: #fff!important;
-        }
-        p {
-            color: #222!important;
-        }
+            button {
+                padding: 10px 14px !important;
+                outline: none !important;
+                border: none !important;
+                border-radius: 14px !important;
+                background-color: #343a40 !important; /* Dark grey color */
+                font-size: 14px !important;
+                color: #fff !important;
+                transition: background-color 0.3s ease !important; /* Smooth transition for hover effect */
+                text-transform: uppercase !important; /* Make text uppercase for a sleek look */
+                letter-spacing: 1px !important; /* Increase letter spacing for a modern touch */
+                font-weight: bold !important; /* Make the font bold */
+            }
+
+            button:hover {
+                background-color: #23272b !important; /* Slightly darker shade for hover effect */
+            }
+            p {
+                color: #222!important;
+            }
         </style>
         </head>
         <body>
@@ -300,14 +309,14 @@ def login_post():
 
         <p>To login, please click the link below.</p>
 
-        <p><button><a href="%s" target="_blank" style="color: #fff!important;">Access Your Account</a></button></p>
+        <p><button><a href="%s" target="_blank" style="color: #fff!important;">Login with Token</a></button></p>
 
         <p>Cheers,</p>
 
         <p>Kord<br>
         🚀<br>
         https://mitta.ai<br>
-        kordless@gmail.com<br>
+        kord@mitta.ai<br>
         </p>
 
         <div>A portion of a story written by my beautiful daughter:</div>
@@ -338,7 +347,7 @@ def verify_phone():
 
     # no email?
     if not email:
-        return redirect(url_for('auth.email'))
+        return redirect(url_for('auth.login'))
     
     # find the user and set hint
     user = User.get_by_email(email)
@@ -369,7 +378,7 @@ def verify_phone_post():
     # check the length
     if len(digits) > 4:
         flash("Verify the last 4 digits of your phone number!")
-        return redirect(url_for('auth.email', **options))
+        return redirect(url_for('auth.login', **options))
     
     # find the user again and get their code
     user = User.get_by_email(email)
@@ -388,7 +397,7 @@ def verify_phone_post():
         else:
             options['use_token'] = 1
             flash("Unable to send SMS token. You'll need to login with an email token.")
-            return redirect(url_for('auth.email', **options))
+            return redirect(url_for('auth.login', **options))
     else:
         # silently reset the code, because validation was wrong
         with client.context():
@@ -468,7 +477,7 @@ def token():
             flash("Incorrect token entered. Try again.")
             return redirect(url_for('auth.login', **options))
     else:
-        return render_template('pages/token.html', config=app.config, op=op, next=next_url, brand=get_brand(app))
+        return render_template('pages/token.html', config=app.config, op=op, next=next_url, brand=get_brand(app), dev=app.config['DEV'])
 
 
 # verify code from emails
@@ -479,7 +488,7 @@ def token_post():
     email = request.args.get('email')
 
     if not mail_token:
-        return redirect(url_for('auth.email'))
+        return redirect(url_for('auth.login'))
 
     # url paste login
     next_url = request.args.get('next')
@@ -545,7 +554,7 @@ def phone():
     if not email:
         # redirect with options for gathering phone
         options = {'op': 1, 'next': url_for('auth.phone')}
-        return redirect(url_for('auth.email',**options))
+        return redirect(url_for('auth.login',**options))
 
     next_url = request.args.get('next')
     if not next_url:
@@ -638,7 +647,7 @@ def tfa_post():
             phone = user.phone
     except:
         # no user, no email, so return
-        return redirect(url_for('auth.email'))
+        return redirect(url_for('auth.login'))
 
     # check if the code is correct
     # we update user below
@@ -663,7 +672,7 @@ def tfa_post():
                 user.put() 
 
         flash("Wrong code. Try again!")
-        return redirect(url_for('auth.email', **options))
+        return redirect(url_for('auth.login', **options))
 
     # update user
     with client.context():

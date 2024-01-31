@@ -6,105 +6,248 @@
 {% endblock %}
 
 {% block content %}
-<div id="#top" class="container container_api container_legal">
-    <h1 class="header">Cookbooks</h1>
-    <p class="lead">The cookbooks listed below offer ready-to-use reference pipelines for MittaAI. You can import them into your MittaAI account from the <a href="/pipelines">pipelines page</a> and then use or edit them to suit your use case.</p>
-    
-    <p class="lead">If you need assistance using or building a pipeline, be sure to pop into our <a href="https://discord.gg/SxwcVGQ8j9">Discord server</a>!</p>
+<div class="container-fluid cookbooks">
+  <div class="row">
+    <div class="col col-lg-10">
+      <h2><span class="gradient-text">Cookbooks</span></h2>
+      <p>Cookbooks are ready-to-use reference pipelines for Mitta. <a href="/login?next=/cookbooks">Login/signup</a> to install the pipelines directly into your account.</p>
+      <p>If you need assistance using or building a pipeline, be sure to pop into <a href="{{ brand.get('slack_url') }}">Slack</a>.</p>
 
-    <h3 class="header">Getting Started Video</h3>
-    <p class="lead">If you would like to get familar with using MittaAI, follow along with the getting started guide to build a simple pipeline to generate words, make a callback, and write the results into the database.</p>
-    <iframe width="560" height="315" src="https://www.youtube.com/embed/ntLqz38hC60?si=67DC_FEEnEwHNXhk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+      {% for cookbook in cookbooks %}
+      <h3 class="header">{{ cookbook.header }}</h3>
+      <p>{{ cookbook.description }}</p>
 
-    <hr id="pdf-indexing" style="padding-bottom: 40px;"/>
-    <h2 class="header">PDF Indexing and Querying</h2>
-    <p class="lead">PDF indexing is useful for building applications which use <a href="https://research.ibm.com/blog/retrieval-augmented-generation-RAG">RAG</a> (Retrieval Augmented Generation) for interactions with users. These two pipelines are used together to query documents to generate grounded responses to a user's input.</p>
-    <div class="row" style="padding-bottom: 20px">
-        <div class="col-md-4">
-            <div class="card" style="width: 18rem;">
-              <img class="card-img-top" src="/static/images/indexing.png" alt="PDF Indexing" style="width: 100%;">
-              <div class="card-body">
-                <h5 class="card-title">PDF Indexing Pipeline</h5>
-                <p class="card-text">Keyterm extraction and text embeddings are used to index a set of documents and make them ready for search. Uploads are limited in size to 25MB.</p>
-                <a href="/cookbooks/rag/pipeline_index.json" class="btn btn-download btn-outline-dark"><i class="fas fa-download"></i> Download</a>
-                <a href="https://github.com/MittaAI/mitta-community/tree/main/cookbooks/rag" class="btn btn-outline-dark"><i class="fab fa-github"></i></a>       
-              </div>
+      <div class="row cookbook-cards">
+        {% for card in cookbook.cookbook_cards %}
+        <div class="card-col col-sm-3">
+          <div class="card">
+            <img class="card-img-top" src="{{ card.image.src }}" alt="{{ card.image.alt }}">
+            <div class="card-body">
+              <h4 class="card-title">{{ card.title }}</h4>
+              <p>{{ card.description }}</p>
+              <!-- Check if username is 'anonymous' and adjust button text and icon accordingly -->
+              {% if username == 'anonymous' %}
+              <a href="{{ card.links.install.href }}" class="btn btn-download btn-outline-dark"><i class="fas fa-download"></i> Download</a>
+              {% else %}
+              <a href="{{ card.links.install.href }}" class="btn btn-download btn-outline-dark"><i class="fas fa-wrench"></i> Install</a>
+              {% endif %}
+              <a href="{{ card.links.github.href }}" class="btn btn-outline-dark"><i class="fab fa-github"></i></a>
             </div>
+          </div>
         </div>
-        <div class="col-md-4">
-            <div class="card" style="width: 18rem;">
-              <img class="card-img-top" src="/static/images/querying.png" alt="PDF Querying" style="width: 100%;">
-              <div class="card-body">
-                <h5 class="card-title">PDF Query Pipeline</h5>
-                <p class="card-text">This pipeline embeds a user query and then conducts a search for matching fragments from the indexed documents. The results are used to form an answer.</p>
-                <a href="/cookbooks/rag/pipeline_query.json" class="btn btn-download btn-outline-dark"><i class="fas fa-download"></i> Download</a>
-                <a href="https://github.com/MittaAI/mitta-community/tree/main/cookbooks/rag" class="btn btn-outline-dark"><i class="fab fa-github"></i></a> 
-              </div>
-            </div>
-        </div>
+        {% endfor %}
+      </div>
+
+      {% if cookbook.youtube_url %}
+      <h4>Video</h4>
+      <div style="max-width: 500px;">
+        <iframe width="100%" height="315" src="{{ cookbook.youtube_url }}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+      {% endif %}
+
+      {% if not loop.last %}
+      <hr/>
+      {% endif %}
+      {% endfor %}
+
     </div>
-
-    <h3 class="header">RAG Video Guide</h3>
-    <iframe width="560" height="315" src="https://www.youtube.com/embed/nlnFbU88sdg?si=HhHORSe4BcjXRH4z" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-
-    <hr id="pirate-bot" style="padding-bottom: 40px;"/>
-    <h2 class="header">Discord Pirate Bot</h2>
-    <p class="lead">These two pipelines implement a bot that acts like a pirate, with limited memory. To use these pipelines with Discord, you will need download and run the <a href="https://github.com/MittaAI/mitta-community/tree/main/cookbooks/piratebot">bot code</a>.</p>
-    <div class="row" style="padding-bottom: 20px">
-        <div class="col-md-4">
-            <div class="card" style="width: 18rem;">
-              <img class="card-img-top" src="/static/images/pirate.png" alt="PDF Indexing" style="width: 100%;">
-              <div class="card-body">
-                <h5 class="card-title">Pirate Bot</h5>
-                <p class="card-text">Queries database for older memories, assembles a new prompt for ChatGPT-X, saves the user's query to memories, and runs a callback.</p>
-                <a href="/cookbooks/piratebot/pipeline_bot.json" class="btn btn-download btn-outline-dark"><i class="fas fa-download"></i> Download</a>
-                <a href="https://github.com/MittaAI/mitta-community/tree/main/cookbooks/piratebot" class="btn btn-outline-dark"><i class="fab fa-github"></i></a> 
-              </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card" style="width: 18rem;">
-              <img class="card-img-top" src="/static/images/piratememories.png" alt="PDF Querying" style="width: 100%;">
-              <div class="card-body">
-                <h5 class="card-title">Pirate Bot Memories</h5>
-                <p class="card-text">Uses uses a Jinja2 processor to transform the bot's response before storing it to the database for use in a subsequent query from Discord.</p>
-                <a href="/cookbooks/piratebot/pipeline_memory.json" class="btn btn-download btn-outline-dark"><i class="fas fa-download"></i> Download</a>
-                <a href="https://github.com/MittaAI/mitta-community/tree/main/cookbooks/piratebot" class="btn btn-outline-dark"><i class="fab fa-github"></i></a> 
-              </div>
-            </div>
-        </div>
-    </div>
-    <h3 class="header">Bot Video Guide</h3>
-    <iframe width="560" height="315" src="https://www.youtube.com/embed/VNqnvoCx9Wg?si=LseWsDeKqHh0ifhI" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-
-    <hr id="pdf-indexing" style="padding-bottom: 40px;"/>
-    <h2 class="header">Vision to Speech Pipeline</h2>
-    <p class="lead">The vision to speech pipeline allows you to send an image to a pipeline and receive a spoken description from an <strong>aispeech</strong> processor. The <a href="https://github.com/MittaAI/mitta-community/tree/main/cookbooks/visionspeech#readme">guide</a> covers use in greater detail.</p>
-    <div class="row" style="padding-bottom: 20px">
-        <div class="col-md-4">
-            <div class="card" style="width: 18rem;">
-              <img class="card-img-top" src="/static/images/experiment.png" alt="Vision Speech" style="width: 100%;">
-              <div class="card-body">
-                <h5 class="card-title">Vision to Speech Pipeline</h5>
-                <p class="card-text">Accepts an image upload and outputs an audio file for download containing the scene description in spoken form.</p>
-                <a href="/cookbooks/visionspeech/pipeline_vision_to_speech.json" class="btn btn-download btn-outline-dark"><i class="fas fa-download"></i> Download</a>
-                <a href="https://github.com/MittaAI/mitta-community/tree/main/cookbooks/visionspeech" class="btn btn-outline-dark"><i class="fab fa-github"></i></a>       
-              </div>
-            </div>
-        </div>
-    </div>
+  </div>
 </div>
-<!-- end docs container -->
 
+<!-- The modal for updating empty secure values -->
+<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalLabel">Enter Value</h3>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <label for="modalInput" id="modalInputLabel"></label>
+        <input type="text" id="modalInput" class="form-control">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="modalSave">Update</button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block javascript %}
 <script type="text/javascript">
-$(document).on('click', 'a.btn-download', function(e) {
-    e.preventDefault();
-    var url = $(this).attr('href');
+$(document).ready(function() {
+  var username = "{{username}}"; // Assuming username is passed to the template
 
-    $('<iframe>', { style: 'display:none;', src: url }).appendTo('body');
+  $('a.btn-download').on('click', function(e) {
+    e.preventDefault();
+    var href = $(this).attr('href');
+    // Extract cookbookName and filename from the href
+    var matches = href.match(/\/([^\/]+)\/([^\/]+)$/);
+
+    if (matches && matches.length === 3) {
+      var cookbookName = matches[1];
+      var filename = matches[2];
+
+      if (username !== 'anonymous') {
+        var url = `/cookbooks/${cookbookName}/${filename}`;
+
+        toastr.info("Installing pipeline...")
+        // AJAX request to get and upload the JSON file
+        $.get(url, function(data) {
+          try {
+            var json = typeof data === 'string' ? JSON.parse(data) : data;
+
+            // AJAX request to upload the JSON
+            $.ajax({
+              url: '/pipeline/upload',
+              type: 'POST',
+              contentType: 'application/json',
+              data: JSON.stringify(json),
+              success: function(response) {
+                // Function to navigate to the pipeline page
+                var navigateToPipeline = function() {
+                  if (response.pipeline && response.pipeline.pipe_id) {
+                    window.location.href = `/pipelines/${response.pipeline.pipe_id}`;
+                  } else {
+                    toastr.success("Pipeline uploaded!");
+                  }
+                };
+
+                // Check for service_tokens_to_update and handle them
+                if (response.service_tokens_to_update) {
+                  // Assuming updateValuesWithModals accepts a callback
+                  updateValuesWithModals(response.service_tokens_to_update, navigateToPipeline);
+                } else {
+                  // No tokens to update, navigate directly
+                  navigateToPipeline();
+                }
+              },
+              error: function(error) {
+                toastr.error(error.responseJSON.error);
+              }
+            });
+          } catch (e) {
+            toastr.error("Failed to parse the downloaded JSON.");
+            console.error("Error parsing JSON:", e);
+          }
+        }).fail(function() {
+          toastr.error("Failed to download the pipeline JSON.");
+        });
+      } else {
+        // For anonymous users, direct download
+        var directDownloadUrl = `/cookbooks/${cookbookName}/${filename}`;
+        var tempLink = document.createElement('a');
+        tempLink.href = directDownloadUrl;
+        tempLink.setAttribute('download', '');
+        tempLink.style.display = 'none';
+        document.body.appendChild(tempLink);
+        tempLink.click();
+        document.body.removeChild(tempLink);
+      }
+    }
+  });
+
+  // Function to open a modal for a specific input field
+  function openModalForField(token) {
+    var modal = $("#myModal");
+    modal.modal("show");
+
+    var inputType = "password";
+    $("#modalInput").attr("type", inputType).val("");
+    $("#modalInputLabel").html("<strong>"+token+"</strong>");
+    modal.data("targetField", token);
+
+    return new Promise(function(resolve) {
+      // Remove any existing click handlers on modal save button
+      $("#modalSave").off("click");
+
+      // Add a new click handler for the modal save button
+      $("#modalSave").on("click", function() {
+        var enteredValue = $("#modalInput").val();
+        resolve(enteredValue);
+        modal.modal("hide"); // Close the modal
+      });
+
+      // Add a keydown event listener for the Enter/Return key
+      $("#modalInput").on("keydown", function(event) {
+        if (event.key === "Enter") {
+          var enteredValue = $("#modalInput").val();
+          resolve(enteredValue);
+          modal.modal("hide"); // Close the modal
+        }
+      });
+
+      modal.on("hidden.bs.modal", function() {
+        // Resolve with null when the modal is closed without saving
+        resolve(null);
+      });
+    });
+  }
+  
+  function updateValuesWithModals(tokensToUpdate, callback) {
+    var updatedValues = [];
+
+    function handleToken(index) {
+      if (index < tokensToUpdate.length) {
+        return openModalForField(tokensToUpdate[index])
+          .then(function(enteredValue) {
+            console.log('entered value: ' + enteredValue);
+            if (enteredValue !== null) {
+              updatedValues.push({ name: tokensToUpdate[index], value: enteredValue });
+              // Move to the next token only if a valid value is entered
+              return handleToken(index + 1);
+            } else {
+              // Reopen the same modal if the entered value is null
+              toastr.warning("You must provide a value for " + tokensToUpdate[index]);
+              return handleToken(index); // Re-call handleToken with the same index to reopen the modal
+            }
+          });
+      } else {
+        return Promise.resolve();
+      }
+    }
+
+    return handleToken(0)
+      .then(function() {
+        var promises = updatedValues.map(function(tokenData) {
+          return new Promise(function(resolve, reject) {
+            $.ajax({
+              type: "POST",
+              url: "/tokens",
+              contentType: "application/json",
+              data: JSON.stringify(tokenData),
+              success: function(response) {
+                toastr.success("Token added successfully for " + tokenData.name);
+                resolve();
+              },
+              error: function(error) {
+                if (error.responseJSON && error.responseJSON.error) {
+                  toastr.error("Error adding token for " + tokenData.name + ": " + error.responseJSON.error);
+                } else {
+                  toastr.error("System error for " + tokenData.name + ": " + error.statusText);
+                }
+                reject();
+              }
+            });
+          });
+        });
+
+        return Promise.all(promises);
+      })
+      .then(function() {
+        if (typeof callback === "function") {
+          callback(); // Call the callback function after all tokens are updated successfully
+        }
+      })
+      .catch(function(error) {
+        toastr.error("An error occurred with saving tokens.");
+      });
+  }
+
+
 });
 </script>
 {% endblock %}

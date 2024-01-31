@@ -1,5 +1,7 @@
 import re
 import random
+import json
+import requests
 import string
 import secrets
 import socket
@@ -74,6 +76,7 @@ def sms_user(phone_e164, message="Just saying Hi!"):
 def email_user(email, subject="subject", html_content="content"):
     if app.config['DEV'] == "True":
         response = {'status': "success", 'message': "sending code via dev console"}
+        print(f"would email {email}")
     else:
         response = {'status': "success", 'message': "sending code via sendmail"}
         message = Mail(
@@ -175,8 +178,8 @@ def load_from_storage(uid, filename):
 def download_as_bytes(uid, filename):
     gcs = storage.Client()
     bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
-    blob = bucket.blob("%s/%s" % (uid, filename))
-
+    blob = bucket.get_blob(f"{uid}/{filename}")
+    
     # Download the file contents as bytes
     content = blob.download_as_bytes()
     return content
@@ -225,39 +228,6 @@ def split_image_by_height(image_bytesio, output_format='PNG', segment_height=819
         segmented_images.append(output_bytesio)
 
     return segmented_images
-
-# Example usage:
-# image_bytesio = BytesIO(...)  # Replace with your image data in BytesIO
-# segmented_images = split_image_by_height(image_bytesio, output_format='PNG', segment_height=8192)
-
-from pydub import AudioSegment
-def create_audio_chunks(input_file_stream, chunk_duration_ms=30000):
-    # Load the audio file from the file stream
-    audio = AudioSegment.from_file(input_file_stream)
-
-    # Initialize variables
-    chunks = []
-    current_position = 0
-    chunk_count = 0
-
-    # Iterate through the audio file in specified chunk duration
-    while current_position < len(audio):
-        # Extract a chunk of the specified duration
-        chunk = audio[current_position:current_position + chunk_duration_ms]
-        current_position += chunk_duration_ms
-
-        # Export chunk to file stream (BytesIO)
-        chunk_stream = BytesIO()
-        chunk.export(chunk_stream, format='mp3')
-        chunk_stream.seek(0)  # Rewind to the beginning of the stream
-
-        # set the filename for things        
-        chunk_stream.name = f"chunk_{chunk_count}.mp3"
-        chunk_count += 1
-
-        chunks.append(chunk_stream)
-    
-    return chunks
 
 
 # load template
@@ -437,11 +407,11 @@ def merge_extras(template_extras, node_extras):
     return merged_extras
 
 
-# convert all POST data to lists of things
 def transform_single_items_to_lists(input_dict):
     for key, value in input_dict.items():
-        if not isinstance(value, list):
-            # If it's not already a list, replace it with a list containing the value
+        # Check if the value is neither a list nor a dictionary
+        if not isinstance(value, (list, dict)):
+            # If it's not already a list or a dictionary, replace it with a list containing the value
             input_dict[key] = [value]
     return input_dict
 
@@ -601,7 +571,37 @@ def compress_text(text):
     compressed_bytes = zlib.compress(text.encode('utf-8'))
     return base64.b64encode(compressed_bytes).decode('utf-8')
 
+
 def decompress_text(compressed_text):
     compressed_bytes = base64.b64decode(compressed_text.encode('utf-8'))
     decompressed_bytes = zlib.decompress(compressed_bytes)
     return decompressed_bytes.decode('utf-8')
+
+
+def get_raw_content_from_github(url):
+    raw_url = url.replace("github.com", "raw.githubusercontent.com").replace("/tree/", "/")
+
+    response = requests.get(raw_url)
+    if response.status_code == 200:
+        return response.text
+    else:
+        return None
+
+
+def github_cookbooks(repo, path):
+    api_url = f"https://api.github.com/repos/{repo}/contents/{path}"
+    response = requests.get(api_url)
+
+    cookbooks = []
+    if response.status_code == 200:
+        contents = response.json()
+        for content in contents:
+            try:
+                url = f"{content.get('html_url')}/mitta_config.json"
+                json_content = json.loads(get_raw_content_from_github(url))
+                if json_content:
+                    cookbooks.append(json_content)
+            except Exception as ex:
+                pass
+
+    return cookbooks

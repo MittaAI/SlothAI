@@ -1,8 +1,30 @@
-/* Reset and base styles */
+/* Fonts */
+@font-face {font-family: 'Silka Regular'; src: url('/static/fonts/silka-regular-webfont.ttf') format('truetype'); font-weight: 400; font-style: normal; }
+@font-face {font-family: 'Silka Bold'; src: url('/static/fonts/silka-bold-webfont.ttf') format('truetype'); font-weight: 700; font-style: normal; }
+@font-face {font-family: 'Silka ExtraLight'; src: url('/static/fonts/silka-extralight-webfont.ttf') format('truetype'); font-weight: 100; font-style: normal; }
+@font-face {font-family: 'Orbitron Black'; src: url('/static/fonts/Orbitron-Black.ttf') format('truetype'); font-weight: 900; /* Adjust as needed */ font-style: normal; }
+@font-face {font-family: 'Orbitron Bold'; src: url('/static/fonts/Orbitron-Bold.ttf') format('truetype'); font-weight: 700; /* Bold */ font-style: normal; }
+@font-face {font-family: 'Orbitron Extra Bold'; src: url('/static/fonts/Orbitron-ExtraBold.ttf') format('truetype'); font-weight: 800; /* Extra Bold */ font-style: normal; }
+@font-face {font-family: 'Orbitron Medium'; src: url('/static/fonts/Orbitron-Medium.ttf') format('truetype'); font-weight: 500; /* Medium */ font-style: normal; }
+@font-face {font-family: 'Orbitron Regular'; src: url('/static/fonts/Orbitron-Regular.ttf') format('truetype'); font-weight: 400; /* Regular */ font-style: normal; }
+@font-face {font-family: 'Orbitron Semi Bold'; src: url('/static/fonts/Orbitron-SemiBold.ttf') format('truetype'); font-weight: 600; /* Semi Bold */ font-style: normal; }
+
+/* page styles */
 body {
-  background: #fefefe;
-  font-size: 15px, sans-serif;
-  padding-left: 3px;
+  background-color: #101010;
+  font-family: 'Silka Regular', 'Roboto', sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+  text-align: left;
+  caret-color: transparent;
+}
+
+input, textarea {
+  caret-color: auto;
+}
+
+body.app {
+  background-color:  white;
 }
 
 html, body {
@@ -11,19 +33,55 @@ html, body {
   padding: 0;
 }
 
-/* Fonts */
-@font-face {
-  font-family: 'Roboto';
-  src: url('/static/fonts/Roboto-Regular.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
+h1,h2,h3 {
+  opacity: 90%;
+  font-family: 'Orbitron Bold';
+  text-transform: uppercase;
 }
 
-@font-face {
-  font-family: 'Roboto';
-  src: url('/static/fonts/Roboto-Bold.ttf') format('truetype');
+h4,h5 {
+  opacity: 90%;
+  font-family: 'Silka Regular', Roboto;
+  text-transform: uppercase;
+}
+
+h1 {
   font-weight: 700;
-  font-style: normal;
+  font-size: 64px; 
+}
+
+h2 {
+  font-weight: 600;
+  font-size: 48px;
+}
+
+h3 {
+  font-weight: 500;
+  font-size: 36px;
+}
+
+h4 {
+  font-weight: 400;
+  font-size: 24px;
+}
+
+h5 {
+  font-weight: 400;
+  font-size: 18px;
+}
+
+h6 {
+  font-weight: 400;
+  font-size: 16px;
+}
+
+footer h5 {
+  font-family: 'Orbitron Medium';
+  color: #444444;
+}
+
+element-selector {
+  font-family: 'Silka Regular', Roboto;
 }
 
 /* Form and label styles */
@@ -32,56 +90,33 @@ form, label {
   padding: 0;
 }
 
-.btn-group {
-  flex-wrap: wrap; /* Adjust this if you don't want wrapping */
-}
-
-.button-node {
-  flex: 0 0 auto; /* Do not grow, do not shrink, and is automatically sized based on content */
-  max-width: 120px; /* Set a fixed width */
-}
-
-
-:focus {
-  outline: 0;
-}
-
-/* Editor styles */
-#editor {
-  height: 50vw;
-  width: 80vw;
-  font-size: 13px;
-}
-
-#pipelineTable_wrapper {
-  padding-top: 16px;
-}
-
 /* Button styles */
 button {
   -webkit-appearance: none;
   border-radius: 0;
 }
 
+button.btn-sortable {
+  border-radius: 0 !important;
+}
+
 footer {
   position: fixed;
   left: 0px;
   bottom: 0px;
-  height: 300px;
   width: 100%;
-  padding-top: 80px;
   background: #EEE;
+  border-top: 2px dashed #222222;
+  padding-top: 5%;
+  padding-bottom: 5%;
 }
 
-.btn-action {
-  border-radius: 0 !important;
-}
-.btn-bottoms {
-  margin-bottom: 4px;
+.video-responsive {
+  max-width: 700px;
 }
 
-.btn-group {
-  flex-wrap: wrap;
+table {
+  margin-top: 14px;
 }
 
 table.dataTable.no-footer {
@@ -97,6 +132,80 @@ table.dataTable.stripe tr.odd {
   background-color: rgba(0,0,0,.05)!important;
 }
 
+/* Link styles */
+a:hover {
+  text-decoration: none;
+  color: #96c9ff;
+  text-decoration: overline;
+}
+
+/* Flash message */
+div.flash {
+  color: red;
+}
+
+/* Login form */
+div.login_form {
+  margin-top: 160px;
+}
+
+div.login_form h2 {
+  font-size: 48px;
+  font-weight: 700;
+}
+
+nav h3 {
+    margin-bottom: 0px;
+}
+
+nav h3 a {
+  color: white;
+  text-decoration: none;
+  transition: text-decoration 0.2s;
+}
+
+/* header style */
+nav h3 a:hover {
+  color: white;
+  text-decoration: none;
+  background-color: transparent;
+  outline: none;
+}
+
+/* code and pre styles */
+code, pre {
+  position: relative;
+  display: block;
+  padding: 20px;
+  background: #f2f2f2;
+  color: #555755;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+span.command-copy {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  opacity: .6;
+  font-size: 20px;
+  color: #555755;
+  cursor: pointer;
+}
+
+span.log-expand {
+  opacity: .6;
+  font-size: 20px;
+  color: #555755;
+  cursor: pointer;
+}
+
+button.navbar-toggler {
+  color: #d9d9e3;
+}
+
 #buttonSortable, #buttonSortable li {
   list-style-type: none;
   margin: 0;
@@ -105,8 +214,72 @@ table.dataTable.stripe tr.odd {
   border: none;
 }
 
-button.btn-sortable {
-  border-radius: 0 !important;
+.greater-than {
+  color: #0adf1c;
+}
+
+.link-icons {
+  color: #aaaaaa;
+  padding-left: 6px;
+}
+
+.btn-group {
+  flex-wrap: wrap; /* Adjust this if you don't want wrapping */
+}
+
+/* Custom margin for the failed count */
+#failed_count.ml-2 {
+    margin-left: 40px; /* Adjust as needed */
+}
+
+.button-node {
+  flex: 0 0 auto; /* Do not grow, do not shrink, and is automatically sized based on content */
+  width: 83px; /* Fixed width */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 4px;
+  color: white;
+  transition: box-shadow 0.3s; /* Smooth transition for box-shadow */
+}
+
+.button-node:hover {
+  /* Keep the pulse glow effect, remove any bounce effect */
+  box-shadow: 0 0 5px gray, 0 0 10px gray;
+  color: white;
+  animation: pulseGlow 1.5s infinite ease-in-out;
+}
+
+.button-pipeline {
+  flex: 0 0 auto; /* Do not grow, do not shrink, and is automatically sized based on content */
+  width: 103px; /* Fixed width */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 4px;
+  color: white;
+}
+
+:focus {
+  outline: 0;
+}
+
+/* Editor styles */
+#editor {
+  height: 50vw;
+  font-size: 13px;
+}
+
+#pipelineTable_wrapper {
+  padding-top: 16px;
+}
+
+.btn-bottoms {
+  margin-bottom: 4px;
+}
+
+.btn-group {
+  flex-wrap: wrap;
 }
 
 #buttonSortable li {
@@ -132,41 +305,203 @@ button.btn-sortable {
   transition: background-color 0.3s, color 0.3s;
 }
 
-table {
-  margin-top: 14px;
+#uploadPipeline {
+  float: left;
 }
 
-/* Link styles */
-a:hover {
-  text-decoration: none;
-  color: #96c9ff;
-  text-decoration: overline;
+#createPipeline {
+  margin-left: 4px;
+  float: left;
 }
 
-/* Flash message */
-div.flash {
-  color: red;
+#fileInput, #pipelineTable, #nodesTable, #templateTable, #tasksTable {
+  display: none;
 }
 
-/* Login form */
-div.login_form {
-  margin-top: 160px;
+.hero {
+  background-size: cover;
+  color: #f4f4f4;
+  font-color: #eee;
+  padding-top: 193px;
+  padding-bottom: 135px;
+  text-align: center;
+  border-bottom: 2px dashed #222222; 
 }
 
-div.login_form h2 {
-  font-size: 48px;
-  font-weight: 700;
+.hero, .offering{
+  background: radial-gradient(circle at center center, rgba(128, 128, 128, 0.3) 0%, rgba(128, 128, 128, 0) 500px);
 }
 
-nav h2 a {
-  color: white;
-  text-decoration: none;
-  transition: text-decoration 0.2s;
+.auth, .about, .pricing, .legal, .cookbooks {
+  background: radial-gradient(circle at center center, rgba(128, 128, 128, 0.3) 0%, rgba(128, 128, 128, 0) 800px);
 }
 
-/* Style the link to be overlined on hover */
-nav h2 a:hover {
-  text-decoration: overline;
+.about, .pricing, .legal, .cookbooks {
+  background-size: cover;
+  color: #f4f4f4;
+  font-color: #d9d9e3;
+  padding-top: 53px;
+  padding-bottom: 54px;
+  text-align: left;
+}
+
+.pricing, .about{
+  min-height: 999px;
+}
+
+/* Custom styles for cards within the 'cookbooks' container */
+.cookbooks .card {
+  width: auto; /* Adjust width as needed */
+  float: left; /* Aligns cards to the left */
+}
+
+.cookbook-cards .card-body p {
+  min-height: 90px;
+}
+
+/* Clearfix for floated elements */
+.cookbooks::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.cookbooks .row {
+  display: block;
+}
+
+.offering, .demos {
+  padding-top: 30px;
+  padding-left: 30px;
+  padding-bottom: 30px;
+  text-align: left;
+  color: #d9d9e3;
+}
+
+.demos .input-group {
+  max-width: 640px;
+}
+
+.pricing button {
+  width: 100%;
+}
+
+.pricing #login {
+  color:  #444444;
+}
+
+.demos {
+  border-bottom: 2px dashed #222222;
+}
+
+.demos h2, .demos h3, .offering h2, .offering h3, .about h2, .about h3, .pricing h2, .pricing h3, .legal h2, .legal h3, .dashboard h3, .cookbooks h3 {
+  font-family: 'Orbitron Bold';
+  padding-top: 10px;
+}
+
+.demos h3 {
+  font-size: 28px;
+}
+
+.legal h2 {
+  font-size: 36px;
+}
+.legal h3 {
+  font-size: 28px;
+}
+
+.card-header h2, .card-header h3, .card-body h2, .card-body h3, .card-body ul {
+  color:  #9999a3;
+}
+
+.card-header {
+  color:  #212529;
+}
+
+.demos h3, .cookbooks h3 {
+  text-decoration: underline;
+}
+
+h3.modal-title {
+  font-size: 24px;
+}
+
+.offering img, .demos img, .about img{
+  border-radius: 10px; 
+  max-width: 100%; 
+  height: auto; 
+  margin: 20px 0 20px 0;
+}
+
+.offering a, .about a, .pricing a, .legal a, a.dash_link, .cookbooks a {
+  color: #7995b0;
+}
+
+.offering a:hover, .about a:hover, .pricing a:hover, .legal a:hover, a:hover.dash_link, .cookbooks a:hover {
+  color: #f4f4f3;
+}
+
+.offering .btn {
+  color:  #f4f4f3;
+  cursor:  pointer;
+}
+
+#convert {
+  cursor:  pointer;
+}
+
+.offering .row, .demos .row, .about .row, .pricing .row, .legal .row, .cookbooks .row {
+  display: flex;
+  justify-content: center;
+  padding-bottom: 23px;
+  padding-top:  23px;
+}
+
+.cookbook-cards {
+  justify-content: flex-start !important;
+}
+
+.cookbook-cards p {
+  font-size: 13px;
+}
+
+.card-body {
+  color: #101010;
+}
+
+.card-col {
+  margin-right: 0px;
+}
+
+.cookbooks hr {
+  border-top: 1px solid #999999;
+}
+
+.auth {
+  background-size: cover;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #f4f4f4;
+}
+
+.auth h3 {
+  font-family: 'Orbitron Bold';
+}
+
+.dashboard {
+  background-color: white;
+  background-size: cover;
+  margin-left: 157px; 
+  width: 85%; 
+  overflow-y: auto;
+  padding-bottom: 53px;
+  transition: margin-left 0.6s ease;
+}
+
+.btn.create {
+  margin-bottom: 10px;
 }
 
 .selected-node {
@@ -181,8 +516,13 @@ nav h2 a:hover {
   height: 20px;
 }
 
-.homelead a {
-  color: white;
+/* Apply custom styles to badges within the task container */
+.task-badge {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+  font-size: 0.8em;
+  height: 18px;
 }
 
 .badge-dark {
@@ -197,10 +537,6 @@ nav h2 a:hover {
 
 .text-muted {
   margin-bottom: 14px;
-}
-
-.navbar {
-  height: 56px !important;
 }
 
 .log-dates {
@@ -221,65 +557,61 @@ nav h2 a:hover {
   padding: 0.6em 2em !important;
 }
 
-.background {
-  background-color: #444;
-  color: white;
-  text-align: center;
-  padding-top: 13px;
-  padding-bottom: 83px;
-  background-color: rgba(68, 68, 68, 0.45);
+/* Navbar and sidebar */
+.sidebar {
+  background-color: #444444;
 }
 
-/* Navbar and sidebar */
-.navbar, .sidebar {
-  background-color: #444;
+.task-badge {
+  overflow: visible !important; 
+}
+
+.navbar {
+  background-color:  #444444;
+  border-bottom: 1px dotted #222222;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1030; /* high z-index to keep it above other elements */
+  padding: .3rem 1rem;
+}
+
+.navbar h2, .navbar h3 {
+  font-family: Roboto,sans-serif; 
+  color: #ffffff; 
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  margin: 0;
 }
 
 /* Content styles */
 .content {
   padding-left: 20px;
-  width: 85%;
-  transition: margin-left 0.3s;
-  margin-left: 15%;
 }
 
-/* Media query to hide text and adjust icon size under 800px */
-@media (max-width: 800px) {
-  .sidebar {
-    width: 60px;
-  }
-  .sidebar a {
-    padding: 10px;
-    text-align: center;
-  }
-  /* Optionally hide the icon labels completely */
-  .sidebar a span {
-    display: none;
-  }
+.navbar {
+  z-index: 1000; /* Ensure the navbar has a high z-index */
 }
 
-@media (min-width: 1342px) {
-  .content {
-    margin-left: 200px;
-  }
+.dropdown-menu {
+  z-index: 1001; /* Dropdown menus should be higher than the navbar */
 }
 
-.page_heading {
-  padding-bottom: 14px;
-  color: #4e6b82;
+div.form-group.email, div.form-group.token {
+  min-width: 333px;
 }
-
-/* Code and pre styles */
-code, pre {
+.video-responsive {
   position: relative;
-  display: block;
-  padding: 20px;
-  background: #f2f2f2;
-  color: #555755;
-  overflow: auto;
-  white-space: pre-wrap;
   overflow: hidden;
-  margin-bottom: 12px;
+  padding-top: 56.25%; /* 16:9 Aspect Ratio */
+}
+
+.video-responsive iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .flash {
@@ -295,23 +627,6 @@ code, pre {
   }
 }
 
-span.command-copy {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  opacity: .6;
-  font-size: 20px;
-  color: #555755;
-  cursor: pointer;
-}
-
-span.log-expand {
-  opacity: .6;
-  font-size: 20px;
-  color: #555755;
-  cursor: pointer;
-}
-
 /* Code block styles */
 .code-block {
   background-color: #f5f5f5;
@@ -321,21 +636,14 @@ span.log-expand {
   white-space: pre-wrap;
 }
 
-/* Callout styles */
-.card-callout {
-  font-weight: bold;
-  font-size: 1.75rem;
-  /* Add any other styling you desire for the callout here */
+.site {
+  font-family: 'Orbitron Medium';
+  font-size: 2rem;
+  font-weight: 500;
 }
 
-#site {
-  color: white;
+.site a{
   text-decoration: none;
-  transition: text-decoration 0.2s;
-}
-
-#site:hover {
-  text-decoration: overline;
 }
 
 #templateText {
@@ -351,64 +659,19 @@ span.log-expand {
   color: white !important;
 }
 
-.container_api h1 {
-  font-size: 3.5rem;
-  font-weight: 250;
-  line-height: 1.3;
-  font-variant-caps: all-small-caps;
-}
-
-.container_api h2 {
-  font-size: 2.5rem;
-  font-weight: 230;
-  line-height: 1.1;
-  font-variant-caps: all-small-caps;
-}
-
-.container_api h3 {
-  font-size: 1.9rem;
-  font-weight: 230;
-  line-height: 1.0;
-  font-variant-caps: all-small-caps;
-}
-
-.container_api h4 {
-  font-size: 1.0rem;
-  font-weight: 190;
-  line-height: 0.9;
-  font-variant-caps: all-small-caps;
-}
-
-.container_api h5 {
-  font-size: 0.90rem;
-  font-weight: 180;
-  line-height: 1.1;
-}
-
-.container {
-  max-width: 960px;
-  margin-top: 80px;
-}
-
-.container-interior {
-  margin-top: 20px;
-}
-
-.container_legal {
-  margin-bottom: 60px;
-}
-
 /* Sidebar styles */
 .sidebar {
-  background-color: #444;
-  height: 100%;
-  width: 15%;
-  max-width: 192px;
   position: fixed;
-  top: 56px;
+  top: auto;
+  height: 100%;
   left: 0;
-  padding-top: 16px;
+  width: 15%;
+  overflow-y: auto;
   transition: width 0.3s;
+}
+
+.sidebar_list {
+  padding-top: 64px;
 }
 
 .sidebar a {
@@ -429,4 +692,133 @@ span.log-expand {
 
 .highlighted-link {
   background-color: #628395;
+}
+
+.sidebar, .container {
+  transition: width 0.5s ease, margin-left 0.5s ease;
+}
+
+.container-fluid.dashboard {
+  padding-top: 54px;
+}
+
+@keyframes shake {
+    0%, 100% {
+        transform: translate(0, 0);
+    }
+    10%, 30%, 50%, 70%, 90% {
+        transform: translate(-2px, -2px);
+    }
+    20%, 40%, 60%, 80% {
+        transform: translate(2px, 2px);
+    }
+}
+
+.shake {
+    animation: shake 0.75s;
+}
+
+@keyframes bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.bounce {
+    animation: bounce 0.5s;
+}
+
+.button-node.bounce {
+    animation: bounce 0.5s ease;
+}
+
+.button-node:hover {
+  /* Keep the pulse glow effect, remove any bounce effect */
+  box-shadow: 0 0 5px gray, 0 0 10px gray;
+  color: white;
+  animation: pulseGlow 1.5s infinite ease-in-out;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 5px gray, 0 0 10px gray;
+  }
+  50% {
+    box-shadow: 0 0 15px gray, 0 0 20px gray;
+  }
+}
+
+@media (max-width: 865px) {
+  .sidebar {
+    width: 64px;
+  }
+  .sidebar a {
+    padding: 10px;
+    text-align: center;
+  }
+  .sidebar a span {
+    display: none;
+  }
+  .navbar-collapse {
+    display: flex;
+    justify-content: center;
+  }
+  .navbar-collapse .dropdown {
+    flex: 0 0 auto;
+  }
+  .dashboard {
+    margin-left: 64px; /* Match sidebar width */
+    width: calc(100% - 64px); /* Remaining width */
+  }
+  .cookbooks .card {
+    width: 100%; /* Full width on small screens */
+    float: none; /* Disable floating on small screens */
+    margin-right: 0; /* Reset margin */
+  }
+  .cookbooks .row {
+    display: flex;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 999px) {
+  .hide-on-medium {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .hide-on-nmns {
+    display: none;
+  }
+}
+
+@media (min-width: 866px) {
+  .sidebar {
+    width: 147px;
+  }
+}
+
+@media only screen and (max-width: 768px) {
+  h1 {
+    font-size: 59px; 
+  }
+
+  h2 {
+    font-size: 43px;
+  }
+
+  h3 {
+    font-size: 31px;
+  }
+
+  .hide-on-small {
+    display: none;
+  }
+  .hide-on-medium {
+    display: none;
+  }
 }

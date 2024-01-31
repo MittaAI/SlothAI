@@ -1,4 +1,4 @@
-{% extends "pages/page_base.html" %}
+{% extends "pages/app_base.html" %}
 
 {% block title %}
 <title> Settings | FeatureBase AI</title>
@@ -7,284 +7,282 @@
 
 {% block content %}
 <!-- Main Content -->
-<div class="content container mt-5 pt-4">
-    <h2 class="page_heading">Settings</h2>
+<div class="container-fluid dashboard">
+  <div class="row">
+    <div class="col col-lg-12">
+      <h3>Settings</h3>
+      <hr/>
+      <h4 class="mb-3">Salutations, {{ username }}!</h4>
 
-    <div class="rounded-lg border p-3">
-        <h4 class="mb-3">Salutations, {{ username }}!</h4>
+      <p>This is your API Token for making calls to the system:</p>
+      <p><pre><span></span>{{api_token}}<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></pre></p>
 
-		<p>This is your API Token for making calls to the system:</p>
-        <p><pre><span></span>{{api_token}}<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></pre></p>
+      <button id="resetToken" class="btn btn-warning"><i class="fas fa-recycle"></i> Reset</button>
+      <p></p>
+      <p>If you reset your token AND you have local callback nodes setup, you will need to delete the <strong>callback_token</strong> service token (below) and then recreate it with the new API token.</p>        
+      <hr/>
 
-        <button id="resetToken" class="btn btn-warning"><i class="fas fa-recycle"></i> Reset</button>
-        <p></p>
-        <p>If you reset your token AND you have local callback nodes setup, you will need to delete the <strong>callback_token</strong> service token (below) and then recreate it with the new API token.</p>        
-        <hr/>
-
-        <h4 class="mb-3">Service Tokens</h4>
-        <div class="form-group">
-            {% if tokens %}
-                <p>You have the following service tokens saved in your account. Once saved, tokens may not be viewed.</p>
-                {% for token in tokens %}
-                    <div class="input-group mb-2">
-                        <div class="input-group-prepend">
-                            <label class="input-group-text"><strong>{{token.get('name')}}</strong></label>
-                        </div>
-                        <div class="input-group-append">
-                            <button type="button" class="btn btn-danger remove-token" data-token_id="{{ token.token_id }}" data-token_name="{{ token.name }}" aria-label="Remove">
-                                <i class="fas fa-trash" aria-hidden="true"></i>
-                            </button>
-                        </div>
-                    </div>
-                {% endfor %}
-            {% else %}
-                <p>No tokens found in your account.</p>
-            {% endif %}
-        </div>
-        <button class="btn btn-success" id="addTokenButton" type="button" data-toggle="modal" data-target="#tokenFormModal">
-            <i class="fas fa-plus"></i> Add Token
-        </button>
-
-        <hr/>
-        
-        <p>
-        {% if dbid %}
-        <h5>Database and Vector Store</h5>
-        <p>Your FeatureBase account is connected to MittaAI. Click the ID to disconnect.</p>
-        <button type="button" id="removeDatabaseButton" class="btn btn-danger">
-            <i class="fas fa-eraser"></i> {{dbid}}
-        </button>
-        <p></p>
-        <p class="card-text"><strong>Note:</strong> Disconnecting from your FeatureBase account or deleting your account will not affect your data on FeatureBase Cloud. You may elect to remove it manually <a href="https://cloud.featurebase.com/">there</a>.</p>
+      <h4 class="mb-3">Service Tokens</h4>
+      <div class="form-group">
+        {% if tokens %}
+          <p>You have the following service tokens saved in your account. Once saved, tokens may not be viewed.</p>
+          {% for token in tokens %}
+            <div class="input-group mb-2">
+              <div class="input-group-prepend">
+                <label class="input-group-text"><strong>{{token.get('name')}}</strong></label>
+              </div>
+              <div class="input-group-append">
+                <button type="button" class="btn btn-danger remove-token" data-token_id="{{ token.token_id }}" data-token_name="{{ token.name }}" aria-label="Remove">
+                  <i class="fas fa-trash" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+          {% endfor %}
         {% else %}
-        <h5>Connect Database and Vector Store</h5>
-        <p>To store and read data from pipelines, you will need to connect a <a href="https://featurebase.com/cloud">FeatureBase Cloud</a> account.</p><p>If you don't have a FeatureBase Cloud account, you may create one during the process.</p>
-        <button type="button" id="addDatabaseButton" class="btn btn-success" data-toggle="modal" data-target="#fbFormModal">
-            <i class="fas fa-plus"></i> Connect FeatureBase
-        </button>
+          <p>No tokens found in your account.</p>
         {% endif %}
-        <hr/>
-        <h5>Delete Your Account</h5>
-        <p>The process of deleting your login is irreversible. We'd hate to see you go.</p>
-        
-        <button class="btn btn-danger delete-button" data-table-id="{{ dbid }}"><i class="fas fa-trash"></i> Delete Account</button>
-        <p></p>
-    </div>
+      </div>
+      <button class="btn btn-success" id="addTokenButton" type="button" data-toggle="modal" data-target="#tokenFormModal">
+        <i class="fas fa-plus"></i> Add Token
+      </button>
+
+      <hr/>
+      
+      {% if dbid %}
+      <h4>Database and Vector Store</h4>
+      <p>Your FeatureBase account is connected to MittaAI. Click the ID to disconnect.</p>
+      <button type="button" id="removeDatabaseButton" class="btn btn-danger">
+        <i class="fas fa-eraser"></i> {{dbid}}
+      </button>
+      <p></p>
+      <p class="card-text"><strong>Note:</strong> Disconnecting from your FeatureBase account or deleting your account will not affect your data on FeatureBase Cloud. You may elect to remove it manually <a href="https://cloud.featurebase.com/">there</a>.</p>
+      {% else %}
+      <h4>Connect Database and Vector Store</h4>
+      <p>Mitta provides transparent database table creation and querying for all users. If you want to manage and query your database directly, you will need to setup a <a href="https://featurebase.com/cloud">FeatureBase Cloud</a> account.</p>
+      <button type="button" id="addDatabaseButton" class="btn btn-success" data-toggle="modal" data-target="#fbFormModal">
+        <i class="fas fa-plus"></i> Connect FeatureBase
+      </button>
+      {% endif %}
+
+      <hr/>
+      <h4>Delete Your Account</h4>
+      <p>The process of deleting your login is irreversible. We'd hate to see you go.</p>
+      <button class="btn btn-danger delete-button" data-table-id="{{ dbid }}"><i class="fas fa-trash"></i> Delete Account</button>
+  </div>
 </div>
 
 <div class="modal fade" id="fbFormModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">Connect a Database</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <!-- Add your node form fields here -->
-                <div class="form-group">
-                    <label for="dbid">Get your <a href="https://cloud.featurebase.com/databases" target="_blank">database ID</a>...</label>
-                    <input type="text" class="form-control" placeholder="Enter your database ID" id="dbid">
-                </div>
-                <div class="form-group">
-                    <label for="db_token">Get your <a href="https://cloud.featurebase.com/configuration/api-keys" target="_blank">API token (secret)</a>...</label>
-                    <input type="password" class="form-control" placeholder="Enter your API token (secret)" id="db_token">
-                </div>
-                <p><strong>Note:</strong> Ensure you copy the <strong>secret</strong> at the bottom of the API key modal on FeatureBase. If you try to use the token ID for the database ID or the token fileds here, it won't work! </p> 
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-success" id="addDatabase"><i class="fas fa-plus"></i> Connect</button>
-            </div>
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="exampleModalLabel">Connect Database</h3>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Add your node form fields here -->
+        <div class="form-group">
+          <label for="dbid">Get your <a href="https://cloud.featurebase.com/databases" target="_blank">database ID</a>...</label>
+          <input type="text" class="form-control" placeholder="Enter your database ID" id="dbid">
         </div>
+        <div class="form-group">
+          <label for="db_token">Get your <a href="https://cloud.featurebase.com/configuration/api-keys" target="_blank">API token (secret)</a>...</label>
+          <input type="password" class="form-control" placeholder="Enter your API token (secret)" id="db_token">
+        </div>
+        <p><strong>Note:</strong> Ensure you copy the <strong>secret</strong> at the bottom of the API key modal on FeatureBase. If you try to use the token ID for the database ID or the token fileds here, it won't work! </p> 
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-success" id="addDatabase"><i class="fas fa-plus"></i> Connect</button>
+      </div>
     </div>
+  </div>
 </div>
 
 <div class="modal fade" id="tokenFormModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">Add a Token</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <!-- Input fields for token name and value -->
-                <div class="form-group">
-                    <label for="token_name">Token Name</label>
-                    <input type="text" class="form-control" placeholder="Enter token name" id="token_name">
-                </div>
-                <div class="form-group">
-                    <label for="token_value">Token Value</label>
-                    <input type="password" class="form-control" placeholder="Enter token value" id="token_value">
-                </div>
-                <p><strong>Note:</strong> The token <strong>name</strong> must include 'secret', 'token' or 'password' somewhere in it to be secured by the system.</p> 
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-success" id="saveToken"><i class="fas fa-plus"></i> Add Token</button>
-            </div>
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="exampleModalLabel">Add a Token</h3>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Input fields for token name and value -->
+        <div class="form-group">
+          <label for="token_name">Token Name</label>
+          <input type="text" class="form-control" placeholder="Enter token name" id="token_name">
         </div>
+        <div class="form-group">
+          <label for="token_value">Token Value</label>
+          <input type="password" class="form-control" placeholder="Enter token value" id="token_value">
+        </div>
+        <p><strong>Note:</strong> The token <strong>name</strong> must include 'secret', 'token' or 'password' somewhere in it to be secured by the system.</p> 
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-success" id="saveToken"><i class="fas fa-plus"></i> Add Token</button>
+      </div>
     </div>
+  </div>
 </div>
-
 {% endblock %}
 
 {% block javascript %}
 <script type="text/javascript">
 $(document).ready(function() {
-	// copy things
-	$('span.command-copy').click(function(e) {
-		var preElement = $(this).closest('pre');
-		var text = preElement.text().trim();
-		var copyTextarea = document.createElement('textarea');
-		copyTextarea.value = text;
-		document.body.appendChild(copyTextarea);
-		copyTextarea.select();
-		document.execCommand('copy');
-		document.body.removeChild(copyTextarea);
-		$(this).addClass('flash');
-		setTimeout(function() {
-			$('span.command-copy').removeClass('flash');
-		}, 500);
-	});
+  // copy things
+  $('span.command-copy').click(function(e) {
+    var preElement = $(this).closest('pre');
+    var text = preElement.text().trim();
+    var copyTextarea = document.createElement('textarea');
+    copyTextarea.value = text;
+    document.body.appendChild(copyTextarea);
+    copyTextarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(copyTextarea);
+    $(this).addClass('flash');
+    setTimeout(function() {
+      $('span.command-copy').removeClass('flash');
+    }, 500);
+  });
 
    $(".delete-button").click(function() {
-        if (confirm("Are you sure you want to delete your login? This action is irreversible...")) {
-            // If confirmed, navigate to the /remove_all_caution path
-            window.location.href = "/remove_all_caution";
+    if (confirm("Are you sure you want to delete your login? This action is irreversible...")) {
+      // If confirmed, navigate to the /remove_all_caution path
+      window.location.href = "/remove_all_caution";
+    }
+  });
+
+  $("#resetToken").click(function() {
+    $.ajax({
+      url: '/token_reset',
+      type: 'POST',
+      data: JSON.stringify({ prompt: 'please' }),
+      contentType: 'application/json',
+      success: function(data) {
+        location.reload();
+      },
+      error: function() {
+        toastr.error("Error resetting token. Very strange.");
+      }
+    });
+  });
+
+  $("#addDatabase").click(function() {
+    var dbid = $("#dbid").val();
+    var db_token = $("#db_token").val();
+
+    if (!dbid || !db_token) {
+      toastr.error("You must enter values for the fields.");
+      return False
+    }
+
+    var postData = {
+      dbid: dbid,
+      db_token: db_token
+    };
+    $.ajax({
+      url: '/connect',
+      type: 'POST',
+      data: JSON.stringify(postData),
+      contentType: 'application/json',
+      success: function(data) {
+        $('#fbFormModal').modal('hide');
+        toastr.success("FeatureBase account connected.")
+        window.location.reload() 
+      },
+      error: function(error) {
+        console.log(error)
+        toastr.error('Error connecting FeatureBase. ' + error.responseJSON.error);
+      }
+    });
+  });
+
+  $("#removeDatabaseButton").click(function() {
+    if (confirm("Are you sure you want to disconnect the database? This may affect running pipelines.")) {
+      // Get the dbid from the data attribute of the button
+      var dbid = $(this).data('table-id');
+      
+      // Send a DELETE request to the /disconnect/<dbid> endpoint
+      $.ajax({
+        url: '/disconnect/' + dbid,
+        type: 'DELETE',
+        success: function(data) {
+          toastr.info("Database connection removed.")
+          window.location.reload()
+        },
+        error: function(error) {
+          toastr.error('This is likely frustrating. ' + error.responseJSON.error);
+          window.location.reload()
         }
-    });
+      });
+    }
+  });
 
-    $("#resetToken").click(function() {
-        $.ajax({
-            url: '/token_reset',
-            type: 'POST',
-            data: JSON.stringify({ prompt: 'please' }),
-            contentType: 'application/json',
-            success: function(data) {
-                location.reload();
-            },
-            error: function() {
-                toastr.error("Error resetting token. Very strange.");
-            }
-        });
-    });
+  $("#saveToken").click(function() {
+    var tokenName = $("#token_name").val();
+    var tokenValue = $("#token_value").val();
 
-    $("#addDatabase").click(function() {
-        var dbid = $("#dbid").val();
-        var db_token = $("#db_token").val();
+    // Check if both token name and value are provided
+    if (!tokenName || !tokenValue) {
+      toastr.error("You need to enter valid entries for the name and value.")
+      return;
+    }
 
-        if (!dbid || !db_token) {
-            toastr.error("You must enter values for the fields.");
-            return False
+    // Create a JSON object with the token data
+    var tokenData = {
+      "name": tokenName,
+      "value": tokenValue
+    };
+
+    // Make an AJAX POST request to add the token
+    $.ajax({
+      type: "POST",
+      url: "/tokens",
+      contentType: "application/json",
+      data: JSON.stringify(tokenData),
+      success: function(response) {
+        // Close the modal
+        $("#tokenFormModal").modal("hide");
+        toastr.success("Token added successfully!");
+        window.location.reload();
+      },
+      error: function(error) {
+        if (error.responseJSON && error.responseJSON.error) {
+          toastr.error("Error adding token: " + error.responseJSON.error);
+        } else {
+          toastr.error("System error: " + error.statusText);
         }
-
-        var postData = {
-            dbid: dbid,
-            db_token: db_token
-        };
-        $.ajax({
-            url: '/connect',
-            type: 'POST',
-            data: JSON.stringify(postData),
-            contentType: 'application/json',
-            success: function(data) {
-                $('#fbFormModal').modal('hide');
-                toastr.success("FeatureBase account connected.")
-                window.location.reload() 
-            },
-            error: function(error) {
-                console.log(error)
-                toastr.error('Error connecting FeatureBase. ' + error.responseJSON.error);
-            }
-        });
+      }
     });
+  });
 
-    $("#removeDatabaseButton").click(function() {
-        if (confirm("Are you sure you want to disconnect the database? This may affect running pipelines.")) {
-            // Get the dbid from the data attribute of the button
-            var dbid = $(this).data('table-id');
-            
-            // Send a DELETE request to the /disconnect/<dbid> endpoint
-            $.ajax({
-                url: '/disconnect/' + dbid,
-                type: 'DELETE',
-                success: function(data) {
-                    toastr.info("Database connection removed.")
-                    window.location.reload()
-                },
-                error: function(error) {
-                    toastr.error('This is likely frustrating. ' + error.responseJSON.error);
-                    window.location.reload()
-                }
-            });
+  $(".remove-token").click(function() {
+    var tokenName = $(this).data("token_name");
+    var tokenID = $(this).data("token_id");
+    var confirmDelete = confirm("Are you sure you want to delete " + tokenName + "?");
+
+    if (confirmDelete) {
+      $.ajax({
+        type: "DELETE",
+        url: "/tokens/" + tokenID,
+        success: function(response) {
+          toastr.success("Token deleted successfully!");
+          window.location.reload();
+        },
+        error: function(error) {
+          if (error.responseJSON && error.responseJSON.error) {
+            toastr.error(error.responseJSON.error);
+          } else {
+            toastr.error("System error: " + error.statusText);
+          }
         }
-    });
-
-    $("#saveToken").click(function() {
-        var tokenName = $("#token_name").val();
-        var tokenValue = $("#token_value").val();
-
-        // Check if both token name and value are provided
-        if (!tokenName || !tokenValue) {
-            toastr.error("You need to enter valid entries for the name and value.")
-            return;
-        }
-
-        // Create a JSON object with the token data
-        var tokenData = {
-            "name": tokenName,
-            "value": tokenValue
-        };
-
-        // Make an AJAX POST request to add the token
-        $.ajax({
-            type: "POST",
-            url: "/tokens",
-            contentType: "application/json",
-            data: JSON.stringify(tokenData),
-            success: function(response) {
-                // Close the modal
-                $("#tokenFormModal").modal("hide");
-                toastr.success("Token added successfully!");
-                window.location.reload();
-            },
-            error: function(error) {
-                if (error.responseJSON && error.responseJSON.error) {
-                    toastr.error("Error adding token: " + error.responseJSON.error);
-                } else {
-                    toastr.error("System error: " + error.statusText);
-                }
-            }
-        });
-    });
-
-    $(".remove-token").click(function() {
-        var tokenName = $(this).data("token_name");
-        var tokenID = $(this).data("token_id");
-        var confirmDelete = confirm("Are you sure you want to delete " + tokenName + "?");
-
-        if (confirmDelete) {
-            $.ajax({
-                type: "DELETE",
-                url: "/tokens/" + tokenID,
-                success: function(response) {
-                    toastr.success("Token deleted successfully!");
-                    window.location.reload();
-                },
-                error: function(error) {
-                    if (error.responseJSON && error.responseJSON.error) {
-                        toastr.error(error.responseJSON.error);
-                    } else {
-                        toastr.error("System error: " + error.statusText);
-                    }
-                }
-            });
-        }
-    });
+      });
+    }
+  });
 });
 </script>
 {% endblock %}

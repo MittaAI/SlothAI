@@ -1,4 +1,4 @@
-{% extends "pages/page_base.html" %}
+{% extends "pages/app_base.html" %}
 
 {% block title %}
 <title>{{pipeline.name}} | Pipeline | {{brand.get('name')}}</title>
@@ -7,527 +7,655 @@
 
 {% block content %}
 <!-- Main Content -->
-<div class="content container mt-5 pt-4">
-    <h2 class="page_heading">Pipeline Details</h2>
-    <div class="rounded-lg border p-3">
-        <div class="row">
-            <div class="col text-left">
-                <h3 class="mb-3">{{pipeline.name}}</h3>
-            </div>
-            <div class="col text-right h-25">
-                <button id="SavePipeline" class="btn btn-success btn-bottoms"><i class="fas fa-save"></i> Save</button>
-                <button id="DownloadPipeline" data-pipe_id="{{pipeline.pipe_id}}" class="btn btn-primary btn-bottoms"><i class="fas fa-download"></i> Download</button>
-                <button class="btn btn-danger delete-button btn-bottoms" data-pipe-id="{{pipeline.pipe_id}}"><i class="fas fa-trash-alt"></i> Delete</button>
-            </div>
-        </div>
-        <p>The pipeline '{{pipeline.name}}' contains the following nodes. Nodes may be reordered, added or deleted.</p>
-        <div class="row">
-            <div class="col text-left">
-                <ul id="buttonSortable" class="btn-group">
-                    {% for node_id in pipeline.node_ids %}
-                        {% for node in nodes %}
-                            {% if node.node_id == node_id %}
-                                <li class="ui-state-default"><i style="position: absolute; bottom: 0;" class="fa fa-bars"></i><button title="{{node.processor}}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" class="btn btn-secondary btn-sortable"><i class="fas fa-{% for processor_info in processors if processor_info.value == node.processor %}{{processor_info.icon }}{% endfor %}"></i><br/>{{ node.name }}</button></li>
-                            {% endif %}
-                        {% endfor %}
-                    {% endfor %}
-                </ul>
-            </div>
-        </div>
-        <p></p>
-        <div class="row">
-            <div class="col text-left">
-                <button id="addNode" class="btn btn-outline-dark"><i class="fas fa-plus"></i> Add Node</button>
-            </div>
-        </div>
-        <hr/>
-        <h4>Send Data</h4>
-        <p>The pipeline is used by POST'ing data to the task ingestion endpoint:</p>
-
-        <ul class="nav nav-tabs" id="codeTabs" role="tablist">
-            {% if (nodes[0].processor == 'jinja2' or nodes[0].processor == 'info_file') and nodes[0].extras.get('upload') == True %}
-            <li class="nav-item">
-                <a class="nav-link upload-tab" id="upload-files-tab" data-toggle="tab" href="#upload-files" role="tab" aria-controls="upload" aria-selected="false">Upload</a>
-            </li>
-            {% elif nodes[0].processor == 'read_file' or nodes[0].processor == 'read_file' %}
-            <li class="nav-item">
-                <a class="nav-link upload-tab" id="upload-tab" data-toggle="tab" href="#upload" role="tab" aria-controls="upload" aria-selected="false">Upload</a>
-            </li>
-            {% elif nodes[0].processor == 'aivision' %}
-            <li class="nav-item">
-                <a class="nav-link upload-tab" id="vision-tab" data-toggle="tab" href="#vision" role="tab" aria-controls="vision" aria-selected="false">Upload Images</a>
-            </li>
-            {% elif nodes[0].processor == 'aiaudio' %}
-            <li class="nav-item">
-                <a class="nav-link" id="record-tab" data-toggle="tab" href="#record" role="tab" aria-controls="record" aria-selected="false">Record Audio</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link upload-tab" id="upload-tab" data-toggle="tab" href="#upload" role="tab" aria-controls="record" aria-selected="false">Upload</a>
-            </li>
-            {% endif %}
-            <li class="nav-item">
-                <a class="nav-link active" id="curl-tab" data-toggle="tab" href="#curl" role="tab" aria-controls="curl" aria-selected="true">cURL</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" id="python-tab" data-toggle="tab" href="#python" role="tab" aria-controls="python" aria-selected="false">Python</a>
-            </li>
-        </ul>
-
-        <div class="tab-content" id="codeTabContent">
-            <div class="tab-pane fade show active" id="curl" role="tabpanel" aria-labelledby="curl-tab"><code>{{ curl_code }}<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></code>
-            </div>
-            <div class="tab-pane fade" id="python" role="tabpanel" aria-labelledby="python-tab"><code>{{python_code}}<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></code>
-            </div>
-            {% if nodes[0].processor == 'info_file'  %}
-            <div class="tab-pane fade" id="upload-files" role="tabpanel" aria-labelledby="upload-files-tab">
-                <p></p>
-                <p>You may upload single files to this pipeline. To upload multiple files, please use the code examples.</p>
-                <input type="file" id="fileInput" style="display: none;" accept=".pdf, .txt, .jpg, .jpeg, .png, .bmp">
-                <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
-            </div>
-            {% elif nodes[0].processor == 'jinja2' and nodes[0].extras.get('upload') == True %}
-            <div class="tab-pane fade" id="upload-files" role="tabpanel" aria-labelledby="upload-files-tab">
-                <p></p>
-                <p>You may upload single files (<strong>.pdf, .txt, .jpg, .jpeg, .png, or .bmp</strong>) to this pipeline. To upload multiple files, please use the code examples.</p>
-                <input type="file" id="fileInput" style="display: none;" accept=".pdf, .txt, .jpg, .jpeg, .png, .bmp">
-                <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
-            </div>
-            {% elif nodes[0].processor == 'read_file' %}
-            <div class="tab-pane fade" id="upload" role="tabpanel" aria-labelledby="upload-tab">
-                <p></p>
-                <p>You may upload single PDFs or text files (<strong>.pdf, .txt, .csv</strong>) to this pipeline. To upload multiple files, please use the code examples.</p>
-                <input type="file" id="fileInput" style="display: none;" accept=".pdf, .txt, .csv">
-                <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
-            </div>
-            {% elif nodes[0].processor == 'aivision' %}
-            <div class="tab-pane fade" id="vision" role="tabpanel" aria-labelledby="upload-tab">
-                <p></p>
-                <p>You may upload single images (<strong>.png, .jpg or .bmp</strong>) to this pipeline. To upload multiple files, please use the code examples.</p>
-                <input type="file" id="fileInput" style="display: none;" accept=".jpg, .jpeg, .png, .bmp">
-                <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
-            </div>
-            {% elif nodes[0].processor == 'aiaudio' %}
-            <div class="tab-pane fade" id="record" role="tabpanel" aria-labelledby="record-tab">
-                <p></p>
-                <p>Click to record, speak words, click stop, and then click upload. If the results are not accurate, check your microphone setup.</p>
-                <button id="startRecord" class="btn btn-primary"><i class="fas fa-microphone"></i> Record</button>
-                <button id="stopRecord" class="btn btn-secondary" disabled><i class="fas fa-stop"></i> Stop</button>
-                <button id="uploadRecord" class="btn btn-success"><i class="fas fa-upload"></i> Upload</button>
-            </div>
-            <div class="tab-pane fade" id="upload" role="tabpanel" aria-labelledby="record-tab">
-                <p></p>
-                <p>You may upload single audio files (<strong>.mp3, .mp3, .mp3, .mp3, .mp3, .wav, .webm, .mp4, .m4a, .m4a, .wav</strong>) to this pipeline. To upload multiple files, please use the code examples.</p>
-                <input type="file" id="fileInput" style="display: none;" accept=".mp3, .mp3, .mp3, .mp3, .mp3, .wav, .webm, .mp4, .m4a, .m4a, .wav">
-                <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
-            </div>
-            {% endif %}
-        </div>
-
-        <hr/>
-        <h4>Graph Layout</h4>
-        <div class="mermaid" style="display: none;">
-            {{mermaid_string}}
-        </div>
+<div class="container-fluid dashboard">
+  <div class="row">
+    <div class="col col-lg-12">
+      <h3>Pipeline</h3>
+      <hr/>
     </div>
+  </div>
 
-    <div class="modal fade" id="nodeFormModal" tabindex="-1" role="dialog" aria-labelledby="nodeFormModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title card-callout" id="nodeFormModalLabel">Add Node to Pipeline</h4>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="selectedNode">Available Nodes</label>
-                        <div class="input-group">
-                            <select class="form-control" id="selectedNode">
-                                <optgroup id="nodePulldown" label="Available Nodes">
-                                    {% for node in all_nodes %}
-                                        {% if node.node_id not in pipeline.get('node_ids') or node.processor == 'callback' %}
-                                            <option value="{{ node.node_id }}">{{ node.processor }} ← {{ node.name }} ← {{ node.template_name }} </option>
-                                        {% endif %}
-                                    {% else %}
-                                        <option value="None">None</option>
-                                    {% endfor %}
-                                </optgroup>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Node list section -->
-                    <div style="margin-top: 20px" class="form-group">
-                        <div class="rounded-lg border p-3" id="selectedNodesContainer" style="display: none;">
-                            <!-- Content inside the container -->
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-success" id="updateButton"><i class="fas fa-plus"></i> Add Node</button>
-                </div>
-            </div>
+  <div class="row">
+    <div class="col text-left">
+      <form class="form-inline">
+        <div class="form-group">
+          <input type="text" class="form-control" id="thepipelineName" value="{{ pipeline.name }}">
+          <button style="margin-left: 8px;" id="renameButton" class="btn btn-secondary">Rename</button>
         </div>
+      </form>
     </div>
+    <div class="col text-right">
+      <button id="SavePipeline" class="btn btn-success btn-bottoms"><i class="fas fa-save"></i> Save</button>
+      <button id="DownloadPipeline" data-pipe_id="{{pipeline.pipe_id}}" class="btn btn-primary btn-bottoms"><i class="fas fa-download"></i> Download</button>
+      <button class="btn btn-danger delete-button btn-bottoms" data-pipe-id="{{pipeline.pipe_id}}"><i class="fas fa-trash-alt"></i> Delete</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col col-lg-12 mt-3">
+      <p>The pipeline '{{pipeline.name}}' contains the following nodes. Nodes may be reordered, added or deleted.</p>
+      <div class="row">
+        <div class="col text-left">
+          <ul id="buttonSortable" class="btn-group" style="display: none;">
+            {% for node_id in pipeline.node_ids %}
+              {% for node in nodes %}
+                {% if node.node_id == node_id %}
+                  <li class="ui-state-default"><i style="position: absolute; bottom: 0;" class="fa fa-bars"></i><button title="{{node.processor}}" data-template_id="{{node.template_id}}" data-node_id="{{node_id}}" data-pipe_id="{{pipeline.pipe_id}}" class="btn btn-secondary btn-sortable"><i class="fas fa-{% for processor_info in processors if processor_info.value == node.processor %}{{processor_info.icon }}{% endfor %}"></i><br/>{{ node.name }}</button></li>
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col col-lg-12 mt-3">
+      <button id="addNode" class="btn btn-outline-dark"><i class="fas fa-plus"></i> Add Node</button>
+    </div>
+  </div>
+
+  <hr/>
+
+  <div class="row">
+    <div class="col col-lg-12 mt-3">
+      <h4>Send Data</h4>
+      <p>The pipeline is used by POST'ing data to the task ingestion endpoint. Files uploaded or created by a pipeline <strong>will be deleted after 48 hours</strong>.</p>
+
+      <ul class="nav nav-tabs" id="codeTabs" role="tablist">
+        {% if (nodes[0].processor == 'jinja2' or nodes[0].processor == 'info_file') and nodes[0].extras.get('upload') %}
+        <li class="nav-item">
+          <a class="nav-link upload-tab" id="upload-files-tab" data-toggle="tab" href="#upload-files" role="tab" aria-controls="upload" aria-selected="false">Upload</a>
+        </li>
+        {% elif nodes[0].processor == 'read_file' or nodes[0].processor == 'read_file' %}
+        <li class="nav-item">
+          <a class="nav-link upload-tab" id="upload-tab" data-toggle="tab" href="#upload" role="tab" aria-controls="upload" aria-selected="false">Upload</a>
+        </li>
+        {% elif nodes[0].processor == 'aivision' %}
+        <li class="nav-item">
+          <a class="nav-link upload-tab" id="vision-tab" data-toggle="tab" href="#vision" role="tab" aria-controls="vision" aria-selected="false">Upload Images</a>
+        </li>
+        {% elif nodes[0].processor == 'aiaudio' %}
+        <li class="nav-item">
+          <a class="nav-link" id="record-tab" data-toggle="tab" href="#record" role="tab" aria-controls="record" aria-selected="false">Record Audio</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link upload-tab" id="upload-tab" data-toggle="tab" href="#upload" role="tab" aria-controls="record" aria-selected="false">Upload</a>
+        </li>
+        {% endif %}
+        <li class="nav-item">
+          <a class="nav-link active" id="curl-tab" data-toggle="tab" href="#curl" role="tab" aria-controls="curl" aria-selected="true">cURL</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" id="python-tab" data-toggle="tab" href="#python" role="tab" aria-controls="python" aria-selected="false">Python</a>
+        </li>
+      </ul>
+
+      <div class="tab-content" id="codeTabContent">
+        <div class="tab-pane fade show active" id="curl" role="tabpanel" aria-labelledby="curl-tab"><code>{{ curl_code }}<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></code>
+        </div>
+        <div class="tab-pane fade" id="python" role="tabpanel" aria-labelledby="python-tab"><code>{{python_code}}<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></code>
+        </div>
+        {% if nodes[0].processor == 'info_file'  %}
+        <div class="tab-pane fade" id="upload-files" role="tabpanel" aria-labelledby="upload-files-tab">
+          <p></p>
+          <p>You may upload single files to this pipeline. To upload multiple files, please use the code examples.</p>
+          <input type="file" id="fileInput" style="display: none;">
+          <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
+        </div>
+        {% elif nodes[0].processor == 'jinja2' and nodes[0].extras.get('upload') %}
+        <div class="tab-pane fade" id="upload-files" role="tabpanel" aria-labelledby="upload-files-tab">
+          <p></p>
+          <p>You may upload single files (<strong>.pdf, .txt, .jpg, .jpeg, .png, or .bmp</strong>) to this pipeline. To upload multiple files, please use the code examples.</p>
+          <input type="file" id="fileInput" style="display: none;" accept=".pdf, .txt, .jpg, .jpeg, .png, .bmp">
+          <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
+        </div>
+        {% elif nodes[0].processor == 'read_file' %}
+        <div class="tab-pane fade" id="upload" role="tabpanel" aria-labelledby="upload-tab">
+          <p></p>
+          <p>You may upload single PDFs or text files (<strong>.pdf, .txt, .csv</strong>) to this pipeline. To upload multiple files, please use the code examples.</p>
+          <input type="file" id="fileInput" style="display: none;" accept=".pdf, .txt, .csv">
+          <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
+        </div>
+        {% elif nodes[0].processor == 'aivision' %}
+        <div class="tab-pane fade" id="vision" role="tabpanel" aria-labelledby="upload-tab">
+          <p></p>
+          <p>You may upload single images (<strong>.png, .jpg or .bmp</strong>) to this pipeline. To upload multiple files, please use the code examples.</p>
+          <input type="file" id="fileInput" style="display: none;" accept=".jpg, .jpeg, .png, .bmp">
+          <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
+        </div>
+        {% elif nodes[0].processor == 'aiaudio' %}
+        <div class="tab-pane fade" id="record" role="tabpanel" aria-labelledby="record-tab">
+          <p></p>
+          <p>Click to record, speak words, click stop, and then click upload. If the results are not accurate, check your microphone setup.</p>
+          <button id="startRecord" class="btn btn-primary"><i class="fas fa-microphone"></i> Record</button>
+          <button id="stopRecord" class="btn btn-secondary" disabled><i class="fas fa-stop"></i> Stop</button>
+          <button id="uploadRecord" class="btn btn-success"><i class="fas fa-upload"></i> Upload</button>
+        </div>
+        <div class="tab-pane fade" id="upload" role="tabpanel" aria-labelledby="record-tab">
+          <p></p>
+          {% if 'gc_speech' in nodes[0].extras.model %}
+          <p>You may upload single audio files (<strong>.l16, .flac, .mp3, .wav, .ogg, .amr, .amr-wb, .spx, .webm</strong>) to this pipeline. To upload multiple files, please use the code examples.</p>
+          <input type="file" id="fileInput" style="display: none;" accept=".l16, .flac, .mp3, .webm, .wav, .ogg, .amr, .amr-wb, .spx, .webm">
+          {% elif 'whisper' in nodes[0].extras.model %}
+          <p>You may upload single audio files (<strong>.mp3, .webm, .mp4, .m4a, .wav</strong>) to this pipeline. To upload multiple files, please use the code examples.</p>
+          <input type="file" id="fileInput" style="display: none;" accept=".mp3, .wav, .webm, .mp4, .m4a, .wav">
+          {% endif %}
+
+          <button id="loadButton" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <hr/>
+  <div class="row">
+    <div class="col col-lg-12 mt-3">
+      <h4>Generative Description</h4>
+      <p id="description">This pipeline can be described by an AI. Click the <strong>Get Description</strong> button for more information.</p>
+      <p id="blurb"></p>
+      <button id="describeButton" data-pipeline_id="{{pipeline.pipe_id}}" class="btn btn-outline-dark"><i class="fas fa-info"></i> Get Description</button>
+    </div>
+  </div>
+  <hr/>
+  <div class="row">
+    <div class="col col-lg-12 mt-3">
+      <h4>Graph Layout</h4>
+      <div class="mermaid" style="display: none;">
+        {{mermaid_string}}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="nodeFormModal" tabindex="-1" role="dialog" aria-labelledby="nodeFormModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title" id="nodeFormModalLabel">Add Node to Pipeline</h4>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="selectedNode">Available Nodes</label>
+          <div class="input-group">
+            <select class="form-control" id="selectedNode">
+              <optgroup id="nodePulldown" label="Available Nodes">
+                {% for node in all_nodes %}
+                  {% if node.node_id not in pipeline.get('node_ids') or node.processor == 'callback' %}
+                    <option value="{{ node.node_id }}">{{ node.processor }} ← {{ node.name }} ← {{ node.template_name }} </option>
+                  {% endif %}
+                {% else %}
+                  <option value="None">None</option>
+                {% endfor %}
+              </optgroup>
+            </select>
+          </div>
+        </div>
+
+        <!-- Node list section -->
+        <div style="margin-top: 20px" class="form-group">
+          <div class="rounded-lg border p-3" id="selectedNodesContainer" style="display: none;">
+            <!-- Content inside the container -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-success" id="updateButton"><i class="fas fa-plus"></i> Add Node</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 </div>
 {% endblock %}
 
 {% block javascript %}
 <script type="module">
-    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
 
-    // Initialize Mermaid when the page is loaded
-    document.addEventListener('DOMContentLoaded', function () {
-        mermaid.initialize({ startOnLoad: true });
+  // Initialize Mermaid when the page is loaded
+  document.addEventListener('DOMContentLoaded', function () {
+    mermaid.initialize({ startOnLoad: true });
 
-    });
-    const mermaidDiv = document.querySelector('.mermaid');
-    mermaidDiv.style.display = 'block';
+  });
+  const mermaidDiv = document.querySelector('.mermaid');
+  mermaidDiv.style.display = 'block';
 
 </script>
 <script type="text/javascript">
 $(document).ready(function() {
-    // grab the nodes from the template and make them available via getNodeInfo
-    var nodes = JSON.parse('{{nodes | tojson}}');
-    var all_nodes = JSON.parse('{{all_nodes | tojson}}');
+  // grab the nodes from the template and make them available via getNodeInfo
+  var nodes = JSON.parse('{{nodes | tojson}}');
+  var all_nodes = JSON.parse('{{all_nodes | tojson}}');
 
-    function setButtonColors() {
-      const buttons = document.querySelectorAll(".btn-group .btn:not(.ignore-color)");
-      buttons.forEach(button => {
-        const name = button.innerText;
-        const color = getColorFromName(name);
-        button.style.backgroundColor = color;
-        button.style.borderColor = color;
+  function setButtonColors() {
+    const buttons = document.querySelectorAll(".btn-group .btn:not(.ignore-color)");
+    buttons.forEach(button => {
+    const name = button.innerText.trimStart();
+    console.log(name);
+    const color = getColorFromName(name);
+    button.style.backgroundColor = color;
+    button.style.borderColor = color;
+    });
+  }
+
+  // update the button colors
+  setButtonColors();
+  
+  var originalPipelineName = $("#thenodeName").val();
+  $("#renameButton").hide();
+
+  // Event listener for changes in the nodeName field
+  $("#thepipelineName").on("input", function() {
+      var currentPipelineName = $("#thepipelineName").val();
+      pipelineNameChanged = currentPipelineName !== originalPipelineName;
+
+      if (pipelineNameChanged) {
+          $("#renameButton").show();
+      } else {
+          $("#renameButton").hide();
+      }
+  });
+
+  $("#renameButton").on("click", function(event) {
+    event.preventDefault(); // Prevent the default form submission behavior
+    var newName = $("#thepipelineName").val();
+    
+    // Check if the node name has changed
+    if (newName !== originalPipelineName) {
+      // Create a JSON object with the new node name
+      var data = {
+        "pipeline": {
+          "name": newName
+        }
+      };
+
+      // Send a POST request to update the node name
+      $.ajax({
+        url: '/pipeline/{{pipeline.pipe_id}}/rename',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(data),
+        success: function(response) {
+          originalPipelineName = newName;
+          toastr.info(response.message);
+          $('#renameButton').hide();
+          window.location.reload();
+        },
+        error: function(error) {
+          // Handle error response here
+          toastr.error(error.responseJSON.error);
+        }
       });
     }
+  });
 
-    // update the button colors
-    setButtonColors();
+  function getNodeInfo(nodeId) {
+    const node = all_nodes.find(node => node.node_id === nodeId);
 
-    function getNodeInfo(nodeId) {
-        const node = all_nodes.find(node => node.node_id === nodeId);
-
-        if (node) {
-            const { name, template_name, processor, input_fields, output_fields, extras } = node;
-            return { name, template_name, processor, input_fields, output_fields, extras };
-        } else {
-            return null;
-        }
+    if (node) {
+      const { name, template_name, processor, input_fields, output_fields, extras } = node;
+      return { name, template_name, processor, input_fields, output_fields, extras };
+    } else {
+      return null;
     }
+  }
 
-    function setPopovers() {
-        // Loop through the buttons
-        node_buttons.each(function() {
-            var nodeButton = $(this);
-            var nodeID = nodeButton.data('node_id');
-            var nodeTemplateID = nodeButton.data('template_id')
-            var nodeInfo = getNodeInfo(nodeID);
+  function setPopovers() {
+    // Loop through the buttons
+    node_buttons.each(function() {
+      var nodeButton = $(this);
+      var nodeID = nodeButton.data('node_id');
+      var nodeTemplateID = nodeButton.data('template_id')
+      var nodeInfo = getNodeInfo(nodeID);
 
-            var container = $('<div>');
+      var container = $('<div>');
 
-            if (nodeInfo) {
-                var inputFields = nodeInfo.input_fields || [];
-                var outputFields = nodeInfo.output_fields || [];
+      if (nodeInfo) {
+        var inputFields = nodeInfo.input_fields || [];
+        var outputFields = nodeInfo.output_fields || [];
 
-                // Process inputs (green)
-                inputFields.forEach(function(field) {
-                    var badgeText = "input: " + field.name;
-                    var badge = $('<span>', {
-                        class: 'badge badge-success',
-                        text: badgeText,
-                    });
+        // Process inputs (green)
+        inputFields.forEach(function(field) {
+          var badgeText = "input: " + field.name;
+          var badge = $('<span>', {
+            class: 'badge badge-success',
+            text: badgeText,
+          });
 
-                    container.append(badge);
-                    container.append('<br>');
-                });
-
-                // Process outputs (blue)
-                outputFields.forEach(function(field) {
-                    var badgeText = 'output: ' + field.name;
-                    var badge = $('<span>', {
-                        class: 'badge badge-primary',
-                        text: badgeText,
-                    });
-
-                    container.append(badge);
-                    container.append('<br>');
-                });
-                if (outputFields.length === 0 && inputFields.length === 0) {
-                    var badge = $('<span>', {
-                        class: 'badge badge-success',
-                        text: 'passthrough',
-                    });
-                    container.append(badge);
-                    container.append('<br>');
-                }
-            }
-            var pipe_id = "{{pipeline.get('pipe_id')}}";
-            container.append($('<a href="/templates/'+nodeTemplateID+'">Edit Template</a><br/>'));
-            container.append($('<a href="/nodes/'+nodeID+'">Edit Node</a><br/>'));
-            container.append($('<a href="/pipelines/'+pipe_id+'/'+nodeID+'/delete">Delete Node</a>'));
-            nodeButton.popover({
-                content: container.html(),
-                trigger: 'focus',
-                html: true,
-                placement: 'top',
-            });
+          container.append(badge);
+          container.append('<br>');
         });
+
+        // Process outputs (blue)
+        outputFields.forEach(function(field) {
+          var badgeText = 'output: ' + field.name;
+          var badge = $('<span>', {
+            class: 'badge badge-primary',
+            text: badgeText,
+          });
+
+          container.append(badge);
+          container.append('<br>');
+        });
+        if (outputFields.length === 0 && inputFields.length === 0) {
+          var badge = $('<span>', {
+            class: 'badge badge-success',
+            text: 'passthrough',
+          });
+          container.append(badge);
+          container.append('<br>');
+        }
+      }
+      var pipe_id = "{{pipeline.get('pipe_id')}}";
+      container.append($('<a href="/templates/'+nodeTemplateID+'">Edit Template</a><br/>'));
+      container.append($('<a href="/nodes/'+nodeID+'">Edit Node</a><br/>'));
+      container.append($('<a href="/pipelines/'+pipe_id+'/'+nodeID+'/delete">Remove Node</a>'));
+      nodeButton.popover({
+        content: container.html(),
+        trigger: 'focus',
+        html: true,
+        placement: 'top',
+      });
+    });
+  }
+
+  // upload tab won't show content unless we do this.
+  $('.upload-tab').click();
+
+  // set popovers
+  var node_buttons = $('button[data-node_id]');
+  setPopovers();
+
+  $('button').on('mouseleave', function () {
+    const that = this;
+    // Delay hiding the popover to allow time for the mouse to enter the popover
+    setTimeout(function () {
+      if (!$('.popover:hover').length) {
+        $(that).popover('hide'); // Hide the popover if the mouse is not over it
+        $(that).blur();
+      }
+    }, 100);
+  });
+
+
+  // Function to trigger the shaking animation for the "Save" button
+  function shakeSaveButton() {
+    // Add the "shake" class to the "Save" button
+    $("#SavePipeline").addClass("shake");
+
+    // After the animation duration, remove the "shake" class to stop the animation
+    setTimeout(function () {
+      $("#SavePipeline").removeClass("shake");
+    }, 500); // Adjust the duration as needed (500 milliseconds in this example)
+  }
+
+  $("#buttonSortable").sortable({
+    revert: true,
+    tolerance: "pointer",
+    update: function (event, ui) {
+      shakeSaveButton();
+    },
+  });
+
+  // add node to pipeline
+  $("#addNode").on("click", function() {
+    if ($("#nodePulldown").find('option').length > 0) {
+      $("#nodeFormModal").modal("show");
+      $("#selectedNodesContainer").hide();
+      $("#selectedNodesContainer").empty();
+      selectedNodes = [];
+    } else {
+      toastr.error("No nodes. Add a node first before adding a pipeline.");
     }
+    setButtonColors();
+  });
 
-    // upload tab won't show content unless we do this.
-    $('.upload-tab').click();
+  // update the pipeline with new node
+  $("#updateButton").on("click", function() {
+    var selectedNodeID = $("#selectedNode").val();
+    var selectedNode = all_nodes.find(function(node) {
+      return node.node_id == selectedNodeID;
+    });
 
-    // set popovers
-    var node_buttons = $('button[data-node_id]');
+    if (selectedNode) {
+      var newLi = '<li class="ui-state-default"><i style="position: absolute; bottom: 0;" class="fa fa-bars"></i>' +
+            '<button title="' + selectedNode.processor + '" data-template_id="' + selectedNode.template_id + '" data-node_id="' + selectedNode.node_id +
+            '" class="btn btn-secondary btn-sortable" style="border-radius: 0 !important;"><i class="fas fa-cube"></i><br/>' + selectedNode.name + '</button></li>';
+      $("#buttonSortable").append(newLi);
+    }
+    
+    node_buttons = $('button[data-node_id]');
+    setButtonColors();
     setPopovers();
 
-    $('button').on('mouseleave', function () {
-        const that = this;
-        // Delay hiding the popover to allow time for the mouse to enter the popover
-        setTimeout(function () {
-            if (!$('.popover:hover').length) {
-                $(that).popover('hide'); // Hide the popover if the mouse is not over it
-                $(that).blur();
-            }
-        }, 100);
-    });
+    // Close the 'nodeformmodal' modal
+    $("#nodeFormModal").modal('hide');
     
-    // make the buttons sortable
-    $("#buttonSortable").sortable({
-        revert: true,
-        tolerance: "pointer"
+    setTimeout(function () {
+      shakeSaveButton();
+    }, 1000);
+  });
+
+  // delete button
+  $(".delete-button").on("click", function () {
+    var pipelineId = $(this).data("pipe-id");
+    var $this = $(this);
+    $this.addClass("flash");
+
+    // Send an AJAX request to delete the pipeline with the DELETE method
+    $.ajax({
+      url: '/pipeline/' + pipelineId,
+      type: 'DELETE',
+      success: function (response) {
+        toastr.success('Pipeline deleted.');
+        window.location.href = "/pipelines";
+      },
+      error: function (error) {
+        console.error("Error deleting pipeline:", error);
+      }
+    });
+  });
+
+  // save current pipeline nodes
+  $("#SavePipeline").on("click", function () {
+    $(this).prop("disabled", true);
+    var dataNodeIds = [];
+    $("#buttonSortable li button").each(function() {
+      var node_id = $(this).data("node_id");
+      dataNodeIds.push(node_id);
     });
 
-    // add node to pipeline
-    $("#addNode").on("click", function() {
-        if ($("#nodePulldown").find('option').length > 1) {
-            $("#nodeFormModal").modal("show");
-            $("#selectedNodesContainer").hide();
-            $("#selectedNodesContainer").empty();
-            selectedNodes = [];
-        } else {
-            toastr.error("No nodes. Add a node first before adding a pipeline.");
-        }
-        setButtonColors();
+    var postData = {
+      nodes: dataNodeIds
+    };
+
+    $.ajax({
+      type: "POST",
+      url: "/pipeline/" + '{{pipeline.pipe_id}}',
+      data: JSON.stringify(postData),
+      contentType: "application/json",
+      success: function(response) {
+        toastr.success("Pipeline saved.");
+        location.reload();
+      },
+      error: function(xhr, status, error) {
+        toastr.error(status + " - " + error);
+      },
+      complete: function() {
+        $("#SavePipeline").prop("disabled", false);
+      }
     });
+  });
+  
+  // download the pipeline
+  $('#DownloadPipeline').on('click', function() {
+    $(this).prop('disabled', true);
+    toastr.info("Download request sent.");
 
-    // update the pipeline with new node
-    $("#updateButton").on("click", function() {
-        var selectedNodeID = $("#selectedNode").val();
-        var selectedNode = all_nodes.find(function(node) {
-            return node.node_id == selectedNodeID;
-        });
+    // Get the pipe_id from the data attribute
+    var pipe_id = $(this).data('pipe_id');
+    var name = $(this).data('name')
 
-        if (selectedNode) {
-            var newLi = '<li class="ui-state-default"><i style="position: absolute; bottom: 0;" class="fa fa-bars"></i>' +
-                        '<button title="' + selectedNode.processor + '" data-template_id="' + selectedNode.template_id + '" data-node_id="' + selectedNode.node_id +
-                        '" class="btn btn-secondary btn-sortable" style="border-radius: 0 !important;"><i class="fas fa-cube"></i><br/>' + selectedNode.name + '</button></li>';
-            $("#buttonSortable").append(newLi);
-        }
-        
-        node_buttons = $('button[data-node_id]');
-        setButtonColors();
-        setPopovers();
-        // Close the 'nodeformmodal' modal
-        $("#nodeFormModal").modal('hide');
-    });
+    // Construct the URL for the download endpoint (replace with your actual endpoint URL)
+    var downloadURL = '/pipelines/' + pipe_id + '/download';
 
-    // delete button
-    $(".delete-button").on("click", function () {
-        var pipelineId = $(this).data("pipe-id");
-        var $this = $(this);
-        $this.addClass("flash");
+    // Create a hidden anchor element to trigger the download
+    var link = document.createElement('a');
+    link.href = downloadURL;
+    link.target = '_blank'; // Open in a new tab
+    link.download = 'pipeline_' + name + '.json'; // Set the filename
 
-        // Send an AJAX request to delete the pipeline with the DELETE method
+    // Trigger a click event on the hidden anchor element
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(function() {
+      $('#DownloadPipeline').prop('disabled', false);
+    }, 10000);
+  });
+
+  // copy things
+  $('span.command-copy').click(function(e) {
+    var preElement = $(this).closest('code');
+    var text = preElement.text().trim();
+    var copyTextarea = document.createElement('textarea');
+    copyTextarea.value = text;
+    document.body.appendChild(copyTextarea);
+    copyTextarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(copyTextarea);
+    $(this).addClass('flash');
+    setTimeout(function() {
+      $('span.command-copy').removeClass('flash');
+    }, 500);
+  });
+
+  // Trigger the file input when the "Load" button is clicked
+  $('#loadButton').click(function() {
+    $('#fileInput').click();
+  });
+
+  // Handle file input change event
+  $('#fileInput').change(function() {
+    const fileInput = this;
+    if (fileInput.files.length > 0) {
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        var fileData = event.target.result;
+        var url = `/pipeline/{{pipeline.get('pipe_id')}}/task`;
+
+        // Create a FormData object for file and JSON data
+        var formData = new FormData();
+        formData.append('document', file, file.name); // Add the file
+        formData.append('data', JSON.stringify({})); // Add the JSON data
+        toastr.info("File upload started.")
         $.ajax({
-            url: '/pipeline/' + pipelineId,
-            type: 'DELETE',
-            success: function (response) {
-                toastr.success('Pipeline deleted.');
-                window.location.href = "/pipelines";
-            },
-            error: function (error) {
-                console.error("Error deleting pipeline:", error);
-            }
+          type: 'POST',
+          url: url,
+          data: formData,
+          processData: false,  // Prevent jQuery from processing the data
+          contentType: false,  // Prevent jQuery from setting the content type
+          success: function(data) {
+            toastr.success('Uploaded file.');
+            location.reload();
+          },
+          error: function(xhr, status, error) {
+            toastr.error('Upload failed. ' + error.responseJSON.error);
+          }
         });
-    });
+      };
+      reader.readAsDataURL(file);
+    }
+  });
 
-    // save current pipeline nodes
-    $("#SavePipeline").on("click", function () {
-        $(this).prop("disabled", true);
-        var dataNodeIds = [];
-        $("#buttonSortable li button").each(function() {
-            var node_id = $(this).data("node_id");
-            dataNodeIds.push(node_id);
+  let mediaRecorder;
+  let audioChunks = [];
+
+  $("#startRecord").click(function() {
+    navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then(function(stream) {
+        mediaRecorder = new MediaRecorder(stream, {
+          mimeType: "audio/webm" // Set the desired mimeType
         });
 
-        var postData = {
-            nodes: dataNodeIds
+        mediaRecorder.ondataavailable = function(event) {
+          if (event.data.size > 0) {
+            audioChunks.push(event.data);
+          }
         };
+        mediaRecorder.start();
+        $("#startRecord").prop("disabled", true);
+        $("#stopRecord").prop("disabled", false);
+      })
+      .catch(function(error) {
+        console.error("Error accessing audio: " + error);
+      });
+  });
 
-        $.ajax({
-            type: "POST",
-            url: "/pipeline/" + '{{pipeline.pipe_id}}',
-            data: JSON.stringify(postData),
-            contentType: "application/json",
-            success: function(response) {
-                toastr.success("Pipeline saved.");
-                location.reload();
-            },
-            error: function(xhr, status, error) {
-                toastr.error(status + " - " + error);
-            },
-            complete: function() {
-                $("#SavePipeline").prop("disabled", false);
-            }
-        });
+  $("#stopRecord").click(function() {
+    mediaRecorder.stop();
+    $("#startRecord").prop("disabled", false);
+    $("#stopRecord").prop("disabled", true);
+  });
+
+  $("#uploadRecord").click(function() {
+    if (audioChunks.length === 0) {
+      toastr.error("No recorded audio to upload.");
+      return;
+    }
+
+    const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+
+    const url = `/pipeline/{{pipeline.get('pipe_id')}}/task`;
+
+    const formData = new FormData();
+    formData.append("document", blob, "recorded_audio.webm"); // Change the filename and content type here
+    formData.append("json", JSON.stringify({ filename: "recorded_audio.webm", content_type: "audio/webm" }));
+
+    $.ajax({
+      type: "POST",
+      url: url,
+      data: formData,
+      processData: false,
+      contentType: false,
+      success: function(data) {
+        toastr.success("Uploaded recorded audio.");
+        location.reload();
+      },
+      error: function(xhr, status, error) {
+        toastr.error("Upload failed: " + error);
+      },
     });
-    
-    // download the pipeline
-    $('#DownloadPipeline').on('click', function() {
-        $(this).prop('disabled', true);
-        toastr.info("Download request sent.");
+  });
 
-        // Get the pipe_id from the data attribute
-        var pipe_id = $(this).data('pipe_id');
-        var name = $(this).data('name')
-
-        // Construct the URL for the download endpoint (replace with your actual endpoint URL)
-        var downloadURL = '/pipelines/' + pipe_id + '/download';
-
-        // Create a hidden anchor element to trigger the download
-        var link = document.createElement('a');
-        link.href = downloadURL;
-        link.target = '_blank'; // Open in a new tab
-        link.download = 'pipeline_' + name + '.json'; // Set the filename
-
-        // Trigger a click event on the hidden anchor element
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(function() {
-            $('#DownloadPipeline').prop('disabled', false);
-        }, 10000);
+  $("#describeButton").click(function() {
+    var pipelineId = $(this).data("pipeline_id");
+    toastr.info("Generating description, standby.")
+    // Make the AJAX request
+    $.ajax({
+      url: '/pipelines/' + pipelineId + '/describe',
+      type: 'GET',
+      dataType: 'json',
+      success: function(data) {
+        // Handle the response data here
+        $("#description").text(data.description);
+        $("#blurb").text(data.blurb);
+      },
+      error: function(xhr, status, error) {
+        // Handle errors here
+        console.error(xhr.responseText);
+      }
     });
-
-    // copy things
-    $('span.command-copy').click(function(e) {
-        var preElement = $(this).closest('code');
-        var text = preElement.text().trim();
-        var copyTextarea = document.createElement('textarea');
-        copyTextarea.value = text;
-        document.body.appendChild(copyTextarea);
-        copyTextarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(copyTextarea);
-        $(this).addClass('flash');
-        setTimeout(function() {
-            $('span.command-copy').removeClass('flash');
-        }, 500);
-    });
-
-    // Trigger the file input when the "Load" button is clicked
-    $('#loadButton').click(function() {
-        $('#fileInput').click();
-    });
-
-    // Handle file input change event
-    $('#fileInput').change(function() {
-        const fileInput = this;
-        if (fileInput.files.length > 0) {
-            const file = fileInput.files[0];
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                var fileData = event.target.result;
-                var url = `/pipeline/{{pipeline.get('pipe_id')}}/task`;
-
-                // Create a FormData object for file and JSON data
-                var formData = new FormData();
-                formData.append('document', file, file.name); // Add the file
-                formData.append('data', JSON.stringify({})); // Add the JSON data
-                toastr.info("File upload started.")
-                $.ajax({
-                    type: 'POST',
-                    url: url,
-                    data: formData,
-                    processData: false,  // Prevent jQuery from processing the data
-                    contentType: false,  // Prevent jQuery from setting the content type
-                    success: function(data) {
-                        toastr.success('Uploaded file.');
-                        location.reload();
-                    },
-                    error: function(xhr, status, error) {
-                        toastr.error('Upload failed. ' + error.responseJSON.error);
-                    }
-                });
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-
-    let mediaRecorder;
-    let audioChunks = [];
-
-    $("#startRecord").click(function() {
-        navigator.mediaDevices
-            .getUserMedia({ audio: true })
-            .then(function(stream) {
-                mediaRecorder = new MediaRecorder(stream, {
-                    mimeType: "audio/webm" // Set the desired mimeType
-                });
-
-                mediaRecorder.ondataavailable = function(event) {
-                    if (event.data.size > 0) {
-                        audioChunks.push(event.data);
-                    }
-                };
-                mediaRecorder.start();
-                $("#startRecord").prop("disabled", true);
-                $("#stopRecord").prop("disabled", false);
-            })
-            .catch(function(error) {
-                console.error("Error accessing audio: " + error);
-            });
-    });
-
-    $("#stopRecord").click(function() {
-        mediaRecorder.stop();
-        $("#startRecord").prop("disabled", false);
-        $("#stopRecord").prop("disabled", true);
-    });
-
-    $("#uploadRecord").click(function() {
-        if (audioChunks.length === 0) {
-            toastr.error("No recorded audio to upload.");
-            return;
-        }
-
-        const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
-
-        const url = `/pipeline/{{pipeline.get('pipe_id')}}/task`;
-
-        const formData = new FormData();
-        formData.append("document", blob, "recorded_audio.webm"); // Change the filename and content type here
-        formData.append("json", JSON.stringify({ filename: "recorded_audio.webm", content_type: "audio/webm" }));
-
-        $.ajax({
-            type: "POST",
-            url: url,
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(data) {
-                toastr.success("Uploaded recorded audio.");
-                location.reload();
-            },
-            error: function(xhr, status, error) {
-                toastr.error("Upload failed: " + error);
-            },
-        });
-    });
+  });
+  $('#buttonSortable').show();
 });
 </script>
 {% endblock %}

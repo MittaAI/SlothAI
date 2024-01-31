@@ -1,0 +1,14 @@
+{# Use this template to drive a generative chat processor. #}
+
+{# Define the input_fields used in this template #}
+input_fields = [{'name': "words", 'type': "stringset"}]
+
+{# The output_fields expected from the node processor using this template #}
+output_fields = [{'name': "assistant_content", 'type': "strings"}]
+
+{# Define the 'extras' for system_prompt  #}
+extras = {'system_prompt': "You are a helpful assistant that generates interesting sentences out of words.", 'processor': "aichat", 'openai_token': None, 'model': "gpt-3.5-turbo"}
+
+{{ words }}
+
+What is a good sentence for these words?

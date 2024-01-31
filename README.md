@@ -16,7 +16,7 @@ Individual movements of a sloth are measured and intentional, mirroring the pace
 
 SlothAI distinguishes itself from other frameworks like LangChain, AutoChain, Auto-GPT, and Ray by focusing on scalable asynchronous inferences coupled with an intuitive UI that simplifies the editing of templates and the management of pipeline flows. SlothAI makes template editing and debugging fun and easy.
 
-If you need to store things or report on things, SlothAI use an insanely fast SQL engine (FeatureBase) capable of point lookups, binary set operations, and vector similarity. Documents are stored temporaraly on Google Cloud Storage. Tasks are executed within containers on Google Cloud via task queues, and for more demanding inferencing tasks, it orchestrates calls to GPU boxes, streamlining the process of running large model inferences.
+If you need to store things or report on things, SlothAI use an insanely fst SQL engine (FeatureBase) capable of point lookups, binary set operations, and vector similarity. Documents are stored temporaraly on Google Cloud Storage. Tasks are executed within containers on Google Cloud via task queues, and for more demanding inferencing tasks, it orchestrates calls to GPU boxes, streamlining the process of running large model inferences.
 
 In the world of data, async ETL's strength is not in the speed of a single process, but in the collective and orchestrated efforts that move mountains of data with remarkable agility.
 

@@ -1,0 +1,6 @@
+{# Use this template with the halt_task processor. #}
+
+{# The halt_task processor halts all tasks at this point in the pipeline. #}
+
+{# The extras for this only require the processor. #}
+extras = {"processor": "halt_task"}

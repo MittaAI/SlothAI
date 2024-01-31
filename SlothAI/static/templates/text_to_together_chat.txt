@@ -1,0 +1,13 @@
+{# Use this template to drive a generative chat processor with a Together.ai powered model #}
+
+{# inputs are words - either a string or a list of strings #}
+input_fields = [{'name': "words", 'type': "strings"}]
+
+{# The output_fields expected from the node processor using this template #}
+output_fields = [{'name': "assistant_content", 'type': "strings"}]
+
+{# Define the 'extras' for system_prompt  #}
+extras = {'system_prompt': "You are an unhelpful assistant.", 'processor': "aichat", 'together_token': None, 'model': "together/mistralai/Mixtral-8x7B-Instruct-v0.1"}
+
+The user blinks, and asks "{{words[0]}}"
+

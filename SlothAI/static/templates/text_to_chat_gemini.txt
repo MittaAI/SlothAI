@@ -1,0 +1,16 @@
+{# Use this template to drive a generative chat processor with Gemini. #}
+
+{# inputs are words - either a string or a list of strings #}
+input_fields = [{'name': "words", 'type': "strings"}]
+
+{# The output_fields expected from the node processor using this template #}
+output_fields = [{'name': "assistant_content", 'type': "strings"}]
+
+{# Define the 'extras' for system_prompt  #}
+extras = {'system_prompt': "You are a pirate in a pirate game, with a user. You are standing on an island with the user.", 'processor': "aichat", 'gemini_token': None, 'model': "gemini-pro"}
+
+Director: The following things are visible here: a beach, coconut trees and sand. Lots of sand. There is a chest here. It is locked.
+
+The pirates mind is currently pondering: Gold, plunder, wind patterns, sand in boot.
+
+The user blinks, and asks "{{words[0]}}"

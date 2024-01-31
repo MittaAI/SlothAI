@@ -1,0 +1,28 @@
+{# Use this template to convert audio, video and images to other formats #}
+
+{# Input Fields #}
+{# 'mitta_uri', 'ffmpeg_string' and 'pipeline' are required. #}
+input_fields = [{'name': "ffmpeg_request", 'type': "string"}]
+
+{# Output Fields #}
+{# 'ffmpeg_result' will contain the status of the task, which is normally 'started' #}
+output_fields = [{'name': "ffmpeg_output_file", 'type': "strings"},{'name': "ffmpeg_command", 'type': "strings"}]
+
+{# Define the pipeline to call with the result file #}
+extras = {'pipeline': None, 'processor': "aiffmpeg", 'ffmpeg_request': "Convert file to a JPG", 'model': "gpt-3.5-turbo-1106", 'openai_token': None}
+
+{# Instructions for file conversion #}
+1. The file the user is wanting to convert is:
+"""
+{{filename[0]}}
+"""
+2. The user has requested the following type of ffmpeg conversion:
+"""
+{{ffmpeg_request}}
+"""
+3. In the JSON dictionary, you will output a `output_file` key with a value that carries the proper file extension for the request. You may append this file extension to the following name, but if it has an extension already, replace it with the correct one:
+"""
+{{output_file}}
+"""
+4. In the JSON dictionary, you will output a `ffmpeg_command` that carries the full ffmpeg command for doing the conversion, including the input and output filenames as mentioned in step 1 and step 3 (output_file):
+ai_dict=
