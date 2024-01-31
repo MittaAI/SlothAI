@@ -121,20 +121,20 @@ class Task:
 			self.nodes = []
 			return node
 
-    def jump_node(self, target_node_name):
-        """
-        Jump to the specified target node in the pipeline using its name if it exists 
-        further down the line from the current node. Does not allow jumping 
-        ahead of the current node.
+	def jump_node(self, target_node_name):
+		"""
+		Jump to the specified target node in the pipeline using its name if it exists 
+		further down the line from the current node. Does not allow jumping 
+		ahead of the current node.
 
-        :param target_node_name: The name of the node to jump to.
-        :return: The name of the node that was jumped to, or None if the jump is not possible.
-        """
-        for i, node_name in enumerate(self.nodes):
-            if node_name == target_node_name and i > 0:
-                self.nodes = self.nodes[i:]
-                return target_node_name
-        return None
+		:param target_node_name: The name of the node to jump to.
+		:return: The name of the node that was jumped to, or None if the jump is not possible.
+		"""
+		for i, node_name in enumerate(self.nodes):
+			if node_name == target_node_name and i > 0:
+				self.nodes = self.nodes[i:]
+				return target_node_name
+		return None
 
 	def delete_task(self):
 		self.delete()
@@ -308,44 +308,44 @@ def transform_data(output_keys, data):
 
 # check boxes and start if needed
 def box_required():
-    boxes = Box.get_boxes()  # Retrieve all boxes
+	boxes = Box.get_boxes()  # Retrieve all boxes
 
-    if not boxes:
-        return False, None  # Indicates no box is available
+	if not boxes:
+		return False, None  # Indicates no box is available
 
-    active_t4s = []
-    halted_t4s = []
+	active_t4s = []
+	halted_t4s = []
 
-    for box in boxes:
-        status = box.get('status')
-        box_ip = box.get('ip_address')
+	for box in boxes:
+		status = box.get('status')
+		box_ip = box.get('ip_address')
 
-        # Check for active boxes
-        if status == "RUNNING":
-            if box_ip and ping(box_ip, timeout=2.0) and check_webserver_connection(box_ip, 9898):
-                active_t4s.append(box)
-            else:
-                halted_t4s.append(box)
+		# Check for active boxes
+		if status == "RUNNING":
+			if box_ip and ping(box_ip, timeout=2.0) and check_webserver_connection(box_ip, 9898):
+				active_t4s.append(box)
+			else:
+				halted_t4s.append(box)
 
-        # Add boxes in START, PROVISIONING, STAGING to halted_t4s
-        elif status in ["START", "PROVISIONING", "STAGING"]:
-            halted_t4s.append(box)
+		# Add boxes in START, PROVISIONING, STAGING to halted_t4s
+		elif status in ["START", "PROVISIONING", "STAGING"]:
+			halted_t4s.append(box)
 
-    # Return a random active box if available
-    if active_t4s:
-        return False, random.choice(active_t4s)
+	# Return a random active box if available
+	if active_t4s:
+		return False, random.choice(active_t4s)
 
-    # No active boxes, attempt to start a halted box
-    if halted_t4s:
-        alternate_box = random.choice(halted_t4s)
-        if alternate_box.get('status') != "START":
-            print("Starting box", alternate_box.get('box_id'))
-            box_start(alternate_box.get('box_id'), alternate_box.get('zone'))
-            Box.start_box(alternate_box.get('box_id'), "START")
-        return True, alternate_box
+	# No active boxes, attempt to start a halted box
+	if halted_t4s:
+		alternate_box = random.choice(halted_t4s)
+		if alternate_box.get('status') != "START":
+			print("Starting box", alternate_box.get('box_id'))
+			box_start(alternate_box.get('box_id'), alternate_box.get('zone'))
+			Box.start_box(alternate_box.get('box_id'), "START")
+		return True, alternate_box
 
-    # No boxes available to start
-    return False, None
+	# No boxes available to start
+	return False, None
 
 
 class RetriableError(Exception):

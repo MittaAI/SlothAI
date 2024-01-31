@@ -166,6 +166,10 @@ def process(task: Task) -> Task:
 
 @processor
 def jinja2(node: Dict[str, any], task: Task) -> Task:
+    # set the time for the template
+    current_epoch_time = int(time.time())
+    task.document['current_epoch'] = current_epoch_time
+
     template_service = app.config['template_service']
 
     template = template_service.get_template(template_id=node.get('template_id'))
@@ -274,6 +278,9 @@ def aigrub(node: Dict[str, any], task: Task) -> Task:
     user = User.get_by_uid(uid=task.user_id)
     uid = user.get('uid')
 
+    # user document
+    user_document = task.document.get('user_document', {})
+
     # grub config
     grub_ip = app.config["GRUB_IP"]
     grub_token = app.config["GRUB_TOKEN"]
@@ -290,6 +297,18 @@ def aigrub(node: Dict[str, any], task: Task) -> Task:
     except:
         output_field = "url"
 
+    # verify ijnput fields steampunk style
+    input_fields = template.get('input_fields')
+
+    # use the first output field, or set one
+    try:
+        input_field = input_fields[0].get('name')
+    except:
+        input_field = "uri"
+
+    # uri to crawl
+    uris = task.document.get(input_field)
+
     # find the destination pipeline
     target_pipeline = task.document.get('pipeline')
     if not target_pipeline:
@@ -300,9 +319,6 @@ def aigrub(node: Dict[str, any], task: Task) -> Task:
             raise NonRetriableError("A valid target pipeline name is required.")
 
         pipe_id = pipeline.get('pipe_id')
-    
-    # uri to crawl
-    uris = task.document.get('uri')
 
     if not uris:
         raise NonRetriableError("Grub processor needs a `uri` key and value of either a URL or a list of URLs.")
@@ -316,7 +332,7 @@ def aigrub(node: Dict[str, any], task: Task) -> Task:
 
     for uri in uris:    
         data = {
-            "doc_id": random_string(17),
+            "doc_id": user_document.get('uuid', None),
             "sidekick_name": user.get('name'),
             "url": uri,
             "upload_url": upload_url,
@@ -427,10 +443,10 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
 
     # negotiate the format
     if model == "gpt-3.5-turbo-1106" and "JSON" in prompt:
-        system_content = task.document.get('system_content', "You write JSON for the user, which are used to drive an ffmpeg file conversion.")
+        system_content = task.document.get('system_content', "You write JSON for the user.")
         response_format = {'type': "json_object"}
     else:
-        system_content = task.document.get('system_content', "You write JSON dictionaries for the user, which are used to drive an ffmpeg file conversion, without using text markup or wrappers.\nYou output things like:\n'''ai_dict={'akey': 'avalue'}'''")
+        system_content = task.document.get('system_content', "You write JSON dictionaries for the user, without using text markup or wrappers.")
         response_format = None
 
     # call the ai
@@ -440,7 +456,9 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
         prompt=prompt,
         retries=3
     )
-
+    print("returned from ai_prompt_to_dict")
+    print(ai_dict)
+    print("===============================")
     if "ffmpeg_command" not in ai_dict:
         raise NonRetriableError("The AI didn't return an `ffmpeg_command`. Try rewording your query.")
     if "output_file" not in ai_dict:
@@ -1223,9 +1241,11 @@ def ai_prompt_to_dict(task=None, model="gpt-3.5-turbo-1106", prompt="", retries=
         ai_dict_str = re.sub(r'^ai_dict\s*=\s*', '', ai_dict_str)
 
         try:
-            ai_dict = eval(ai_dict_str)
+            # ai_dict = eval(ai_dict_str) security measures
+            ai_dict = ast.literal_eval(ai_dict_str)
+            print(ai_dict)
             if ai_dict.get('ai_dict'):
-                ai_dict = ai_dict('ai_dict')
+                ai_dict = ai_dict['ai_dict']
             err = None
             break
         except (ValueError, SyntaxError, NameError, AttributeError, TypeError) as ex:
@@ -2233,13 +2253,14 @@ def read_uri(node: Dict[str, any], task: Task) -> Task:
                 _content_type = content_type[index]
 
         # if filename is not set, or empty, we'll generate one from the inferred content type
-        if filename is None:
+        if not filename:
             file_extension = get_file_extension(_content_type)
 
             if not file_extension:
                 raise NonRetriableError("This URL will require using the filename and content_type fields.")
             _filename = f"{random_string(16)}.{file_extension}"
         else:
+            print(filename)
             _filename = filename[index]
 
         bucket_uri = upload_to_storage_requests(uid, _filename, response.content, _content_type)

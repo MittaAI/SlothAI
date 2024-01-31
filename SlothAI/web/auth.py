@@ -278,18 +278,26 @@ def login_post():
         <html>
         <head>
         <style>
-        button {
-            padding: 10px 24px !important;
-            outline: none !important;
-            border: none !important;
-            border-radius: 24px !important;
-            background-color: #437ef6 !important;
-            font-size:14px!important;
-            color: #fff!important;
-        }
-        p {
-            color: #222!important;
-        }
+            button {
+                padding: 10px 14px !important;
+                outline: none !important;
+                border: none !important;
+                border-radius: 14px !important;
+                background-color: #343a40 !important; /* Dark grey color */
+                font-size: 14px !important;
+                color: #fff !important;
+                transition: background-color 0.3s ease !important; /* Smooth transition for hover effect */
+                text-transform: uppercase !important; /* Make text uppercase for a sleek look */
+                letter-spacing: 1px !important; /* Increase letter spacing for a modern touch */
+                font-weight: bold !important; /* Make the font bold */
+            }
+
+            button:hover {
+                background-color: #23272b !important; /* Slightly darker shade for hover effect */
+            }
+            p {
+                color: #222!important;
+            }
         </style>
         </head>
         <body>
@@ -301,14 +309,14 @@ def login_post():
 
         <p>To login, please click the link below.</p>
 
-        <p><button><a href="%s" target="_blank" style="color: #fff!important;">Access Your Account</a></button></p>
+        <p><button><a href="%s" target="_blank" style="color: #fff!important;">Login with Token</a></button></p>
 
         <p>Cheers,</p>
 
         <p>Kord<br>
         🚀<br>
         https://mitta.ai<br>
-        kordless@gmail.com<br>
+        kord@mitta.ai<br>
         </p>
 
         <div>A portion of a story written by my beautiful daughter:</div>

@@ -32,32 +32,32 @@
       <p>This pipeline transforms any media file smaller than 32MB into another format with conversational language.</p>
       <img src="/images/ffmpeg_pipe_1.png"/>
       <div class="input-group mb-3">
-        <input id="instructions" type="text" class="form-control" value="Convert to a 640 wide black and white gif" aria-label="instructions" aria-describedby="convert">
+        <input id="ffmpeg_instructions" type="text" class="form-control" value="Convert to a 640 wide black and white gif" aria-label="ffmpeg_instructions" aria-describedby="convert">
         <div class="input-group-append">
-          <button class="btn btn-outline-light" id="convert">Convert</span>
+          <button class="btn btn-primary" id="convert">Convert</span>
         </div>
       </div>
       <button class="btn btn-outline-light" id="convertMedia"><i class="fab fa-github"></i> Repo</button>
       <button class="btn btn-outline-light" id="convertMediaDocker"><i class="fab fa-docker"></i> Docker</button>
     </div>
   </div>
-
-  <!-- coming soon
   <div class="row">
     <div class="col-lg-9">
       <h3>Grab a New Hacker News Post About AI</h3>
-      <p>Visits a recent post to Hacker News about AI. Provides page summary and then takes you there.</p>
+      <p>Visits a recent post to Hacker News about AI. Provides page summary, screenshot, and links.</p>
       <img src="/images/hn_pipe_1.png"/>
       <div class="input-group mb-3">
-        <input type="text" class="form-control" placeholder="Take me to a new story about AI." aria-label="instructions" aria-describedby="news">
+        <input id="crawl_instructions" type="text" class="form-control" value="I want the latest stories about AI" placeholder="Take me to a new story about AI." aria-label="crawl_instructions" aria-describedby="news">
         <div class="input-group-append">
-          <span class="input-group-text" id="news">See News</span>
+          <button class="btn btn-primary" id="crawl">Search News</span>
         </div>
       </div>
-      <button class="btn btn-outline-light" id="crawlSite">Crawl Another Site</button>
+      <button class="btn btn-outline-light" id="crawlMedia"><i class="fab fa-github"></i> Repo</button>
     </div>
   </div>
-
+  </div>
+ 
+  <!--
   <div class="row">
     <div class="col-lg-9">
       <h3>Generate a Pirate's Dream</h3>
@@ -111,7 +111,7 @@
 
       <p">Ready to learn how to build a simple pipeline to simulate a pirate's brain?</p>
       <div class="video video-responsive">
-        <iframe width="530" height="315" src="https://www.youtube.com/embed/CuALke2rQbQ?si=if7GJJnzP0C17s9b" title="YouTube video player" frameborder="1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+        <iframe width="530" height="315" src="https://www.youtube.com/embed/wglj1U-UUEs?si=_I1MIiAmOEQJkQCG" title="YouTube video player" frameborder="1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
       </div>
     </div>
   </div>
@@ -129,7 +129,7 @@ $(document).ready(function() {
     window.open('https://github.com/MittaAI/mitta-community/tree/main/cookbooks/conversion/docker', '_blank');
   });
 
-  $('#crawlSite').click(function() {
+  $('#crawlMedia').click(function() {
     window.open('https://github.com/MittaAI/mitta-community/tree/main/cookbooks/hackerbot', '_blank');
   });
 
@@ -141,7 +141,7 @@ $(document).ready(function() {
   });
 
   $('#convert').click(function() {
-    var conversionInstructions = $('#instructions').val();
+    var conversionInstructions = $('#ffmpeg_instructions').val();
     console.log(conversionInstructions)
     // Create a form element
     var form = $('<form>', {
@@ -154,6 +154,27 @@ $(document).ready(function() {
       'type': 'hidden',
       'name': 'instructions',
       'value': conversionInstructions
+    });
+    console.log(instructionsInput);
+    form.append(instructionsInput);
+    $('body').append(form);
+    form.submit();
+  });
+
+  $('#crawl').click(function() {
+    var crawlInstructions = $('#crawl_instructions').val();
+    console.log(crawlInstructions)
+    // Create a form element
+    var form = $('<form>', {
+      'action': 'https://news.mitta.ai/news', // The URL
+      'method': 'POST', 
+      'target': '_self'
+    });
+
+    var instructionsInput = $('<input>', {
+      'type': 'hidden',
+      'name': 'instructions',
+      'value': crawlInstructions
     });
     console.log(instructionsInput);
     form.append(instructionsInput);

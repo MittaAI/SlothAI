@@ -286,6 +286,11 @@ def ingest_post(pipeline_id):
     except Exception as ex:
         return jsonify({"error": f"Error getting or transforming JSON data: {ex}"}), 400
 
+    # temp overload of document_id for uuid from grub cluster
+    # grub cluster needs to pass user_document for it to work correctly without
+    if request.args.get('document_id'):
+        json_data_dict['document_id'] = request.args.get('document_id')
+
     # now we create the task
     task_id = random_string()
     task = Task(
@@ -303,7 +308,7 @@ def ingest_post(pipeline_id):
 
     # store and queue
     task.document = json_data
-    print(task.document)
+
     try:
         app.config['task_service'].create_task(task)
         return jsonify(task.to_dict()), 200
