@@ -145,6 +145,7 @@ def process(task: Task) -> Task:
 
     # processor methods are responsible for adding errors to documents
     task = processors[node.get('processor')](node, task)
+    print(task)
 
     # TODO, decide what to do with errors and maybe truncate pipeline
     if task.document.get('error'):
@@ -199,7 +200,86 @@ def jinja2(node: Dict[str, any], task: Task) -> Task:
 
 @processor
 def halt_task(node: Dict[str, any], task: Task) -> Task:
-    raise NonRetriableError("Task halted and removed.")
+    # Set the current epoch time in the task document
+    current_epoch_time = int(time.time())
+    task.document['current_epoch'] = current_epoch_time
+
+    # Templates
+    template_service = app.config['template_service']
+    template = template_service.get_template(template_id=node.get('template_id'))
+    if not template:
+        raise TemplateNotFoundError(template_id=node.get('template_id'))
+
+    # Clean and prepare the template text
+    template_text = Template.remove_fields_and_extras(template.get('text')).strip()
+
+    # Render the template
+    try:
+        if template_text:
+            jinja_template = env.from_string(template_text)
+            rendered_text = jinja_template.render(task.document)
+    except Exception as e:
+        raise NonRetriableError(f"Unable to render jinja: {e}. You may want to use |safe_tojson to handle null entries and check your syntax.")
+
+    # Parse the rendered text as JSON and check for 'halt_task'
+    try:
+        rendered_json = json.loads(rendered_text.strip())
+        halt_task_flag = rendered_json.get('halt_task', False)
+        if halt_task_flag:
+            task_halt_message = rendered_json.get('halt_message', "Task halted and removed.")
+            raise NonRetriableError(task_halt_message)
+    except NonRetriableError as e:
+        raise NonRetriableError(e)
+    except Exception as e:
+        raise NonRetriableError(f"Unable to parse rendered Jinja output as JSON or check 'halt_task': {e}")
+
+    # Continue with the task if not halted
+    return task
+
+
+@processor
+def jump_task(node: Dict[str, any], task: Task) -> Task:
+    # Set the current epoch time in the task document
+    current_epoch_time = int(time.time())
+    task.document['current_epoch'] = current_epoch_time
+
+    # Templates
+    template_service = app.config['template_service']
+    template = template_service.get_template(template_id=node.get('template_id'))
+    if not template:
+        raise TemplateNotFoundError(template_id=node.get('template_id'))
+
+    # Clean and prepare the template text
+    template_text = Template.remove_fields_and_extras(template.get('text')).strip()
+
+    # Render the template
+    try:
+        if template_text:
+            jinja_template = env.from_string(template_text)
+            rendered_text = jinja_template.render(task.document)
+    except Exception as e:
+        raise NonRetriableError(f"Unable to render jinja: {e}. You may want to use |safe_tojson to handle null entries and check your syntax.")
+
+    # Parse the rendered text as JSON and attempt to jump
+    try:
+        rendered_json = json.loads(rendered_text.strip())
+        # Check for 'jump_to_node' key in the rendered JSON
+        jump_node_name = rendered_json.get('jump_node')
+
+        if jump_node_name:
+            # Attempt to get the node_id from the node name
+            jump_node = Node.get(name=jump_node_name)
+
+            if not jump_node:
+                raise NonRetriableError(f"Node '{jump_node_name}' not found")
+            else:
+                task.jump_node(jump_id=jump_node.get('node_id'))
+        else:
+            task.document['jump_task_message'] = "A 'jump_node' name is not defined"
+    except Exception as e:
+        raise NonRetriableError(f"Jump task failed: {e}")
+
+    return task
 
 
 @processor
@@ -456,9 +536,7 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
         prompt=prompt,
         retries=3
     )
-    print("returned from ai_prompt_to_dict")
-    print(ai_dict)
-    print("===============================")
+
     if "ffmpeg_command" not in ai_dict:
         raise NonRetriableError("The AI didn't return an `ffmpeg_command`. Try rewording your query.")
     if "output_file" not in ai_dict:
@@ -967,7 +1045,7 @@ def aichat(node: Dict[str, any], task: Task) -> Task:
     elif "gemini-pro" in task.document.get('model'):
         model = task.document.get('model')
 
-        if not task.document.get('gemini_token'):
+        if not task.document.get(' _token'):
             raise NonRetriableError(f"You'll need to specify a 'gemini_token' in extras to use the {model} model.")
         genai.configure(api_key=task.document.get('gemini_token'))
 
@@ -1241,17 +1319,22 @@ def ai_prompt_to_dict(task=None, model="gpt-3.5-turbo-1106", prompt="", retries=
         ai_dict_str = re.sub(r'^ai_dict\s*=\s*', '', ai_dict_str)
 
         try:
-            # ai_dict = eval(ai_dict_str) security measures
             ai_dict = ast.literal_eval(ai_dict_str)
-            print(ai_dict)
-            if ai_dict.get('ai_dict'):
-                ai_dict = ai_dict['ai_dict']
+            # Normalize output to ensure ai_dict is directly accessible
+            if isinstance(ai_dict, dict):
+                if 'ai_dict' in ai_dict and len(ai_dict) == 1:
+                    # Directly use the 'ai_dict' if it's the only key
+                    ai_dict = ai_dict['ai_dict']
+                elif 'ai_dict' in ai_dict:
+                    # If 'ai_dict' exists among other keys, prioritize its content
+                    ai_dict = {**ai_dict, **ai_dict['ai_dict']}
+                    del ai_dict['ai_dict']
             err = None
             break
         except (ValueError, SyntaxError, NameError, AttributeError, TypeError) as ex:
             ai_dict = {"ai_dict": ai_dict_str}
-            err = f"AI returned a un-evaluatable, non-dictionary object on try {_try} of {retries}: {ex}"
-            time.sleep(2) # give it a few seconds
+            err = f"AI returned an unevaluable, non-dictionary object on try {_try} of {retries}: {ex}"
+            time.sleep(2)  # Pause between retries
 
     return err, ai_dict
 
@@ -1350,8 +1433,11 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
             # Process as a simple list
             result_dict = {field['name']: [] for field in output_fields}
             for dictionary in ai_dicts:
-                for key, value in dictionary.items():
-                    result_dict[key].append(value)
+                try:
+                    for key, value in dictionary.items():
+                        result_dict[key].append(value)
+                except:
+                    print(dictionary)
 
             for field in output_fields:
                 field_name = field['name']

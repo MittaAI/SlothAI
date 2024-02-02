@@ -50,12 +50,12 @@ class TaskService:
 
     def drop_task(self, task: Task):
         self.task_store.update(
-                    task_id=task.id,
-                    error=task.error,
-                    retries=task.retries,
-                    current_node_id=task.next_node(),
-                    state=TaskState.FAILED
-                )
+            task_id=task.id,
+            error=task.error,
+            retries=task.retries,
+            current_node_id=task.next_node(),
+            state=TaskState.FAILED
+        )
 
     def queue_task(self, task: Task):
         self.task_queue.queue(task)

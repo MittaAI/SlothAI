@@ -39,6 +39,7 @@ processors = [
     {"value": "read_fb", "label": "Read Processor (FeatureBase)", "icon": "database"},
     {"value": "split_task", "label": "Split Task Processor", "icon": "columns"},
     {"value": "halt_task", "label": "Halt Task Processor", "icon": "stop-circle"},
+    {"value": "jump_task", "label": "Jump Task Processor", "icon": "code-branch"},
     {"value": "write_fb", "label": "Write Processor (FeatureBase)", "icon": "database"},
     {"value": "aidict", "label": "Generative Completion Processor", "icon": "code"},
     {"value": "aistruct", "label": "Generative Structure Processor", "icon": "building"},
@@ -78,6 +79,7 @@ template_examples = [
     {"name": "Convert page text into chunks w/loop", "template_name": "text_filename_to_chunks_loop", "processor_type": "jinja2"},
     {"name": "Split task", "template_name": "split_task", "processor_type": "split_task"},
     {"name": "Halt task", "template_name": "halt_task", "processor_type": "halt_task"},
+    {"name": "Jump task", "template_name": "jump_task", "processor_type": "jump_task"},
     {"name": "Generate lists of keys from input", "template_name": "text_to_struct", "processor_type": "aistruct"},
     {"name": "Generate keyterms from text", "template_name": "text_to_keyterms", "processor_type": "aidict"},
     {"name": "Generate a question from text and keyterms", "template_name": "text_keyterms_to_question", "processor_type": "aidict"},
@@ -223,7 +225,10 @@ def home():
     except:
         username = "anonymous"
         email = "anonymous"
-    return render_template('pages/index.html', username=username, email=email, brand=get_brand(app), dev=app.config['DEV'], current_date=current_date)
+
+    rendered_html = render_template('pages/index.html', username=username, email=email, brand=get_brand(app), dev=app.config['DEV'], current_date=current_date)
+    minified_html = htmlmin.minify(rendered_html, remove_empty_space=True)
+    return Response(minified_html, mimetype='text/html')
 
 
 @site.route('/pro', methods=['GET'])

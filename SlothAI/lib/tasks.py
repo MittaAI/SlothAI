@@ -110,7 +110,29 @@ class Task:
 		if len(self.nodes) == 0:
 			return None
 		return self.nodes[0]
-	
+
+	def jump_node(self, jump_id=None):
+		"""
+		Modify the task's node sequence to jump to the specified node.
+		This leaves the current node intact but removes all nodes between
+		the current node and the target node.
+
+		:param jump_id: The ID of the node to jump to.
+		"""
+		if jump_id not in self.nodes:
+			raise ValueError(f"Node '{jump_id}'' not found in task nodes.")
+
+		current_index = 0  # Assuming the first node is always the current node
+		jump_index = self.nodes.index(jump_id)
+
+		if jump_index <= current_index:
+			raise ValueError("Cannot jump backwards or to the current node.")
+
+		# Remove nodes between the current node and the jump node
+		# This keeps the current node and the jump node in the list
+		self.nodes = [self.nodes[current_index]] + self.nodes[jump_index:]
+		return True
+
 	def remove_node(self):
 		if len(self.nodes) > 1:
 			node = self.nodes[0]
@@ -120,21 +142,6 @@ class Task:
 			node = self.nodes[0]
 			self.nodes = []
 			return node
-
-	def jump_node(self, target_node_name):
-		"""
-		Jump to the specified target node in the pipeline using its name if it exists 
-		further down the line from the current node. Does not allow jumping 
-		ahead of the current node.
-
-		:param target_node_name: The name of the node to jump to.
-		:return: The name of the node that was jumped to, or None if the jump is not possible.
-		"""
-		for i, node_name in enumerate(self.nodes):
-			if node_name == target_node_name and i > 0:
-				self.nodes = self.nodes[i:]
-				return target_node_name
-		return None
 
 	def delete_task(self):
 		self.delete()

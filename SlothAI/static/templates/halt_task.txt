@@ -1,6 +1,12 @@
 {# Use this template with the halt_task processor. #}
 
-{# The halt_task processor halts all tasks at this point in the pipeline. #}
+{# Define the input_fields used in this template. AI should not alter this definition #}
+input_fields = [{'name': "uri", 'type': "strings"}]
 
-{# The extras for this only require the processor. #}
+{# The extras for this only require the processor. AI should not alter this definition. #}
 extras = {"processor": "halt_task"}
+
+{# Use Jinja2 to test variables and set halt_task to True if you need to halt the task. #}
+{
+	"halt_task": {% if not uri %}true{% else %}false{% endif %}
+}
