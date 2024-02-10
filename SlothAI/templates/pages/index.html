@@ -38,7 +38,7 @@
         </div>
       </div>
       <button class="btn btn-outline-light" id="convertMedia"><i class="fab fa-github"></i> Repo</button>
-      <button class="btn btn-outline-light" id="convertMediaDocker"><i class="fab fa-docker"></i> Docker</button>
+      <button class="btn btn-outline-light ml-2" id="convertMediaDocker"><i class="fab fa-docker"></i> Docker</button>
     </div>
   </div>
   <div class="row">
@@ -53,23 +53,23 @@
         </div>
       </div>
       <button class="btn btn-outline-light" id="newsMedia"><i class="fab fa-github"></i> Repo</button>
-      <button class="btn btn-outline-light" id="newsMediaDocker"><i class="fab fa-docker"></i> Docker</button>
+      <button class="btn btn-outline-light ml-2" id="newsMediaDocker"><i class="fab fa-docker"></i> Docker</button>
     </div>
   </div>
- 
+
   <div class="row">
     <div class="col-lg-9">
       <h3>Generate a Pirate's Dream</h3>
-      <p>Arr! We conjure in our mind pirate images bold and grand. Cross us, and ye face the cannon's roar!</p>
+      <p>We conjure in our mind pirate images bold and grand. Cross us, and ye face the cannon's roar!</p>
       <img src="/images/pirate_pipe_1.png"/>
       <div class="input-group mb-3">
-        <input type="text" class="form-control" placeholder="Show me a pirate digging up treasure." value="Give me your gold" aria-label="instructions" aria-describedby="dream">
+        <input id="dream_instructions" type="text" class="form-control" placeholder="Show me a pirate digging up treasure." value="Blimy! There be gold coins in the sand." aria-label="dream_instructions" aria-describedby="dream">
         <div class="input-group-append">
           <span class="btn btn-primary" id="dream">Dream</span>
         </div>
       </div>
       <button class="btn btn-outline-light" id="dreamMedia"><i class="fab fa-github"></i> Repo</button>
-      <button class="btn btn-outline-light" id="dreamMediaDocker"><i class="fab fa-docker"></i> Docker</button>
+      <button class="btn btn-outline-light ml-2" id="dreamMediaDocker"><i class="fab fa-docker"></i> Docker</button>
     </div>
   </div>
 
@@ -161,7 +161,7 @@ $(document).ready(function() {
   // Event handlers for form submissions
   $('#convert').click(() => submitForm('https://ai.mitta.ai/convert', 'instructions', '#ffmpeg_instructions'));
   $('#crawl').click(() => submitForm('https://news.mitta.ai/news', 'instructions', '#crawl_instructions'));
-  $('#dream').click(() => submitForm('https://dream.mitta.ai/dream', 'instructions', '#ffmpeg_instructions'));
+  $('#dream').click(() => submitForm('https://dreams.mitta.ai', 'instructions', '#dream_instructions'));
 });
 </script>
 {% endblock %}

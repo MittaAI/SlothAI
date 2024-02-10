@@ -133,6 +133,21 @@ class Task:
 		self.nodes = [self.nodes[current_index]] + self.nodes[jump_index:]
 		return True
 
+	def halt_node(self):
+	    """
+	    Modify the task's node sequence to halt after the current node.
+	    This removes all nodes subsequent to the current node, effectively stopping the task's progress after the current node is processed.
+	    """
+	    if len(self.nodes) == 0:
+	        return None
+
+	    current_index = 0  # Assuming the first node is always the current node
+
+	    # Keep only the current node in the list, removing all subsequent nodes
+	    self.nodes = self.nodes[:current_index + 1]
+
+	    return True
+
 	def remove_node(self):
 		if len(self.nodes) > 1:
 			node = self.nodes[0]

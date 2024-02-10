@@ -3,6 +3,7 @@ import re
 import math
 import time
 import base64
+import random
 
 from io import BytesIO
 
@@ -13,7 +14,6 @@ import openai
 import google.generativeai as genai
 
 import pandas as pd
-import numpy as np
 
 from itertools import groupby
 
@@ -145,7 +145,6 @@ def process(task: Task) -> Task:
 
     # processor methods are responsible for adding errors to documents
     task = processors[node.get('processor')](node, task)
-    print(task)
 
     # TODO, decide what to do with errors and maybe truncate pipeline
     if task.document.get('error'):
@@ -226,12 +225,9 @@ def halt_task(node: Dict[str, any], task: Task) -> Task:
         rendered_json = json.loads(rendered_text.strip())
         halt_task_flag = rendered_json.get('halt_task', False)
         if halt_task_flag:
-            task_halt_message = rendered_json.get('halt_message', "Task halted and removed.")
-            raise NonRetriableError(task_halt_message)
-    except NonRetriableError as e:
-        raise NonRetriableError(e)
-    except Exception as e:
-        raise NonRetriableError(f"Unable to parse rendered Jinja output as JSON or check 'halt_task': {e}")
+            task.halt_node()
+    except:
+        raise NonRetriableError(f"Halting task with error. Use a 'halt_task' key and boolean to halt or pass without errors.")
 
     # Continue with the task if not halted
     return task
@@ -296,6 +292,9 @@ def callback(node: Dict[str, any], task: Task) -> Task:
     # need to rewrite to allow mapping tokens to the url template
     # alternately we could require a jinja template processor to be used in front of this to build the url
     auth_uri = task.document.get('callback_uri')
+
+    if isinstance(auth_uri, list):
+        auth_uri = auth_uri[0]
 
     # strip secure stuff out of the document
     document = strip_secure_fields(task.document) # returns document
@@ -377,7 +376,7 @@ def aigrub(node: Dict[str, any], task: Task) -> Task:
     except:
         output_field = "url"
 
-    # verify ijnput fields steampunk style
+    # verify input fields steampunk style
     input_fields = template.get('input_fields')
 
     # use the first output field, or set one
@@ -1045,7 +1044,7 @@ def aichat(node: Dict[str, any], task: Task) -> Task:
     elif "gemini-pro" in task.document.get('model'):
         model = task.document.get('model')
 
-        if not task.document.get(' _token'):
+        if not task.document.get('gemini_token'):
             raise NonRetriableError(f"You'll need to specify a 'gemini_token' in extras to use the {model} model.")
         genai.configure(api_key=task.document.get('gemini_token'))
 
@@ -1443,6 +1442,8 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
                 field_name = field['name']
                 if field_name not in task.document:
                     task.document[field_name] = []
+                if not isinstance(task.document[field_name], list):
+                    task.document[field_name] = [task.document[field_name]]
                 task.document[field_name].extend(result_dict[field_name])
 
     task.document.pop('outer_index', None)
@@ -2009,6 +2010,11 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
             client = documentai.DocumentProcessorServiceClient(client_options=opts)
             parent = client.common_location_path(app.config['PROJECT_ID'], "us")
             processor_list = client.list_processors(parent=parent)
+
+            # spray the list
+            processor_list = list(client.list_processors(parent=parent))
+            random.shuffle(processor_list)
+
             for processor in processor_list:
                 name = processor.name
                 break # stupid google objects
@@ -2027,12 +2033,16 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
                 # Get the content of the current page as bytes
                 page_content = page_stream.getvalue()
 
-                # load data
-                raw_document = documentai.RawDocument(content=page_content, mime_type="application/pdf")
+                try:                
+                    # load data
+                    raw_document = documentai.RawDocument(content=page_content, mime_type="application/pdf")
 
-                # make request
-                request = documentai.ProcessRequest(name=pdf_processor.name, raw_document=raw_document)
-                result = client.process_document(request=request)
+                    # make request
+                    request = documentai.ProcessRequest(name=pdf_processor.name, raw_document=raw_document)
+                    result = client.process_document(request=request)
+                except:
+                    raise NonRetriableError("Google OCR jobs are failing. Try increasing the batch size.")
+
                 document = result.document
 
                 # move to texts
@@ -2376,7 +2386,11 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
     except:
         output_field = "mitta_uri"
 
-    input_fields = template.get('input_fields')    
+    input_fields = template.get('input_fields')
+
+    if not input_fields:
+        raise NonRetriableError("You must have 'input_fields' defined for this processor.")
+
     # needs to be moved
     # scan for required fields in the input
     for field in input_fields:
@@ -2459,7 +2473,8 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
                     voice = "Nicole"
 
                 audio_data = generate(text=item, voice=voice, model=model)
-            except:
+            except Exception as ex:
+                app.logger.info(f"Error with EL: {ex}")
                 raise NonRetriableError("Something went wrong wih the call to ElevenLabs.")
 
         # save audio file
@@ -2676,11 +2691,23 @@ def read_fb(node: Dict[str, any], task: Task) -> Task:
         else:
             raise NonRetriableError("Specify a 'table' key and value and template the table in your SQL.")
 
-    # rewrite show tables
-    pattern = r'\b(show|tables)\b'
-    matches = re.findall(pattern, sql.lower())
-    if matches:
-        raise NonRetriableError("SHOW TABLE functions are disabled for shared database access. Add a FeatureBase account to settings to enable advanced queries.")
+
+    # Check if the query matches "show tables" but not "show create table"
+    pattern_show_tables = r'\bshow\s+tables\b'
+    pattern_show_create_table = r'\bshow\s+create\s+table\b'
+
+    # Convert SQL to lowercase to make regex search case-insensitive
+    sql_lower = sql.lower()
+
+    # First, check if the allowed phrase "show create table" is in the query
+    if re.search(pattern_show_create_table, sql_lower):
+        # This is an allowed query, so you might not want to do anything, or process it as valid.
+        pass
+    else:
+        # If the allowed phrase is not found, then check for "show tables"
+        if re.search(pattern_show_tables, sql_lower):
+            # If "show tables" is found and it's not part of "show create table", block the query
+            raise NonRetriableError("SHOW TABLE functions are disabled for shared database access. Add a FeatureBase account to settings to enable advanced queries.")
 
     resp, err = featurebase_query(document=doc)
     if err:
