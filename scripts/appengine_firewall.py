@@ -41,7 +41,7 @@ def main():
         raise ValueError("ERROR: Could process data from Google")
     print("IP ranges for Google APIs and services default domains:")
     
-    command = "gcloud compute firewall-rules create sloth-control --target-tags sloth --allow tcp:8787 --source-ranges "
+    command = "gcloud compute firewall-rules create gpu-control --target-tags controller --allow tcp:8787 --source-ranges "
     for ip in (cidrs["goog"] - cidrs["cloud"]).iter_cidrs():
         command = command + f"{ip.ipv4()},"
     command = command.rstrip(",")

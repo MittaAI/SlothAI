@@ -19,14 +19,15 @@ from itertools import groupby
 
 from google.cloud import vision, storage, documentai
 from google.api_core.client_options import ClientOptions
+
 from SlothAI.lib.util import random_string, random_name, get_file_extension, upload_to_storage, upload_to_storage_requests, split_image_by_height, download_as_bytes
 from SlothAI.lib.template import Template
-
 from SlothAI.web.models import Token
 
 from typing import Dict
 
 import PyPDF2
+import fitz
 
 from flask import current_app as app
 from flask import url_for
@@ -912,18 +913,18 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
 
         elif "instructor" in model:
             # check required services (GPU boxes)
-            defer, selected_box = box_required()
+            defer, selected_box = box_required(box_type="instructor")
 
             if defer:
                 if selected_box:
                     # Logic to start or wait for the box to be ready
                     # Possibly setting up the box or waiting for it to transition from halted to active
-                    raise RetriableError("Sloth virtual machine is being started to run embeddings.")
+                    raise RetriableError("Instructor box is being started to run embedding.")
                 else:
                     # No box is available, raise a non-retriable error
-                    raise NonRetriableError("No available virtual machine to run embeddings.")
+                    raise NonRetriableError("No available Instructor machine to run embeddings.")
      
-            sloth_url = f"http://sloth:{app.config['SLOTH_TOKEN']}@{selected_box.get('ip_address')}:9898/embed"
+            embedding_url = f"http://instructor:{app.config['CONTROLLER_TOKEN']}@{selected_box.get('ip_address')}:9898/embed"
 
             try:
                 # Initialize a list to store the embeddings
@@ -933,26 +934,26 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
                     batch = input_data[i:i + batch_size]
 
                     # Prepare the data for the POST request
-                    sloth_data = {
+                    embedding_data = {
                         "text": batch,
                         "model": model
                     }
 
-                    # Send the POST request to the Sloth embedding service
-                    response = requests.post(sloth_url, json=sloth_data, headers={"Content-Type": "application/json"}, timeout=60)
+                    # Send the POST request to the Instructor embedding service
+                    response = requests.post(embedding_url, json=embedding_data, headers={"Content-Type": "application/json"}, timeout=60)
 
                     # Check the response and extract embeddings
                     if response.status_code == 200:
                         batch_embeddings = response.json().get("embeddings")
                         embeddings.extend(batch_embeddings)
                     else:
-                        raise NonRetriableError(f"Embedding server is overloaded. Error code: {response.status_code}")
+                        raise RetriableError(f"Embedding server is starting with status: {{response.status_code}}.")
 
                 # Add the embeddings to the output field in the task document
                 task.document[output_field] = embeddings
             except Exception as ex:
                 app.logger.info(f"embedding processor: {ex}")
-                raise NonRetriableError(f"Exception talking to Sloth embedding: {ex}")
+                raise NonRetriableError(f"Exception talking to Instructor embedding endpoint: {ex}")
 
     return task
 
@@ -1980,79 +1981,40 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
     # loop over the filenames
     for index, file_name in enumerate(filename):
         if "application/pdf" in content_type[index]:
-            # Get the document
-            gcs = storage.Client()
-            bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
-            blob = bucket.blob(f"{uid}/{file_name}")
-            image_content = blob.download_as_bytes()
+                # Get the document from Google Cloud Storage
+                gcs = storage.Client()
+                bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
+                blob = bucket.blob(f"{uid}/{file_name}")
+                pdf_content = blob.download_as_bytes()
 
-            # Create a BytesIO object for the PDF content
-            pdf_content_stream = BytesIO(image_content)
-            pdf_reader = PyPDF2.PdfReader(pdf_content_stream)
+                # Create a BytesIO object for the PDF content
+                pdf_content_stream = BytesIO(pdf_content)
 
-            index_pages = []
+                # Open the PDF with fitz
+                doc = fitz.open(stream=pdf_content_stream, filetype="pdf")
 
-            num_pdf_pages = len(pdf_reader.pages)
+                num_pdf_pages = len(doc)
 
-            # build an alernate list of page numbers from the pipeline
-            if page_numbers:
+                # Build a list of page numbers to process
+                index_pages = []
+                if page_numbers:
                     if page_numbers[index] < 1:
-                        raise NonRetriableError("Page numbers must be whole numbers > 0.")
+                        raise Exception("Page numbers must be whole numbers > 0.")
                     if page_numbers[index] > num_pdf_pages:
-                        raise NonRetriableError(f"Page number ({page_numbers[index]}) is larger than the number of pages ({num_pdf_pages}).")   
+                        raise Exception(f"Page number ({page_numbers[index]}) is larger than the number of pages ({num_pdf_pages}).")
                     index_pages.append(page_numbers[index]-1)
-            else:
-                for page_number in range(num_pdf_pages):
-                    index_pages.append(page_number)
+                else:
+                    index_pages = list(range(num_pdf_pages))
 
-            # processor for document ai
-            opts = ClientOptions(api_endpoint=f"us-documentai.googleapis.com")
-            client = documentai.DocumentProcessorServiceClient(client_options=opts)
-            parent = client.common_location_path(app.config['PROJECT_ID'], "us")
-            processor_list = client.list_processors(parent=parent)
+                texts = []
 
-            # spray the list
-            processor_list = list(client.list_processors(parent=parent))
-            random.shuffle(processor_list)
-
-            for processor in processor_list:
-                name = processor.name
-                break # stupid google objects
-
-            pdf_processor = client.get_processor(name=name)
-
-            texts = []
-
-            # build seperate pages and process each, adding text to texts
-            for page_num in index_pages:
-                pdf_writer = PyPDF2.PdfWriter()
-                pdf_writer.add_page(pdf_reader.pages[page_num])
-                page_stream = BytesIO()
-                pdf_writer.write(page_stream)
-
-                # Get the content of the current page as bytes
-                page_content = page_stream.getvalue()
-
-                try:                
-                    # load data
-                    raw_document = documentai.RawDocument(content=page_content, mime_type="application/pdf")
-
-                    # make request
-                    request = documentai.ProcessRequest(name=pdf_processor.name, raw_document=raw_document)
-                    result = client.process_document(request=request)
-                except:
-                    raise NonRetriableError("Google OCR jobs are failing. Try increasing the batch size.")
-
-                document = result.document
-
-                # move to texts
-                texts.append(document.text.replace("'","`").replace('"', '``').replace("\n"," ").replace("\r"," ").replace("\t"," "))
-
-                # Close the page stream
-                page_stream.close()
-        
-            # update document
-            task.document[output_field].extend(texts)
+                # Extract text from specified pages
+                for page_num in index_pages:
+                    page = doc.load_page(page_num)
+                    text = page.get_text()
+                    texts.append(text)
+                # Assuming task.document[output_field] is a list where you want to store the extracted texts
+                task.document[output_field].extend(texts)
         
         elif "text/plain" in content_type[index]:
             # grab document

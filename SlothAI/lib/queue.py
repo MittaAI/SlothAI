@@ -47,9 +47,13 @@ class AppEngineTaskQueue(ABC):
 		# Create a timestamp
 		timestamp = timestamp_pb2.Timestamp()
 
-		# Calculate the time 15 seconds from now
-		if task.document.get('run_in', None):
-			future_time = datetime.utcnow() + timedelta(seconds=int(task.document.get('run_in')))
+		# wait 15 seconds for each retry
+		if task.retries:
+			# Retrieve the number of retries
+			retries = task.retries
+			
+			# Calculate future_time to be 15 seconds per retry
+			future_time = datetime.utcnow() + timedelta(seconds=15 * retries)
 		else:
 			delay = random.randint(100, 300)
 			future_time = datetime.utcnow() + timedelta(milliseconds=delay)

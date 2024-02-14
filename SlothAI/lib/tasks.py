@@ -134,19 +134,19 @@ class Task:
 		return True
 
 	def halt_node(self):
-	    """
-	    Modify the task's node sequence to halt after the current node.
-	    This removes all nodes subsequent to the current node, effectively stopping the task's progress after the current node is processed.
-	    """
-	    if len(self.nodes) == 0:
-	        return None
+		"""
+		Modify the task's node sequence to halt after the current node.
+		This removes all nodes subsequent to the current node, effectively stopping the task's progress after the current node is processed.
+		"""
+		if len(self.nodes) == 0:
+			return None
 
-	    current_index = 0  # Assuming the first node is always the current node
+		current_index = 0  # Assuming the first node is always the current node
 
-	    # Keep only the current node in the list, removing all subsequent nodes
-	    self.nodes = self.nodes[:current_index + 1]
+		# Keep only the current node in the list, removing all subsequent nodes
+		self.nodes = self.nodes[:current_index + 1]
 
-	    return True
+		return True
 
 	def remove_node(self):
 		if len(self.nodes) > 1:
@@ -329,7 +329,7 @@ def transform_data(output_keys, data):
 
 
 # check boxes and start if needed
-def box_required():
+def box_required(box_type=None):
 	boxes = Box.get_boxes()  # Retrieve all boxes
 
 	if not boxes:
@@ -341,6 +341,11 @@ def box_required():
 	for box in boxes:
 		status = box.get('status')
 		box_ip = box.get('ip_address')
+		box_id = box.get('box_id')
+
+		# Check if the called type matches the box_type
+		if box_type and box_id.split("-")[0] != box_type:
+			continue
 
 		# Check for active boxes
 		if status == "RUNNING":
@@ -350,7 +355,7 @@ def box_required():
 				halted_t4s.append(box)
 
 		# Add boxes in START, PROVISIONING, STAGING to halted_t4s
-		elif status in ["START", "PROVISIONING", "STAGING"]:
+		elif status in ["START", "PROVISIONING", "STAGING", "TERMINATED"]:
 			halted_t4s.append(box)
 
 	# Return a random active box if available
