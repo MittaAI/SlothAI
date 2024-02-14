@@ -30,8 +30,8 @@ def status_handler(box_id="all", cron_key=""):
 	for box in boxes:
 		box_list.append(box.get('box_id'))
 
-		# check sloth- (with dash) is in name
-		if "sloth-" in box.get('box_id'):
+		# check type- is in name
+		if "instructor-" in box.get('box_id') or "pdf-" in box.get('box_id'):
 			# run create (which updates Box object in datastore - the cache of current boxes)
 			Box.create(box.get('box_id'), box.get('ip_address'), box.get('zone'), box.get('status'))
 

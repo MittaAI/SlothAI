@@ -110,7 +110,44 @@ class Task:
 		if len(self.nodes) == 0:
 			return None
 		return self.nodes[0]
-	
+
+	def jump_node(self, jump_id=None):
+		"""
+		Modify the task's node sequence to jump to the specified node.
+		This leaves the current node intact but removes all nodes between
+		the current node and the target node.
+
+		:param jump_id: The ID of the node to jump to.
+		"""
+		if jump_id not in self.nodes:
+			raise ValueError(f"Node '{jump_id}'' not found in task nodes.")
+
+		current_index = 0  # Assuming the first node is always the current node
+		jump_index = self.nodes.index(jump_id)
+
+		if jump_index <= current_index:
+			raise ValueError("Cannot jump backwards or to the current node.")
+
+		# Remove nodes between the current node and the jump node
+		# This keeps the current node and the jump node in the list
+		self.nodes = [self.nodes[current_index]] + self.nodes[jump_index:]
+		return True
+
+	def halt_node(self):
+		"""
+		Modify the task's node sequence to halt after the current node.
+		This removes all nodes subsequent to the current node, effectively stopping the task's progress after the current node is processed.
+		"""
+		if len(self.nodes) == 0:
+			return None
+
+		current_index = 0  # Assuming the first node is always the current node
+
+		# Keep only the current node in the list, removing all subsequent nodes
+		self.nodes = self.nodes[:current_index + 1]
+
+		return True
+
 	def remove_node(self):
 		if len(self.nodes) > 1:
 			node = self.nodes[0]
@@ -120,21 +157,6 @@ class Task:
 			node = self.nodes[0]
 			self.nodes = []
 			return node
-
-	def jump_node(self, target_node_name):
-		"""
-		Jump to the specified target node in the pipeline using its name if it exists 
-		further down the line from the current node. Does not allow jumping 
-		ahead of the current node.
-
-		:param target_node_name: The name of the node to jump to.
-		:return: The name of the node that was jumped to, or None if the jump is not possible.
-		"""
-		for i, node_name in enumerate(self.nodes):
-			if node_name == target_node_name and i > 0:
-				self.nodes = self.nodes[i:]
-				return target_node_name
-		return None
 
 	def delete_task(self):
 		self.delete()
@@ -307,7 +329,7 @@ def transform_data(output_keys, data):
 
 
 # check boxes and start if needed
-def box_required():
+def box_required(box_type=None):
 	boxes = Box.get_boxes()  # Retrieve all boxes
 
 	if not boxes:
@@ -319,6 +341,11 @@ def box_required():
 	for box in boxes:
 		status = box.get('status')
 		box_ip = box.get('ip_address')
+		box_id = box.get('box_id')
+
+		# Check if the called type matches the box_type
+		if box_type and box_id.split("-")[0] != box_type:
+			continue
 
 		# Check for active boxes
 		if status == "RUNNING":
@@ -328,7 +355,7 @@ def box_required():
 				halted_t4s.append(box)
 
 		# Add boxes in START, PROVISIONING, STAGING to halted_t4s
-		elif status in ["START", "PROVISIONING", "STAGING"]:
+		elif status in ["START", "PROVISIONING", "STAGING", "TERMINATED"]:
 			halted_t4s.append(box)
 
 	# Return a random active box if available

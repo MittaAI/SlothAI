@@ -3,6 +3,7 @@ import re
 import math
 import time
 import base64
+import random
 
 from io import BytesIO
 
@@ -13,20 +14,20 @@ import openai
 import google.generativeai as genai
 
 import pandas as pd
-import numpy as np
 
 from itertools import groupby
 
 from google.cloud import vision, storage, documentai
 from google.api_core.client_options import ClientOptions
+
 from SlothAI.lib.util import random_string, random_name, get_file_extension, upload_to_storage, upload_to_storage_requests, split_image_by_height, download_as_bytes
 from SlothAI.lib.template import Template
-
 from SlothAI.web.models import Token
 
 from typing import Dict
 
 import PyPDF2
+import fitz
 
 from flask import current_app as app
 from flask import url_for
@@ -199,7 +200,83 @@ def jinja2(node: Dict[str, any], task: Task) -> Task:
 
 @processor
 def halt_task(node: Dict[str, any], task: Task) -> Task:
-    raise NonRetriableError("Task halted and removed.")
+    # Set the current epoch time in the task document
+    current_epoch_time = int(time.time())
+    task.document['current_epoch'] = current_epoch_time
+
+    # Templates
+    template_service = app.config['template_service']
+    template = template_service.get_template(template_id=node.get('template_id'))
+    if not template:
+        raise TemplateNotFoundError(template_id=node.get('template_id'))
+
+    # Clean and prepare the template text
+    template_text = Template.remove_fields_and_extras(template.get('text')).strip()
+
+    # Render the template
+    try:
+        if template_text:
+            jinja_template = env.from_string(template_text)
+            rendered_text = jinja_template.render(task.document)
+    except Exception as e:
+        raise NonRetriableError(f"Unable to render jinja: {e}. You may want to use |safe_tojson to handle null entries and check your syntax.")
+
+    # Parse the rendered text as JSON and check for 'halt_task'
+    try:
+        rendered_json = json.loads(rendered_text.strip())
+        halt_task_flag = rendered_json.get('halt_task', False)
+        if halt_task_flag:
+            task.halt_node()
+    except:
+        raise NonRetriableError(f"Halting task with error. Use a 'halt_task' key and boolean to halt or pass without errors.")
+
+    # Continue with the task if not halted
+    return task
+
+
+@processor
+def jump_task(node: Dict[str, any], task: Task) -> Task:
+    # Set the current epoch time in the task document
+    current_epoch_time = int(time.time())
+    task.document['current_epoch'] = current_epoch_time
+
+    # Templates
+    template_service = app.config['template_service']
+    template = template_service.get_template(template_id=node.get('template_id'))
+    if not template:
+        raise TemplateNotFoundError(template_id=node.get('template_id'))
+
+    # Clean and prepare the template text
+    template_text = Template.remove_fields_and_extras(template.get('text')).strip()
+
+    # Render the template
+    try:
+        if template_text:
+            jinja_template = env.from_string(template_text)
+            rendered_text = jinja_template.render(task.document)
+    except Exception as e:
+        raise NonRetriableError(f"Unable to render jinja: {e}. You may want to use |safe_tojson to handle null entries and check your syntax.")
+
+    # Parse the rendered text as JSON and attempt to jump
+    try:
+        rendered_json = json.loads(rendered_text.strip())
+        # Check for 'jump_to_node' key in the rendered JSON
+        jump_node_name = rendered_json.get('jump_node')
+
+        if jump_node_name:
+            # Attempt to get the node_id from the node name
+            jump_node = Node.get(name=jump_node_name)
+
+            if not jump_node:
+                raise NonRetriableError(f"Node '{jump_node_name}' not found")
+            else:
+                task.jump_node(jump_id=jump_node.get('node_id'))
+        else:
+            task.document['jump_task_message'] = "A 'jump_node' name is not defined"
+    except Exception as e:
+        raise NonRetriableError(f"Jump task failed: {e}")
+
+    return task
 
 
 @processor
@@ -216,6 +293,9 @@ def callback(node: Dict[str, any], task: Task) -> Task:
     # need to rewrite to allow mapping tokens to the url template
     # alternately we could require a jinja template processor to be used in front of this to build the url
     auth_uri = task.document.get('callback_uri')
+
+    if isinstance(auth_uri, list):
+        auth_uri = auth_uri[0]
 
     # strip secure stuff out of the document
     document = strip_secure_fields(task.document) # returns document
@@ -297,7 +377,7 @@ def aigrub(node: Dict[str, any], task: Task) -> Task:
     except:
         output_field = "url"
 
-    # verify ijnput fields steampunk style
+    # verify input fields steampunk style
     input_fields = template.get('input_fields')
 
     # use the first output field, or set one
@@ -456,9 +536,7 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
         prompt=prompt,
         retries=3
     )
-    print("returned from ai_prompt_to_dict")
-    print(ai_dict)
-    print("===============================")
+
     if "ffmpeg_command" not in ai_dict:
         raise NonRetriableError("The AI didn't return an `ffmpeg_command`. Try rewording your query.")
     if "output_file" not in ai_dict:
@@ -835,18 +913,18 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
 
         elif "instructor" in model:
             # check required services (GPU boxes)
-            defer, selected_box = box_required()
+            defer, selected_box = box_required(box_type="instructor")
 
             if defer:
                 if selected_box:
                     # Logic to start or wait for the box to be ready
                     # Possibly setting up the box or waiting for it to transition from halted to active
-                    raise RetriableError("Sloth virtual machine is being started to run embeddings.")
+                    raise RetriableError("Instructor box is being started to run embedding.")
                 else:
                     # No box is available, raise a non-retriable error
-                    raise NonRetriableError("No available virtual machine to run embeddings.")
+                    raise NonRetriableError("No available Instructor machine to run embeddings.")
      
-            sloth_url = f"http://sloth:{app.config['SLOTH_TOKEN']}@{selected_box.get('ip_address')}:9898/embed"
+            embedding_url = f"http://instructor:{app.config['CONTROLLER_TOKEN']}@{selected_box.get('ip_address')}:9898/embed"
 
             try:
                 # Initialize a list to store the embeddings
@@ -856,26 +934,26 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
                     batch = input_data[i:i + batch_size]
 
                     # Prepare the data for the POST request
-                    sloth_data = {
+                    embedding_data = {
                         "text": batch,
                         "model": model
                     }
 
-                    # Send the POST request to the Sloth embedding service
-                    response = requests.post(sloth_url, json=sloth_data, headers={"Content-Type": "application/json"}, timeout=60)
+                    # Send the POST request to the Instructor embedding service
+                    response = requests.post(embedding_url, json=embedding_data, headers={"Content-Type": "application/json"}, timeout=60)
 
                     # Check the response and extract embeddings
                     if response.status_code == 200:
                         batch_embeddings = response.json().get("embeddings")
                         embeddings.extend(batch_embeddings)
                     else:
-                        raise NonRetriableError(f"Embedding server is overloaded. Error code: {response.status_code}")
+                        raise RetriableError(f"Embedding server is starting with status: {{response.status_code}}.")
 
                 # Add the embeddings to the output field in the task document
                 task.document[output_field] = embeddings
             except Exception as ex:
                 app.logger.info(f"embedding processor: {ex}")
-                raise NonRetriableError(f"Exception talking to Sloth embedding: {ex}")
+                raise NonRetriableError(f"Exception talking to Instructor embedding endpoint: {ex}")
 
     return task
 
@@ -1241,17 +1319,22 @@ def ai_prompt_to_dict(task=None, model="gpt-3.5-turbo-1106", prompt="", retries=
         ai_dict_str = re.sub(r'^ai_dict\s*=\s*', '', ai_dict_str)
 
         try:
-            # ai_dict = eval(ai_dict_str) security measures
             ai_dict = ast.literal_eval(ai_dict_str)
-            print(ai_dict)
-            if ai_dict.get('ai_dict'):
-                ai_dict = ai_dict['ai_dict']
+            # Normalize output to ensure ai_dict is directly accessible
+            if isinstance(ai_dict, dict):
+                if 'ai_dict' in ai_dict and len(ai_dict) == 1:
+                    # Directly use the 'ai_dict' if it's the only key
+                    ai_dict = ai_dict['ai_dict']
+                elif 'ai_dict' in ai_dict:
+                    # If 'ai_dict' exists among other keys, prioritize its content
+                    ai_dict = {**ai_dict, **ai_dict['ai_dict']}
+                    del ai_dict['ai_dict']
             err = None
             break
         except (ValueError, SyntaxError, NameError, AttributeError, TypeError) as ex:
             ai_dict = {"ai_dict": ai_dict_str}
-            err = f"AI returned a un-evaluatable, non-dictionary object on try {_try} of {retries}: {ex}"
-            time.sleep(2) # give it a few seconds
+            err = f"AI returned an unevaluable, non-dictionary object on try {_try} of {retries}: {ex}"
+            time.sleep(2)  # Pause between retries
 
     return err, ai_dict
 
@@ -1350,13 +1433,18 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
             # Process as a simple list
             result_dict = {field['name']: [] for field in output_fields}
             for dictionary in ai_dicts:
-                for key, value in dictionary.items():
-                    result_dict[key].append(value)
+                try:
+                    for key, value in dictionary.items():
+                        result_dict[key].append(value)
+                except:
+                    print(dictionary)
 
             for field in output_fields:
                 field_name = field['name']
                 if field_name not in task.document:
                     task.document[field_name] = []
+                if not isinstance(task.document[field_name], list):
+                    task.document[field_name] = [task.document[field_name]]
                 task.document[field_name].extend(result_dict[field_name])
 
     task.document.pop('outer_index', None)
@@ -1893,70 +1981,40 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
     # loop over the filenames
     for index, file_name in enumerate(filename):
         if "application/pdf" in content_type[index]:
-            # Get the document
-            gcs = storage.Client()
-            bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
-            blob = bucket.blob(f"{uid}/{file_name}")
-            image_content = blob.download_as_bytes()
+                # Get the document from Google Cloud Storage
+                gcs = storage.Client()
+                bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
+                blob = bucket.blob(f"{uid}/{file_name}")
+                pdf_content = blob.download_as_bytes()
 
-            # Create a BytesIO object for the PDF content
-            pdf_content_stream = BytesIO(image_content)
-            pdf_reader = PyPDF2.PdfReader(pdf_content_stream)
+                # Create a BytesIO object for the PDF content
+                pdf_content_stream = BytesIO(pdf_content)
 
-            index_pages = []
+                # Open the PDF with fitz
+                doc = fitz.open(stream=pdf_content_stream, filetype="pdf")
 
-            num_pdf_pages = len(pdf_reader.pages)
+                num_pdf_pages = len(doc)
 
-            # build an alernate list of page numbers from the pipeline
-            if page_numbers:
+                # Build a list of page numbers to process
+                index_pages = []
+                if page_numbers:
                     if page_numbers[index] < 1:
-                        raise NonRetriableError("Page numbers must be whole numbers > 0.")
+                        raise Exception("Page numbers must be whole numbers > 0.")
                     if page_numbers[index] > num_pdf_pages:
-                        raise NonRetriableError(f"Page number ({page_numbers[index]}) is larger than the number of pages ({num_pdf_pages}).")   
+                        raise Exception(f"Page number ({page_numbers[index]}) is larger than the number of pages ({num_pdf_pages}).")
                     index_pages.append(page_numbers[index]-1)
-            else:
-                for page_number in range(num_pdf_pages):
-                    index_pages.append(page_number)
+                else:
+                    index_pages = list(range(num_pdf_pages))
 
-            # processor for document ai
-            opts = ClientOptions(api_endpoint=f"us-documentai.googleapis.com")
-            client = documentai.DocumentProcessorServiceClient(client_options=opts)
-            parent = client.common_location_path(app.config['PROJECT_ID'], "us")
-            processor_list = client.list_processors(parent=parent)
-            for processor in processor_list:
-                name = processor.name
-                break # stupid google objects
+                texts = []
 
-            pdf_processor = client.get_processor(name=name)
-
-            texts = []
-
-            # build seperate pages and process each, adding text to texts
-            for page_num in index_pages:
-                pdf_writer = PyPDF2.PdfWriter()
-                pdf_writer.add_page(pdf_reader.pages[page_num])
-                page_stream = BytesIO()
-                pdf_writer.write(page_stream)
-
-                # Get the content of the current page as bytes
-                page_content = page_stream.getvalue()
-
-                # load data
-                raw_document = documentai.RawDocument(content=page_content, mime_type="application/pdf")
-
-                # make request
-                request = documentai.ProcessRequest(name=pdf_processor.name, raw_document=raw_document)
-                result = client.process_document(request=request)
-                document = result.document
-
-                # move to texts
-                texts.append(document.text.replace("'","`").replace('"', '``').replace("\n"," ").replace("\r"," ").replace("\t"," "))
-
-                # Close the page stream
-                page_stream.close()
-        
-            # update document
-            task.document[output_field].extend(texts)
+                # Extract text from specified pages
+                for page_num in index_pages:
+                    page = doc.load_page(page_num)
+                    text = page.get_text()
+                    texts.append(text)
+                # Assuming task.document[output_field] is a list where you want to store the extracted texts
+                task.document[output_field].extend(texts)
         
         elif "text/plain" in content_type[index]:
             # grab document
@@ -2290,7 +2348,11 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
     except:
         output_field = "mitta_uri"
 
-    input_fields = template.get('input_fields')    
+    input_fields = template.get('input_fields')
+
+    if not input_fields:
+        raise NonRetriableError("You must have 'input_fields' defined for this processor.")
+
     # needs to be moved
     # scan for required fields in the input
     for field in input_fields:
@@ -2373,7 +2435,8 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
                     voice = "Nicole"
 
                 audio_data = generate(text=item, voice=voice, model=model)
-            except:
+            except Exception as ex:
+                app.logger.info(f"Error with EL: {ex}")
                 raise NonRetriableError("Something went wrong wih the call to ElevenLabs.")
 
         # save audio file
@@ -2590,11 +2653,23 @@ def read_fb(node: Dict[str, any], task: Task) -> Task:
         else:
             raise NonRetriableError("Specify a 'table' key and value and template the table in your SQL.")
 
-    # rewrite show tables
-    pattern = r'\b(show|tables)\b'
-    matches = re.findall(pattern, sql.lower())
-    if matches:
-        raise NonRetriableError("SHOW TABLE functions are disabled for shared database access. Add a FeatureBase account to settings to enable advanced queries.")
+
+    # Check if the query matches "show tables" but not "show create table"
+    pattern_show_tables = r'\bshow\s+tables\b'
+    pattern_show_create_table = r'\bshow\s+create\s+table\b'
+
+    # Convert SQL to lowercase to make regex search case-insensitive
+    sql_lower = sql.lower()
+
+    # First, check if the allowed phrase "show create table" is in the query
+    if re.search(pattern_show_create_table, sql_lower):
+        # This is an allowed query, so you might not want to do anything, or process it as valid.
+        pass
+    else:
+        # If the allowed phrase is not found, then check for "show tables"
+        if re.search(pattern_show_tables, sql_lower):
+            # If "show tables" is found and it's not part of "show create table", block the query
+            raise NonRetriableError("SHOW TABLE functions are disabled for shared database access. Add a FeatureBase account to settings to enable advanced queries.")
 
     resp, err = featurebase_query(document=doc)
     if err:

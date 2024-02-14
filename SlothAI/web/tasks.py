@@ -39,6 +39,7 @@ def process_tasks(cron_key):
 		task = process(task)
 
 		node = task.remove_node()
+		
 		if len(task.nodes) > 0:
 			task_service.queue_task(task)			
 		else:
@@ -55,6 +56,7 @@ def process_tasks(cron_key):
 		# TODO: this could be drop task but drop_task should accept a final state.
 		return "invalid state for processing", 200
 	except Exception as e:
+		print(task.to_dict())
 		traceback.print_exc()
 		task.error = str(e)
 		app.logger.error(f"processing task with id {task.id} on node with id {task.next_node()} in pipeline with id {task.pipe_id}: {str(e)}: dropping task.")

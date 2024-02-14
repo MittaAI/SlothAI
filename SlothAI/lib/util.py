@@ -377,20 +377,27 @@ def callback_extras(extras):
 
     localCallback = False
     update = False
-    for key, value in extras.items():
-        if "callback_uri" in key and "[callback_uri]" in value:
 
+    # Check for callback_uri and ensure it's not None or empty
+    callback_uri = extras.get('callback_uri')
+    if callback_uri:
+        # Now check if the placeholder is in the value
+        if "[callback_uri]" in callback_uri:
             localCallback = True
-            extras[key] = protocol + "://" + request.host+"/{{username}}/callback?token={{callback_token}}"
-
-    for key, value in extras.items():
-        if "callback_token" in key and "[callback_token]" in value and localCallback:
-            update = True
-            # we'll set the token, but after callback_extras is called, we need to move it to service tokens
-            extras[key] = current_user.api_token
+            extras['callback_uri'] = protocol + "://" + request.host + "/{{username}}/callback?token={{callback_token}}"
+    
+    # Check for callback_token and ensure localCallback is true before proceeding
+    if localCallback:
+        callback_token = extras.get('callback_token')
+        if callback_token:
+            # Now check if the placeholder is in the value
+            if "[callback_token]" in callback_token:
+                update = True
+                # Assuming current_user.api_token is always available; otherwise, add a check
+                extras['callback_token'] = current_user.api_token
 
     return extras, update
-
+    
 
 # handles merging the extras in from template, user and system definitions
 def merge_extras(template_extras, node_extras):

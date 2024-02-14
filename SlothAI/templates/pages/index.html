@@ -38,7 +38,7 @@
         </div>
       </div>
       <button class="btn btn-outline-light" id="convertMedia"><i class="fab fa-github"></i> Repo</button>
-      <button class="btn btn-outline-light" id="convertMediaDocker"><i class="fab fa-docker"></i> Docker</button>
+      <button class="btn btn-outline-light ml-2" id="convertMediaDocker"><i class="fab fa-docker"></i> Docker</button>
     </div>
   </div>
   <div class="row">
@@ -49,30 +49,31 @@
       <div class="input-group mb-3">
         <input id="crawl_instructions" type="text" class="form-control" value="I want the latest stories about AI" placeholder="Take me to a new story about AI." aria-label="crawl_instructions" aria-describedby="news">
         <div class="input-group-append">
-          <button class="btn btn-primary" id="crawl">Search News</span>
+          <button class="btn btn-primary" id="crawl">News</span>
         </div>
       </div>
-      <button class="btn btn-outline-light" id="crawlMedia"><i class="fab fa-github"></i> Repo</button>
-    </div>
-  </div>
-  </div>
- 
-  <!--
-  <div class="row">
-    <div class="col-lg-9">
-      <h3>Generate a Pirate's Dream</h3>
-      <p>Arr! We conjure in our mind pirate images bold and grand. Cross us, and ye face the cannon's roar!</p>
-      <img src="/images/pirate_pipe_1.png"/>
-      <div class="input-group mb-3">
-        <input type="text" class="form-control" placeholder="Show me a pirate digging up treasure." aria-label="instructions" aria-describedby="dream">
-        <div class="input-group-append">
-          <span class="input-group-text" id="dream">I Dream of Pirates</span>
-        </div>
-      </div>
-      <button class="btn btn-outline-light" id="addCannons">Add Cannons</button>
+      <button class="btn btn-outline-light" id="newsMedia"><i class="fab fa-github"></i> Repo</button>
+      <button class="btn btn-outline-light ml-2" id="newsMediaDocker"><i class="fab fa-docker"></i> Docker</button>
     </div>
   </div>
 
+  <div class="row">
+    <div class="col-lg-9">
+      <h3>Generate a Pirate's Dream</h3>
+      <p>We conjure in our mind pirate images bold and grand. Cross us, and ye face the cannon's roar!</p>
+      <img src="/images/pirate_pipe_1.png"/>
+      <div class="input-group mb-3">
+        <input id="dream_instructions" type="text" class="form-control" placeholder="Show me a pirate digging up treasure." value="Blimy! There be gold coins in the sand." aria-label="dream_instructions" aria-describedby="dream">
+        <div class="input-group-append">
+          <span class="btn btn-primary" id="dream">Dream</span>
+        </div>
+      </div>
+      <button class="btn btn-outline-light" id="dreamMedia"><i class="fab fa-github"></i> Repo</button>
+      <button class="btn btn-outline-light ml-2" id="dreamMediaDocker"><i class="fab fa-docker"></i> Docker</button>
+    </div>
+  </div>
+
+  <!--
   <div class="row">
     <div class="col-lg-9">
       <h3>Ask Faraday About Electricity</h3>
@@ -121,66 +122,46 @@
 {% block javascript %}
 <script type="text/javascript">
 $(document).ready(function() {
-  $('#convertMedia').click(function() {
-    window.open('https://github.com/MittaAI/mitta-community/tree/main/cookbooks/conversion', '_blank');
-  });
+  // Function to open GitHub links
+  function openGitHubLink(path) {
+    window.open(`https://github.com/MittaAI/mitta-community/tree/main/cookbooks/${path}`, '_blank');
+  }
 
-  $('#convertMediaDocker').click(function() {
-    window.open('https://github.com/MittaAI/mitta-community/tree/main/cookbooks/conversion/docker', '_blank');
-  });
+  // Function to create and submit a form
+  function submitForm(actionURL, inputName, inputValueSelector) {
+    var inputValue = $(inputValueSelector).val();
+    console.log(inputValue);
 
-  $('#crawlMedia').click(function() {
-    window.open('https://github.com/MittaAI/mitta-community/tree/main/cookbooks/hackerbot', '_blank');
-  });
-
-  $('#addCannons').click(function() {
-    window.open('https://github.com/MittaAI/mitta-community/tree/main/cookbooks/piratedreams', '_blank');
-  });
-
-  $('#convertForm').submit(function(event) {
-  });
-
-  $('#convert').click(function() {
-    var conversionInstructions = $('#ffmpeg_instructions').val();
-    console.log(conversionInstructions)
-    // Create a form element
     var form = $('<form>', {
-      'action': 'https://ai.mitta.ai/convert', // The URL
-      'method': 'POST', 
+      'action': actionURL,
+      'method': 'POST',
       'target': '_self'
     });
 
     var instructionsInput = $('<input>', {
       'type': 'hidden',
-      'name': 'instructions',
-      'value': conversionInstructions
+      'name': inputName,
+      'value': inputValue
     });
+
     console.log(instructionsInput);
     form.append(instructionsInput);
     $('body').append(form);
     form.submit();
-  });
+  }
 
-  $('#crawl').click(function() {
-    var crawlInstructions = $('#crawl_instructions').val();
-    console.log(crawlInstructions)
-    // Create a form element
-    var form = $('<form>', {
-      'action': 'https://news.mitta.ai/news', // The URL
-      'method': 'POST', 
-      'target': '_self'
-    });
+  // Event handlers for GitHub links
+  $('#convertMedia').click(() => openGitHubLink('conversion'));
+  $('#convertMediaDocker').click(() => openGitHubLink('conversion/docker'));
+  $('#newsMedia').click(() => openGitHubLink('hackerbot'));
+  $('#newsMediaDocker').click(() => openGitHubLink('hackerbot/docker'));
+  $('#dreamMedia').click(() => openGitHubLink('piratedreams'));
+  $('#dreamMediaDocker').click(() => openGitHubLink('piratedreams/docker'));
 
-    var instructionsInput = $('<input>', {
-      'type': 'hidden',
-      'name': 'instructions',
-      'value': crawlInstructions
-    });
-    console.log(instructionsInput);
-    form.append(instructionsInput);
-    $('body').append(form);
-    form.submit();
-  });
+  // Event handlers for form submissions
+  $('#convert').click(() => submitForm('https://ai.mitta.ai/convert', 'instructions', '#ffmpeg_instructions'));
+  $('#crawl').click(() => submitForm('https://news.mitta.ai/news', 'instructions', '#crawl_instructions'));
+  $('#dream').click(() => submitForm('https://dreams.mitta.ai', 'instructions', '#dream_instructions'));
 });
 </script>
 {% endblock %}

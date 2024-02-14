@@ -78,12 +78,18 @@ $(document).ready(function() {
     });
   });
 
-  $("table tbody tr").each(function() {
+$("table tbody tr").each(function() {
     var tdLog = $(this).find("td[data-log]");
     var rawData = tdLog.data('log');
 
-    // Brute force cleaning of the data
-    var cleanedData = rawData.slice(2, -1)
+    // Attempt to decode Unicode escape sequences
+    var decodedData = rawData.replace(/\\u([\d\w]{4})/gi, function (match, grp) {
+        return String.fromCharCode(parseInt(grp, 16)); 
+    });
+    decodedData = decodedData.replace(/\\\\/g, '\\');
+
+    // Continue with your existing cleaning logic
+    var cleanedData = decodedData.slice(2, -1)
       .replace(/\\n/g, " ")
       .replace(/\\\'|\\\"|\\'/g, "'")
       .replace(/\\/g, "");
@@ -106,7 +112,7 @@ $(document).ready(function() {
     tdLog.empty(); 
     var jsonViewer = $('<pre>').appendTo(tdLog);
     jsonViewer.jsonViewer(jsonDataObj, {collapsed: true, withQuotes: true});
-  });
+});
 
 
   $('td pre.json-document > a.json-toggle').each(function() {

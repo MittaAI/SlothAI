@@ -15,7 +15,7 @@ def box_status(box_id="", zone=""):
 		# get all status
 		
 		# reach out to the controller box
-		url = f"http://{app.config['SLOTH_CONTROLLER_USERNAME']}:{app.config['SLOTH_TOKEN']}@{app.config['SLOTH_CONTROLLER_IP']}:8787/api/instance/list?token={app.config['SLOTH_TOKEN']}"
+		url = f"http://{app.config['CONTROLLER_USERNAME']}:{app.config['CONTROLLER_TOKEN']}@{app.config['CONTROLLER_IP']}:8787/api/instance/list?token={app.config['CONTROLLER_TOKEN']}"
 
 		headers = {"Content-Type": "application/json"}
 		response = requests.get(url, headers=headers)
@@ -46,7 +46,7 @@ def box_status(box_id="", zone=""):
 
 		# reach out to the controller box
 		# /api/instance/<zone>/<instance_id>/status
-		url = f"http://{app.config['SLOTH_CONTROLLER_USERNAME']}:{app.config['SLOTH_TOKEN']}@{app.config['SLOTH_CONTROLLER_IP']}:8787/api/instance/{zone}/{box_id}/status?token={app.config['SLOTH_TOKEN']}"
+		url = f"http://{app.config['CONTROLLER_USERNAME']}:{app.config['CONTROLLER_TOKEN']}@{app.config['CONTROLLER_IP']}:8787/api/instance/{zone}/{box_id}/status?token={app.config['CONTROLLER_TOKEN']}"
 
 		headers = {"Content-Type": "application/json"}
 		response = requests.get(url, headers=headers)
@@ -70,7 +70,7 @@ def box_status(box_id="", zone=""):
 def box_start(box_id="", zone="us-central1-a"):
 		# reach out to the controller box
 		# /api/instance/<zone>/<instance_id>/start
-		url = f"http://{app.config['SLOTH_CONTROLLER_USERNAME']}:{app.config['SLOTH_TOKEN']}@{app.config['SLOTH_CONTROLLER_IP']}:8787/api/instance/{zone}/{box_id}/start?token={app.config['SLOTH_TOKEN']}"
+		url = f"http://{app.config['CONTROLLER_USERNAME']}:{app.config['CONTROLLER_TOKEN']}@{app.config['CONTROLLER_IP']}:8787/api/instance/{zone}/{box_id}/start?token={app.config['CONTROLLER_TOKEN']}"
 
 		headers = {"Content-Type": "application/json"}
 		response = requests.get(url, headers=headers)
@@ -79,7 +79,7 @@ def box_start(box_id="", zone="us-central1-a"):
 def box_stop(box_id="", zone="us-central1-a"):
 		# reach out to the controller box
 		# /api/instance/<zone>/<instance_id>/start
-		url = f"http://{app.config['SLOTH_CONTROLLER_USERNAME']}:{app.config['SLOTH_TOKEN']}@{app.config['SLOTH_CONTROLLER_IP']}:8787/api/instance/{zone}/{box_id}/stop?token={app.config['SLOTH_TOKEN']}"
+		url = f"http://{app.config['CONTROLLER_USERNAME']}:{app.config['CONTROLLER_TOKEN']}@{app.config['CONTROLLER_IP']}:8787/api/instance/{zone}/{box_id}/stop?token={app.config['CONTROLLER_TOKEN']}"
 
 		headers = {"Content-Type": "application/json"}
 		response = requests.get(url, headers=headers)
