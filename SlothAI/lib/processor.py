@@ -353,7 +353,7 @@ def callback(node: Dict[str, any], task: Task) -> Task:
 def aigrub(node: Dict[str, any], task: Task) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
-
+    print(task.document)
     # user
     user = User.get_by_uid(uid=task.user_id)
     uid = user.get('uid')
@@ -947,7 +947,7 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
                         batch_embeddings = response.json().get("embeddings")
                         embeddings.extend(batch_embeddings)
                     else:
-                        raise RetriableError(f"Embedding server is starting with status: {{response.status_code}}.")
+                        raise RetriableError(f"Embedding server is starting with status: {response.status_code}.")
 
                 # Add the embeddings to the output field in the task document
                 task.document[output_field] = embeddings

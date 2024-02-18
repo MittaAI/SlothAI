@@ -204,17 +204,51 @@ def task_log_count():
     return jsonify(response_data)
 
 
+@site.route('/logs/<log_id>', methods=['GET'])
+@flask_login.login_required
+def log_details(log_id):
+    # Fetch log details for the specified log_id for the current user
+    log_details = Log.fetch(log_id=log_id, uid=current_user.uid)[0]
+    print(log_details)    
+    
+    if log_details:
+        # Convert log line string into a dictionary
+        log_line_dict = json.loads(log_details['line'])
+        
+        # Decode UTF-8 characters in the dictionary
+        decoded_log_line = {}
+        for key, value in log_line_dict.items():
+            if isinstance(value, str):
+                decoded_log_line[key] = value.encode('utf-8').decode('unicode-escape')
+            else:
+                decoded_log_line[key] = value
+        
+        return jsonify(decoded_log_line)
+    else:
+        # Log not found
+        return jsonify({"error": "Log not found"}), 404
+
+
 @site.route('/logs', methods=['GET'])
 @flask_login.login_required
 def logs():
-    # get the user and their tables
+    # Fetch logs for the current user
+    raw_logs = Log.fetch(uid=current_user.uid)
+    
+    # Prepare logs metadata for the template
+    prepared_logs = []
+    for log in raw_logs:
+        prepared_logs.append({
+            "log_id": log["log_id"],
+            "created": log["created"]
+        })
+
+    # Other user details
     username = current_user.name
     email = current_user.email
     hostname = request.host
 
-    logs = Log.fetch(uid=current_user.uid)
-
-    return render_template('pages/logs.html', brand=get_brand(app), username=username, email=email, hostname=hostname, logs=logs)
+    return render_template('pages/logs.html', brand=get_brand(app), username=username, email=email, hostname=hostname, logs=prepared_logs)
 
 
 @site.route('/', methods=['GET'])

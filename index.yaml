@@ -9,3 +9,9 @@ indexes:
   - name: user_id
   - name: created
     direction: desc
+
+- kind: Log
+  properties:
+  - name: log_id
+  - name: created
+    direction: desc

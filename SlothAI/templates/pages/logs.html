@@ -43,7 +43,7 @@
             <td class="log-dates">
               <button class="badge badge-dark">{{ log.created }}</button>
             </td>
-            <td data-log="{{ log.line }}"></td>
+            <td data-log_id="{{ log.log_id }}"></td>
           </tr>
           {% endfor %}
         </tbody>
@@ -78,41 +78,37 @@ $(document).ready(function() {
     });
   });
 
-$("table tbody tr").each(function() {
-    var tdLog = $(this).find("td[data-log]");
-    var rawData = tdLog.data('log');
+  $("table tbody tr").each(function() {
+      var tdLog = $(this).find("td[data-log_id]");
+      var logId = tdLog.data('log_id'); // Get the log ID
 
-    // Attempt to decode Unicode escape sequences
-    var decodedData = rawData.replace(/\\u([\d\w]{4})/gi, function (match, grp) {
-        return String.fromCharCode(parseInt(grp, 16)); 
-    });
-    decodedData = decodedData.replace(/\\\\/g, '\\');
+      // Make an AJAX request to fetch the log data
+      $.ajax({
+          url: "/logs/" + logId,
+          type: "GET",
+          success: function(response) {
+              // Remove any keys containing 'token' from the response object
+              Object.keys(response).forEach(function(key) {
+                  if (key.toLowerCase().includes('token')) {
+                      delete response[key];
+                  }
+              });
 
-    // Continue with your existing cleaning logic
-    var cleanedData = decodedData.slice(2, -1)
-      .replace(/\\n/g, " ")
-      .replace(/\\\'|\\\"|\\'/g, "'")
-      .replace(/\\/g, "");
+              // Clear the contents of the table cell
+              tdLog.empty();
 
-    var jsonDataObj;
+              // Create a <pre> element and append it to the table cell
+              var jsonViewer = $('<pre>').appendTo(tdLog);
 
-    try {
-      jsonDataObj = JSON.parse(cleanedData);
-      for (var key in jsonDataObj) {
-        if (key.toLowerCase().includes('token')) {
-          delete jsonDataObj[key];
-        }
-      }
-    } catch (error) {
-      toastr.error("Error parsing JSON. Showing in plain format.")
-      jsonDataObj = { "ParsingError": "Error parsing JSON" };
-    }
-
-    // Initialize jsonViewer with all items collapsed
-    tdLog.empty(); 
-    var jsonViewer = $('<pre>').appendTo(tdLog);
-    jsonViewer.jsonViewer(jsonDataObj, {collapsed: true, withQuotes: true});
-});
+              // Use the jsonViewer plugin to display the JSON data
+              jsonViewer.jsonViewer(response, {collapsed: true, withQuotes: true});
+          },
+          error: function(xhr, status, error) {
+              console.error("Error fetching log data: ", error);
+              toastr.error("Error fetching log data.");
+          }
+      });
+  });
 
 
   $('td pre.json-document > a.json-toggle').each(function() {
@@ -135,14 +131,11 @@ $("table tbody tr").each(function() {
   });
 
   var initialLogCount = "0";
+  var currentLogCount = "0"
   function checkForChanges() {
-    var currentLogCount = $("#log_count").text();
+    currentLogCount = $("#log_count").text();
     if (currentLogCount !== initialLogCount) { location.reload(); }
   }
-  setTimeout(function() {
-    initialLogCount = $("#log_count").text();
-    setInterval(checkForChanges, 5000);
-  }, 3000);
 
 });
 </script>
