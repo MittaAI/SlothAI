@@ -817,7 +817,7 @@ class Log(flask_login.UserMixin, ndb.Model):
             node_id=node_id,
             pipe_id=pipe_id,
             created=datetime.datetime.utcnow(),
-            line=str(line).encode('utf-8')
+            line=line if isinstance(line, bytes) else line.encode('utf-8')
         )
         log.put()
         return log.to_dict()

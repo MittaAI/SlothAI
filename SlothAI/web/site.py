@@ -208,8 +208,7 @@ def task_log_count():
 @flask_login.login_required
 def log_details(log_id):
     # Fetch log details for the specified log_id for the current user
-    log_details = Log.fetch(log_id=log_id, uid=current_user.uid)[0]
-    print(log_details)    
+    log_details = Log.fetch(log_id=log_id, uid=current_user.uid)[0] 
     
     if log_details:
         # Convert log line string into a dictionary

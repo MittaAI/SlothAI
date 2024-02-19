@@ -12,7 +12,6 @@ callback = Blueprint('callback', __name__)
 @callback.route('/<user_name>/callback', methods=['POST'])
 @flask_login.login_required
 def handle_callback(user_name):
-    print("in callback")
     json_data_dict = {}  # Initialize the dict for JSON data
     uploaded_filenames = []  # List to store filenames of uploaded files
 
@@ -31,7 +30,6 @@ def handle_callback(user_name):
                 return jsonify({"error": f"Error parsing JSON data from file {filename}: {ex}"}), 400
         else:
             # For non-JSON files, upload to storage and add their filenames to the list
-            print(f"Uploading file to storage: {filename}")
             upload_uri = upload_to_storage(flask_login.current_user.uid, filename, uploaded_file)
             uploaded_filenames.append(filename)
 
@@ -42,7 +40,8 @@ def handle_callback(user_name):
     # Attempt to parse JSON data from request body if no JSON files were uploaded
     if not json_data_dict:
         try:
-            json_data_dict = request.get_json(force=True)  # force=True allows parsing without application/json header
+            data = request.get_data()
+            json_data_dict = json.loads(data)
         except Exception as ex:
             return jsonify({"error": "Error parsing JSON data from request body: {ex}"}), 400
 
@@ -52,7 +51,6 @@ def handle_callback(user_name):
     json_data_dict['node_id'] = node_id  # Ensure the dict contains the node_id
     json_data_dict['pipe_id'] = pipe_id  # Ensure the dict contains the pipe_id
 
-    print(json_data_dict)
     # Create the log entry with 'node_id' and 'pipe_id', whether provided or placeholders
     log = Log.create(user_id=flask_login.current_user.uid, line=json.dumps(json_data_dict), node_id=node_id, pipe_id=pipe_id)
     if log:
