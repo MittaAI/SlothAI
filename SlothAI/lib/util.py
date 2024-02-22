@@ -461,6 +461,8 @@ def build_mermaid(pipeline, nodes):
             return value
 
         previous_extras_list = "\n".join([f"{key}: {sanitize_value(value, key)}" for key, value in nodes[0].get('extras').items() if all(exclude not in key for exclude in excluded_keys)])
+        if not previous_extras_list:
+            previous_extras_list = " "
     else:
         previous_extras_list = "none"
 
