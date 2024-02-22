@@ -20,7 +20,7 @@ from itertools import groupby
 from google.cloud import vision, storage, documentai
 from google.api_core.client_options import ClientOptions
 
-from SlothAI.lib.util import random_string, random_name, get_file_extension, upload_to_storage, upload_to_storage_requests, split_image_by_height, download_as_bytes
+from SlothAI.lib.util import random_string, random_name, get_file_extension, upload_to_storage, upload_to_storage_requests, storage_pickle, split_image_by_height, download_as_bytes
 from SlothAI.lib.template import Template
 from SlothAI.web.models import Token
 
@@ -391,41 +391,63 @@ def aigrub(node: Dict[str, any], task: Task) -> Task:
         elif isinstance(queries, str):
             queries = [queries]
 
-        # build callback URL
-        pipe_id = task.pipe_id
-        node_id = task.nodes[0] # the current node
-
+        # Callback for resuming the pipeline flow
         if app.config['DEV'] == "True":
-            callback_url = f"{app.config['NGROK_URL']}/pipeline/{pipe_id}/task/{node_id}?token={user_token}"
+            callback_url = f"{app.config['NGROK_URL']}/pipeline/{task.pipe_id}/task/{task.id}?token={user_token}"
         else:
-            callback_url = f"{app.config['BRAND_SERVICE_URL']}/pipeline/{pipe_id}/task/{node_id}?token={user_token}"
+            callback_url = f"{app.config['BRAND_SERVICE_URL']}/pipeline/{task.pipe_id}/task/{task.id}?token={user_token}"
 
-        # loop through user queries
+        # Initialize the list to track statuses
+        statuses = []
+
+        # Loop through each query and make the request
         for query in queries:
             config_data = {
-                "grub_token": grub_token ,
+                "grub_token": grub_token,
                 "username": username,
                 "query": query,
                 "callback_url": callback_url,
-                "openai_token": openai_token
+                "openai_token": openai_token,
             }
 
-        response = requests.post(
-            request_url,
-            headers={"Content-Type": "application/json"},
-            data=json.dumps(config_data),
-            timeout=10
-        )
+            try:
+                # Make the request
+                response = requests.post(
+                    request_url,
+                    headers={"Content-Type": "application/json"},
+                    data=json.dumps(config_data),
+                    timeout=10
+                )
 
-        if response.json().get('status') == "success":
-            # task doesn't make it past here because we remove all nodes
-            # see you on the other side of the else...
+                # Try to parse the JSON response
+                response_json = response.json()
+                
+                # Check the status in the JSON response
+                if response_json.get('status') == "success":
+                    statuses.append("success")
+                else:
+                    statuses.append("failed")  # Considered failed if status is not success
+
+            except Exception as e:
+                # Handle exceptions for request errors or .json() parsing errors
+                statuses.append("failed")
+
+        # After processing all queries, check if all statuses are "success"
+        if all(status == "success" for status in statuses):
+            # Proceed with the task modification only if all are successful
             task.nodes = [task.next_node()]
+
+            # Save the document
+            bucket_uri = storage_pickle(uid, task.document, task.id, task.nodes[0])
+
+            # exit current task with threads running on external service
             return task
         else:
-            raise NonRetriableError(f"Error: {response.get('aigrub_error')}")
+            # Raise error if any of the queries did not succeed
+            raise NonRetriableError("Error: Not all queries were successful")
 
     else:
+        # we were jumped into so we now complete and move on
         return task
 
 
@@ -438,131 +460,133 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
     # Get user information
     user = User.get_by_uid(uid=task.user_id)
     uid = user.get('uid')
+    username = user.get('name')
+    user_token = user.get('api_token')
 
-    # user document
-    user_document = task.document.get('user_document', {})
+    # Serial pipeline execution brought us here
+    if task.jump_status < 0:
 
-    # inputs
-    input_fields = template.get('input_fields')
+        # inputs
+        input_fields = template.get('input_fields')
 
-    # Check if each input field is present in 'task.document'
-    for field in input_fields:
-        field_name = field['name']
-        if field_name not in task.document:
-            raise NonRetriableError(f"Input field '{field_name}' is not present in the document.")
+        # Check if each input field is present in 'task.document'
+        for field in input_fields:
+            field_name = field['name']
+            if field_name not in task.document:
+                raise NonRetriableError(f"Input field '{field_name}' is not present in the document.")
 
-    # output file name
-    if not task.document.get('output_file'):
-        task.document['output_file'] = random_string(13)
-    output_file = task.document.get('output_file')
+        # output file name
+        if not task.document.get('output_file'):
+            task.document['output_file'] = random_string(13)
+        output_file = task.document.get('output_file')
 
-    # Construct the AIFFMPEG service URL using the selected box details
-    ffmpeg_url = f"{app.config['FFMPEG_URL']}"
+        # Construct the AIFFMPEG service URL using the selected box details
+        ffmpeg_url = f"{app.config['FFMPEG_URL']}"
 
-    # Identify the target pipeline for the output
-    target_pipeline = task.document.get('pipeline')
-    if not target_pipeline:
-        raise NonRetriableError("A valid target pipeline name is required for the `pipeline` key.")
-    else:
-        pipeline = Pipeline.get(uid=task.user_id, name=target_pipeline)
-        if not pipeline:
-            raise NonRetriableError("Pipeline not found.")
-        pipe_id = pipeline.get('pipe_id')
+        # ffmpeg_request string 
+        ffmpeg_string = task.document.get('ffmpeg_request')
+        if not ffmpeg_string:
+            raise NonRetriableError("The `aiffmpeg` processor or requires a `ffmpeg_request` key with the request to run.")
+        if isinstance(ffmpeg_string, list):
+            # rewrite as a string
+            task.document['ffmpeg_request'] = ffmpeg_string[0]
 
-    # ffmpeg_request string 
-    ffmpeg_string = task.document.get('ffmpeg_request')
-    if not ffmpeg_string:
-        raise NonRetriableError("The `aiffmpeg` processor or requires a `ffmpeg_request` key with the request to run.")
-    if isinstance(ffmpeg_string, list):
-        # rewrite as a string
-        task.document['ffmpeg_request'] = ffmpeg_string[0]
-
-    # File URL to process (get just the first one)
-    if not task.document.get('mitta_uri'):
-        raise NonRetriableError("The `aiffmpeg` processor expects a `mitta_uri` key in the input fields.")
-
-    mitta_uri = task.document.get('mitta_uri')[0]
-
-    if not mitta_uri:
-        raise NonRetriableError("The `aiffmpeg` processor requires a `mitta_uri` key with the media file URL. Use the info_file processor to upload or access the file.")
-    else:
-        mitta_uri = f"{mitta_uri}?token={user.get('api_token')}"
-
-      # Callback URL
-    if app.config["DEV"] == "True":
-        callback_url = f"{app.config['NGROK_URL']}/pipeline/{pipe_id}/task?token={user.get('api_token')}"
-    else:
-        callback_url = f"https://mitta.ai/pipeline/{pipe_id}/task?token={user.get('api_token')}"
-
-    # get the model and begin
-    model = task.document.get('model')
-
-    # load the template
-    template_text = Template.remove_fields_and_extras(template.get('text'))
-
-    if template_text:
-        jinja_template = env.from_string(template_text)
-        prompt = jinja_template.render(task.document)
-    else:
-        raise NonRetriableError("Couldn't find template text.")
-
-    # negotiate the format
-    if model == "gpt-3.5-turbo-1106" and "JSON" in prompt:
-        system_content = task.document.get('system_content', "You write JSON for the user.")
-        response_format = {'type': "json_object"}
-    else:
-        system_content = task.document.get('system_content', "You write JSON dictionaries for the user, without using text markup or wrappers.")
-        response_format = None
-
-    # call the ai
-    err, ai_dict = ai_prompt_to_dict(
-        task=task,
-        model=model,
-        prompt=prompt,
-        retries=3
-    )
-
-    if "ffmpeg_command" not in ai_dict:
-        raise NonRetriableError("The AI didn't return an `ffmpeg_command`. Try rewording your query.")
-    if "output_file" not in ai_dict:
-        raise NonRetriableError("The AI didn't return an `output_file`. Try rewording your query or include an `output_file` key in your input fields.")
-
-    # Prepare data for AIFFMPEG service
-    ffmpeg_data = {
-        "ffmpeg_token": app.config['FFMPEG_TOKEN'],
-        "user_id": uid,
-        "user_document": user_document,
-        "mitta_uri": mitta_uri,
-        "callback_url": callback_url,
-        "ffmpeg_command": ai_dict.get('ffmpeg_command'),
-        "output_file": ai_dict.get('output_file'),
-        "input_file": task.document.get('filename')[0]
-    }
-
-    # Post request to AIFFMPEG service
-    try:
-        ffmpeg_response = requests.post(
-            ffmpeg_url,
-            json = ffmpeg_data,
-            timeout = 10
-        )
-    except:
-        raise NonRetriableError("The request to the 'ffmpeg' backend failed. Try another task.")
-
-    if ffmpeg_response:
-        ffmpeg_response = ffmpeg_response.json()
-        
-    # Handle response
-    if "result" in ffmpeg_response:
-        if ffmpeg_response.get('result') == "success":
-            task.document['ffmpeg_status'] = "started"
-            task.document['ffmpeg_command'] = ai_dict.get('ffmpeg_command')
+        # File URL to process (get just the first one)
+        if not task.document.get('mitta_uri'):
+            raise NonRetriableError("The `aiffmpeg` processor expects a `mitta_uri` key in the input fields.")
         else:
-            raise NonRetriableError("Processing failed. Check the file, try another file, or reword the request.")
-    else:
-        raise NonRetriableError("Processing failed with no result. Check the file URL or try another file.")
+            if isinstance(mitta_uri, list):
+                mitta_uri = task.document.get('mitta_uri')[0]
+            else:
+                mitta_uri = task.document.get('mitta_uri')
 
-    return task
+        if not mitta_uri:
+            raise NonRetriableError("The `aiffmpeg` processor requires a `mitta_uri` key with the media file URL. Use the info_file processor to upload or access the file.")
+        else:
+            mitta_uri = f"{mitta_uri}?token={user.get('api_token')}"
+
+        # Callback for resuming the pipeline flow
+        if app.config['DEV'] == "True":
+            callback_url = f"{app.config['NGROK_URL']}/pipeline/{task.pipe_id}/task/{task.id}?token={user_token}"
+        else:
+            callback_url = f"{app.config['BRAND_SERVICE_URL']}/pipeline/{task.pipe_id}/task/{task.id}?token={user_token}"
+
+        # get the model and begin
+        model = task.document.get('model')
+
+        # load the template
+        template_text = Template.remove_fields_and_extras(template.get('text'))
+
+        if template_text:
+            jinja_template = env.from_string(template_text)
+            prompt = jinja_template.render(task.document)
+        else:
+            raise NonRetriableError("Couldn't find template text.")
+
+        # negotiate the format
+        if model == "gpt-3.5-turbo-1106" and "JSON" in prompt:
+            system_content = task.document.get('system_content', "You write JSON for the user.")
+            response_format = {'type': "json_object"}
+        else:
+            system_content = task.document.get('system_content', "You write JSON dictionaries for the user, without using text markup or wrappers.")
+            response_format = None
+
+        # call the ai
+        err, ai_dict = ai_prompt_to_dict(
+            task=task,
+            model=model,
+            prompt=prompt,
+            retries=3
+        )
+
+        if "ffmpeg_command" not in ai_dict:
+            raise NonRetriableError("The AI didn't return an `ffmpeg_command`. Try rewording your query.")
+        if "output_file" not in ai_dict:
+            raise NonRetriableError("The AI didn't return an `output_file`. Try rewording your query or include an `output_file` key in your input fields.")
+
+        # Prepare data for AIFFMPEG service
+        ffmpeg_data = {
+            "ffmpeg_token": app.config['FFMPEG_TOKEN'],
+            "username": username,
+            "mitta_uri": mitta_uri,
+            "callback_url": callback_url,
+            "ffmpeg_command": ai_dict.get('ffmpeg_command'),
+            "output_file": ai_dict.get('output_file'),
+            "input_file": task.document.get('filename')[0]
+        }
+
+        # Post request to AIFFMPEG service
+        try:
+            ffmpeg_response = requests.post(
+                ffmpeg_url,
+                json = ffmpeg_data,
+                timeout = 10
+            )
+        except:
+            raise NonRetriableError("The request to the 'ffmpeg' backend failed. Try another task.")
+
+        if ffmpeg_response:
+            ffmpeg_response = ffmpeg_response.json()
+            
+        # Handle response
+        if "result" in ffmpeg_response:
+            if ffmpeg_response.get('result') == "success":
+                # Proceed with the task modification only if all are successful
+                task.nodes = [task.next_node()]
+
+                # Save the document
+                bucket_uri = storage_pickle(uid, task.document, task.id, task.nodes[0])
+
+                # exit current task with threads running on external service
+                return task
+            else:
+                raise NonRetriableError("Processing failed. Check the file, try another file, or reword the request.")
+        else:
+            raise NonRetriableError("Processing failed with no result. Check the file URL or try another file.")
+
+    else:
+        # we were jumped into so we now complete and move on
+        return task
 
 
 @processor

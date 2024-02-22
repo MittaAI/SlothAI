@@ -163,6 +163,39 @@ def upload_to_storage_requests(uid, filename, data, content_type):
     return bucket_uri
 
 
+def storage_pickle(uid, task_document, task_id, node_id):
+    """
+    Serializes a task document and uploads it to cloud storage.
+
+    Parameters:
+    - uid (str): The user ID associated with the task.
+    - task_document (dict): The document/data associated with the task.
+    - task_id (str): The unique identifier of the task.
+
+    Returns:
+    - str: The URI of the uploaded document in the storage bucket.
+    """
+    # Add the node_id to the document's task_node_id'
+    task_document['task_node_id'] = node_id
+    
+    # Serialize task_document to JSON
+    json_storage_dict = json.dumps(task_document)
+
+    # Create a filename for the JSON storage document
+    json_filename = f'json_data_{task_id}.json'
+
+    # Convert the JSON string to bytes
+    data_bytes = json_storage_dict.encode('utf-8')
+
+    # Set content type to JSON
+    content_type = 'application/json'
+
+    # Call upload_to_storage_requests to save the document
+    bucket_uri = upload_to_storage_requests(uid, json_filename, data_bytes, content_type)
+
+    return bucket_uri
+
+
 def load_from_storage(uid, filename):
     # set up bucket on google cloud
     gcs = storage.Client()
@@ -184,10 +217,11 @@ def download_as_bytes(uid, filename):
     content = blob.download_as_bytes()
     return content
 
-from PIL import Image
-from io import BytesIO
 
 def split_image_by_height(image_bytesio, output_format='PNG', segment_height=8192):
+    from PIL import Image
+    from io import BytesIO
+    
     """
     Splits an image stored in a BytesIO object by height into segments.
 

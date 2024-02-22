@@ -17,7 +17,7 @@ from werkzeug.utils import secure_filename
 
 from SlothAI.lib.tasks import Task, TaskState
 from SlothAI.web.models import Pipeline, Node, Token
-from SlothAI.lib.util import random_string, upload_to_storage, deep_scrub, transform_single_items_to_lists, gpt_dict_completion
+from SlothAI.lib.util import random_string, upload_to_storage, load_from_storage, deep_scrub, transform_single_items_to_lists, gpt_dict_completion
 from SlothAI.lib.template import Template
 
 from SlothAI.web.nodes import node_create
@@ -209,10 +209,14 @@ def pipeline_delete(pipe_id):
 
 
 @pipeline.route('/pipeline/<pipeline_id>/task', methods=['POST'])
-@pipeline.route('/pipeline/<pipeline_id>/task/<node_id>', methods=['POST'])
+@pipeline.route('/pipeline/<pipeline_id>/task/<task_id>', methods=['POST'])
 @flask_login.login_required
-def ingest_post(pipeline_id, node_id=None):
-    pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipeline_id)
+def ingest_post(pipeline_id, task_id=None):
+    # user
+    uid = current_user.uid
+    username = current_user.name
+
+    pipeline = Pipeline.get(uid=uid, pipe_id=pipeline_id)
     if not pipeline:
         return jsonify({"response": f"Pipeline '{pipeline_id}' not found"}), 404
 
@@ -239,7 +243,7 @@ def ingest_post(pipeline_id, node_id=None):
                     return jsonify({"error": f"Error reading JSON file '{filename}': {e}"}), 400
             else:
                 # Process and upload other files
-                bucket_uri = upload_to_storage(current_user.uid, filename, uploaded_file)
+                bucket_uri = upload_to_storage(uid, filename, uploaded_file)
                 filenames.append(filename)
                 
                 # Guess the MIME type based on the file extension
@@ -247,7 +251,7 @@ def ingest_post(pipeline_id, node_id=None):
                 content_types.append(mime_type)
 
                 # Build the URI for access
-                upload_uris.append(f"https://{app.config.get('APP_DOMAIN')}/d/{current_user.name}/{filename}")
+                upload_uris.append(f"https://{app.config.get('APP_DOMAIN')}/d/{username}/{filename}")
 
     # Directly process JSON payload if no JSON data files were uploaded
     if not json_data_dict:
@@ -280,28 +284,60 @@ def ingest_post(pipeline_id, node_id=None):
         json_data_dict['content_type'] = content_types
         json_data_dict['access_uri'] = upload_uris
 
-    # Handle calls from asyncronous processes direct to node
-    if node_id:
-        # Attempt to find the index of the specified node_id in the pipeline's node_ids
+
+    # This section handles asynchronous calls directed to specific nodes in the processing pipeline.
+    # It is triggered when a task_id is provided in the request, indicating that the operation
+    # should continue from a specified point in the pipeline rather than starting from the beginning.
+    if task_id:
         try:
-            # Identify the index of the node_id
+            # Construct the filename from the task_id to locate the stored JSON data.
+            json_filename = f'json_data_{task_id}.json'
+            
+            # Load the JSON file from storage using the unique identifier (uid) of the current user
+            # and the constructed filename. The file contains the current state of the task's data.
+            buffer = load_from_storage(uid, json_filename)
+            json_storage_dict = json.load(buffer)
+            
+            # Extract the 'task_node_id' from the loaded JSON data, which specifies the next node
+            # in the pipeline to process. This key is then removed from the dictionary to prevent
+            # redundancy and potential conflicts during data merging.
+            node_id = json_storage_dict.get('task_node_id')
+            json_storage_dict.pop('task_node_id', None)  # Use pop with None as default to avoid KeyError
+            
+            # Locate the index of the specified node_id within the pipeline's sequence of nodes.
+            # This determines the starting point for processing within the pipeline.
             node_index = pipeline.get('node_ids').index(node_id)
-            # Modify the pipeline's node_ids to include only nodes from the specified node_id onwards
+            
+            # Adjust the list of node_ids to process by slicing the original list from the
+            # identified starting point onwards. This effectively "jumps" the processing
+            # to the specified node, skipping all previous nodes in the pipeline.
             modified_node_ids = pipeline.get('node_ids')[node_index:]
-            jump_status = 1
-        except ValueError:
-            # If node_id is not in node_ids, return an error
-            return jsonify({"error": "Specified node_id not found in pipeline's node_ids"}), 400
+            jump_status = 1  # Set a flag indicating that a jump in the pipeline has occurred.
+            
+            # Merge the current task data (json_data_dict) with the newly loaded data (json_storage_dict).
+            # This ensures that any updates or changes made prior to this point are incorporated
+            # into the task's data moving forward. json_storage_dict takes precedence in the merge,
+            # overriding any duplicate keys in json_data_dict.
+            json_data_dict.update(json_storage_dict)
+            
+        except Exception as ex:
+            print(ex)
+            # This block catches the case where the specified node_id does not exist within
+            # the pipeline's list of node_ids. An error response is returned to indicate
+            # that the requested jump to a specific node cannot be fulfilled.
+            return jsonify({"error": "The 'node_id' was not found, or the JSON document for the previous task was not loaded."}), 400
     else:
-        # If no specific node_id is provided, use the original node_ids from the pipeline
+        # This branch handles the case where no specific task_id is provided in the request.
+        # In such cases, the operation proceeds with the original, unmodified list of node_ids
+        # from the pipeline, starting from the beginning of the process.
         modified_node_ids = pipeline.get('node_ids')
-        jump_status = -1
+        jump_status = -1  # Set a flag indicating that no jump in the pipeline is occurring.
 
     # Create and store the task with either the modified or original node_ids
     task_id = random_string()
     task = Task(
         id=task_id,
-        user_id=current_user.uid,
+        user_id=uid,
         pipe_id=pipeline.get('pipe_id'),
         nodes=modified_node_ids,
         document=json_data_dict,
