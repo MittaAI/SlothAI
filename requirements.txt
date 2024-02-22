@@ -38,3 +38,5 @@ mistralai==0.0.8
 elevenlabs==0.2.27
 instructor==0.4.5
 htmlmin==0.1.12
+PyMuPDFb==1.23.22
+python-magic==0.4.27

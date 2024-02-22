@@ -12,7 +12,10 @@
     <div class="col col-lg-12">
       <h3>Settings</h3>
       <hr/>
-      <h4 class="mb-3">Salutations, {{ username }}!</h4>
+      <h4 class="mb-3">Salutations!</h4>
+
+      <p>This is your username on the system:</p>
+      <p><pre><span></span>{{username}}<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></pre></p>
 
       <p>This is your API Token for making calls to the system:</p>
       <p><pre><span></span>{{api_token}}<span class="command-copy"><i class="fa fa-clipboard" aria-hidden="true"></i></span></pre></p>
@@ -22,14 +25,17 @@
       <p>If you reset your token AND you have local callback nodes setup, you will need to delete the <strong>callback_token</strong> service token (below) and then recreate it with the new API token.</p>        
       <hr/>
 
+
       <h4 class="mb-3">Service Tokens</h4>
       <div class="form-group">
         {% if tokens %}
           <p>You have the following service tokens saved in your account. Once saved, tokens may not be viewed.</p>
+          <div class="d-flex flex-row flex-wrap align-items-center">
+
           {% for token in tokens %}
-            <div class="input-group mb-2">
+            <div class="d-flex align-items-center mr-2 mb-2">
               <div class="input-group-prepend">
-                <label class="input-group-text"><strong>{{token.get('name')}}</strong></label>
+                <label class="input-group-text remove-label"><strong>{{token.get('name')}}</strong></label>
               </div>
               <div class="input-group-append">
                 <button type="button" class="btn btn-danger remove-token" data-token_id="{{ token.token_id }}" data-token_name="{{ token.name }}" aria-label="Remove">
@@ -38,6 +44,8 @@
               </div>
             </div>
           {% endfor %}
+
+          </div>
         {% else %}
           <p>No tokens found in your account.</p>
         {% endif %}

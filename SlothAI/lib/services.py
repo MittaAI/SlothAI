@@ -33,7 +33,8 @@ class TaskService:
             state=task.state,
             error=task.error,
             retries=task.retries,
-            split_status=task.split_status
+            split_status=task.split_status,
+            jump_status=task.jump_status,
         )
         self.queue_task(task)
 
@@ -66,6 +67,7 @@ class TaskService:
 			error=task.error,
 			current_node_id=task.next_node(),
 			split_status=task.split_status,
+            jump_status=task.jump_status
 		)
 
     def retry_task(self, task: Task):

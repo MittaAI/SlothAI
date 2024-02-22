@@ -1,8 +1,8 @@
 {% extends "pages/app_base.html" %}
 
 {% block title %}
-<title> Logs | {{ brand.get('name') }}</title>
-<meta property='og:title' content="Tasks | {{ brand.get('name') }}"/>
+<title>Logs | {{ brand.get('name') }}</title>
+<meta property='og:title' content="Logs | {{ brand.get('name') }}"/>
 {% endblock %}
 
 {% block content %}
@@ -11,46 +11,31 @@
     <div class="col col-lg-12">
       <h3>Callback Logs</h3>
       <hr/>
-      <p>Use of the default callback will log the pipeline document here. Click the <strong>document date</strong> to <strong>copy</strong> the JSON data.</p><p>Data and logs <strong>clear after 1 hour</strong>. Any files stored on the system will be <strong>removed after 48 hours</strong>.</p>
-    </div>
-  </div>
-  <div class="row">
-    <div class="col col-lg-12">
-      <button onclick="location.reload()" type="button" class="reload-button btn btn-success">
+      <p>Use of the default callback will log the pipeline document here. Click the <strong>document date</strong> to <strong>copy</strong> the JSON data.</p>
+      <p>Data and logs <strong>clear after 1 hour</strong> and are sorted in ascending order, newest logs at the bottom.</p>
+      <button id="reload" type="button" class="reload-button btn btn-success">
         <i class="fas fa-sync-alt"></i> Reload
       </button>
-      {% if logs %}
-      <button id="clearCompleted" type="button" data-toggle="tooltip" data-placement="top" title="Clear logs." class="btn btn-secondary">
-        <i class="fas fa-ban"></i> Logs
+      <button id="clearCompleted" type="button" class="btn btn-secondary">
+        <i class="fas fa-ban"></i> Clear Logs
       </button>
-      {% endif %}
     </div>
   </div>
-  
-  {% if logs %}
   <div class="row">
     <div class="col col-lg-12">
-      <table class="table table-striped">
-        <thead>
+      <table class="table table-striped" id="logsTable">
+        <thead style="display: none;">
           <tr>
-            <th style="width: 200px;">Date</th>
+            <th style="width: 150px;">Date</th>
             <th>Log</th>
           </tr>
         </thead>
         <tbody>
-          {% for log in logs %}
-          <tr>
-            <td class="log-dates">
-              <button class="badge badge-dark">{{ log.created }}</button>
-            </td>
-            <td data-log="{{ log.line }}"></td>
-          </tr>
-          {% endfor %}
+          <!-- Log entries will be dynamically inserted here -->
         </tbody>
       </table>
     </div>
   </div>
-  {% endif %}
 </div>
 {% endblock %}
 
@@ -60,67 +45,81 @@
 
 <script type="text/javascript">
 $(document).ready(function() {
-  $('.reload-button').on('click', function() {
-    window.location.reload();
-  });
-
-  $(document).ready(function() {
-    $('.badge').click(function() {
-      // 'this' refers to the clicked badge element
-      var logData = $(this).closest('td').next('td').data('log');
-
-      // Copy logData to clipboard
-      navigator.clipboard.writeText(logData).then(() => {
-        toastr.info('Copied to clipboard.');
-      }).catch(err => {
-        console.error('Error in copying text: ', err);
-      });
-    });
-  });
-
-$("table tbody tr").each(function() {
-    var tdLog = $(this).find("td[data-log]");
-    var rawData = tdLog.data('log');
-
-    // Attempt to decode Unicode escape sequences
-    var decodedData = rawData.replace(/\\u([\d\w]{4})/gi, function (match, grp) {
-        return String.fromCharCode(parseInt(grp, 16)); 
-    });
-    decodedData = decodedData.replace(/\\\\/g, '\\');
-
-    // Continue with your existing cleaning logic
-    var cleanedData = decodedData.slice(2, -1)
-      .replace(/\\n/g, " ")
-      .replace(/\\\'|\\\"|\\'/g, "'")
-      .replace(/\\/g, "");
-
-    var jsonDataObj;
-
-    try {
-      jsonDataObj = JSON.parse(cleanedData);
-      for (var key in jsonDataObj) {
-        if (key.toLowerCase().includes('token')) {
-          delete jsonDataObj[key];
-        }
+  // Define the function to be called when mutations are observed
+  var callback = function(mutationsList, observer) {
+    for(let mutation of mutationsList) {
+      if (mutation.type === 'childList' || mutation.type === 'characterData') {
+        // Log count changed, fetch and update logs
+        fetchAndUpdateLogs();
       }
-    } catch (error) {
-      toastr.error("Error parsing JSON. Showing in plain format.")
-      jsonDataObj = { "ParsingError": "Error parsing JSON" };
     }
+  };
 
-    // Initialize jsonViewer with all items collapsed
-    tdLog.empty(); 
-    var jsonViewer = $('<pre>').appendTo(tdLog);
-    jsonViewer.jsonViewer(jsonDataObj, {collapsed: true, withQuotes: true});
-});
+  // Create an observer instance linked to the callback function
+  var observer = new MutationObserver(callback);
+
+  // Start observing the target node for configured mutations
+  var targetNode = document.getElementById('log_count');
+  if (targetNode) {
+    observer.observe(targetNode, {
+      childList: true, // observe direct children
+      characterData: true, // observe text content or node value
+      subtree: true // observe all descendants
+    });
+  }
 
 
-  $('td pre.json-document > a.json-toggle').each(function() {
-    $(this).click();
-  });
+  function fetchAndUpdateLogs() {
+    $.ajax({
+      url: "/logs/all",
+      type: "GET",
+      success: function(logs) {
+        var tbody = $("#logsTable tbody");
 
-  $('#clearCompleted').click(function() {
-    // Send the DELETE request to the server.
+        if (logs.length > 0) {
+          $("#logsTable thead").show();
+        } else {
+          $("#logsTable thead").hide();
+        }
+
+        // Keep track of log IDs already in the table
+        var existingLogIds = tbody.find("tr").map(function() {
+          return $(this).data("log_id");
+        }).get();
+
+        logs.forEach(function(log) {
+          // Check if the log is already displayed
+          if (!existingLogIds.includes(log.log_id)) {
+            var logDate = `<td class="log-dates"><button class="badge badge-dark">${log.created}</button></td>`;
+            var logDataCell = `<td></td>`;
+            var row = `<tr data-log_id="${log.log_id}">${logDate}${logDataCell}</tr>`;
+
+            tbody.append(row);
+
+            var tdLog = tbody.find(`tr[data-log_id="${log.log_id}"] td:nth-child(2)`);
+            var jsonViewer = $('<pre>').appendTo(tdLog);
+            jsonViewer.jsonViewer(log.log_data, {collapsed: true, withQuotes: true});
+
+            // Attach click event for new log entry
+            tdLog.prev('.log-dates').find('button').off('click').on('click', function() {
+              var logData = $(this).closest('tr').find('td:nth-child(2) pre').text();
+              navigator.clipboard.writeText(logData).then(() => {
+                toastr.info('Copied to clipboard.');
+              }).catch(err => {
+                console.error('Error in copying text: ', err);
+              });
+            });
+          }
+        });
+      },
+      error: function(xhr, status, error) {
+        console.error("Error fetching logs: ", error);
+      }
+    });
+  }
+
+
+  $('#clearCompleted').off('click').on('click', function() {
     $.ajax({
       url: '/logs',
       type: 'DELETE',
@@ -134,18 +133,9 @@ $("table tbody tr").each(function() {
     });
   });
 
-  var initialLogCount = "0";
-  function checkForChanges() {
-    var currentLogCount = $("#log_count").text();
-    if (currentLogCount !== initialLogCount) { location.reload(); }
-  }
-  setTimeout(function() {
-    initialLogCount = $("#log_count").text();
-    setInterval(checkForChanges, 5000);
-  }, 3000);
-
 });
 </script>
 {% endblock %}
+
 
 

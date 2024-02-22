@@ -204,17 +204,58 @@ def task_log_count():
     return jsonify(response_data)
 
 
+# simple log api
+@site.route('/logs/<log_id>', methods=['GET'])
+@flask_login.login_required
+def logs_api(log_id):
+    if log_id == "all":
+        # Fetch all logs for the current user
+        raw_logs = Log.fetch(uid=current_user.uid)
+        logs_json = [
+            {
+                "log_id": log["log_id"],
+                "created": log["created"].strftime("%Y-%m-%d %H:%M:%S"),  # Format datetime as string
+                "log_data": json.loads(log["line"])  # Assuming log data is stored as a JSON string in 'line'
+            }
+            for log in raw_logs
+        ]
+        return jsonify(logs_json)
+    else:
+        # Fetch log details for the specified log_id for the current user
+        logs = Log.fetch(log_id=log_id, uid=current_user.uid)
+        if logs:
+            log_details = logs[0]
+        else:
+            log_details = None
+
+        if log_details:
+            log_line_dict = json.loads(log_details['line'])
+            decoded_log_line = {key: value.encode('utf-8').decode('unicode-escape') if isinstance(value, str) else value for key, value in log_line_dict.items()}
+            return jsonify(decoded_log_line)
+        else:
+            return jsonify({"error": "Log not found"}), 404
+
+
 @site.route('/logs', methods=['GET'])
 @flask_login.login_required
 def logs():
-    # get the user and their tables
+    # Fetch logs for the current user
+    raw_logs = Log.fetch(uid=current_user.uid)
+
+    # Prepare logs metadata for the template
+    prepared_logs = []
+    for log in raw_logs:
+        prepared_logs.append({
+            "log_id": log["log_id"],
+            "created": log["created"]
+        })
+
+    # Other user details
     username = current_user.name
     email = current_user.email
     hostname = request.host
 
-    logs = Log.fetch(uid=current_user.uid)
-
-    return render_template('pages/logs.html', brand=get_brand(app), username=username, email=email, hostname=hostname, logs=logs)
+    return render_template('pages/logs.html', brand=get_brand(app), username=username, email=email, hostname=hostname, logs=prepared_logs)
 
 
 @site.route('/', methods=['GET'])
