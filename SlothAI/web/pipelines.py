@@ -1,6 +1,7 @@
 import os
 import json
 import re
+import mimetypes
 
 from datetime import datetime
 
@@ -208,113 +209,115 @@ def pipeline_delete(pipe_id):
 
 
 @pipeline.route('/pipeline/<pipeline_id>/task', methods=['POST'])
+@pipeline.route('/pipeline/<pipeline_id>/task/<node_id>', methods=['POST'])
 @flask_login.login_required
-def ingest_post(pipeline_id):
+def ingest_post(pipeline_id, node_id=None):
     pipeline = Pipeline.get(uid=current_user.uid, pipe_id=pipeline_id)
     if not pipeline:
-        return jsonify({"response": f"pipeline with id {pipeline_id} not found"}), 404
+        return jsonify({"response": f"Pipeline '{pipeline_id}' not found"}), 404
 
-    # things we need to track
+    # Prepare storage for JSON data and file upload details
+    json_data_dict = {}
     filenames, content_types, upload_uris = [], [], []
 
-    # start looking for uploaded files in the payload
-    file_field_names = request.files.keys()
-
-    # upload any files to storage
-    for field_name in file_field_names:
-        uploaded_file = request.files[field_name]
-        filename = secure_filename(uploaded_file.filename)
-        bucket_uri = upload_to_storage(current_user.uid, filename, uploaded_file)
-
-        # Check if the file is json_data.json
-        if filename == 'json_data.json':
-            try:
-                # try a decoded version first
-                uploaded_file.stream.seek(0)
-                json_data_file = uploaded_file.read().decode('utf-8')
-                json_data_file_dict = json.loads(json_data_file)
-            except Exception as ex:
-                if not json_data_file:
-                    return jsonify({"error": "The attached JSON file is empty. Check your code, or don't include the empty 'json_data.json' file in the payload."}), 400  
-                else:
-                    return jsonify({"error": "Can't read the attached JSON file. Try reformatting it."}), 400
-        else:
-            # add any files uploaded to the document, except json_data.json
-            filenames.append(filename)
-            content_types.append(uploaded_file.content_type)
-            upload_uris.append(f"https://{app.config.get('APP_DOMAIN')}/d/{current_user.name}/{filename}")
-            json_data_file_dict = {}
-    else:
-        if not file_field_names:
-            json_data_file_dict = {}
-
-    # Check for JSON data from form
-    try:
-        form_json_data = request.form.get('data') or request.form.get('json')
-        if not form_json_data:
-            json_data_dict = request.get_json(silent=True) or {}
-        else:
-            json_data_dict = json.loads(form_json_data)
-
-        if json_data_dict:
-            if not isinstance(json_data_dict, dict):
-                return jsonify({"error": "The JSON data is not a dictionary"}), 400
-            else:
-                if json_data_file_dict:
-                    json_data_dict.update(json_data_file_dict)
-        else:
-            if not json_data_file_dict:
-                if not file_field_names:
-                    # here we have no files and no JSON
-                    return jsonify({"error": "Wasn't able to find a JSON data payload or an upload file."}), 400
-            else:
-                json_data_dict = json_data_file_dict
-
-        # if we had files
-        if file_field_names:
-            json_data_dict['filename'] = filenames
-            json_data_dict['content_type'] = content_types
-            json_data_dict['access_uri'] = upload_uris
-
-        # Validate and transform JSON data
-        json_data = transform_single_items_to_lists(json_data_dict)
+    # Iterate over each file field name
+    for field_name in request.files:
+        # Now correctly handle multiple files under the same field name
+        files_list = request.files.getlist(field_name)
         
-        # final check, probably never happens TODO remove
-        if not isinstance(json_data_dict, dict):
-            return jsonify({"error": "The transformed JSON data is not a dictionary"}), 400
+        for uploaded_file in files_list:
+            filename = secure_filename(uploaded_file.filename)
+            if re.match(r'^json_data(_[0-9a-z]+)?\.json$', filename):
+                try:
+                    uploaded_file.stream.seek(0)
+                    file_data = json.load(uploaded_file)
+                    if isinstance(file_data, dict):
+                        json_data_dict.update(file_data)
+                    else:
+                        return jsonify({"error": "JSON data must be a dictionary"}), 400
+                except Exception as e:
+                    return jsonify({"error": f"Error reading JSON file '{filename}': {e}"}), 400
+            else:
+                # Process and upload other files
+                bucket_uri = upload_to_storage(current_user.uid, filename, uploaded_file)
+                filenames.append(filename)
+                
+                # Guess the MIME type based on the file extension
+                mime_type, _ = mimetypes.guess_type(filename)
+                content_types.append(mime_type)
 
-    except Exception as ex:
-        return jsonify({"error": f"Error getting or transforming JSON data: {ex}"}), 400
+                # Build the URI for access
+                upload_uris.append(f"https://{app.config.get('APP_DOMAIN')}/d/{current_user.name}/{filename}")
 
-    # temp overload of document_id for uuid from grub cluster
-    # grub cluster needs to pass user_document for it to work correctly without
-    if request.args.get('document_id'):
-        json_data_dict['document_id'] = request.args.get('document_id')
+    # Directly process JSON payload if no JSON data files were uploaded
+    if not json_data_dict:
+        # Try to get JSON data from request.get_json() first
+        json_payload = request.get_json(silent=True)
 
-    # now we create the task
+        if json_payload and isinstance(json_payload, dict):
+            json_data_dict = json_payload
+        else:
+            # Iterate through each key in request.form and attempt JSON decoding
+            for key in request.form.keys():
+                try:
+                    # Attempt to decode each form field as JSON
+                    potential_json_data = json.loads(request.form[key])
+                    if isinstance(potential_json_data, dict):
+                        # Merge with json_data_dict if it's a dictionary
+                        json_data_dict.update(potential_json_data)
+                except json.JSONDecodeError:
+                    # If decoding fails, it's not JSON data, so ignore
+                    pass
+
+    # Transform and validate JSON data
+    json_data_dict = transform_single_items_to_lists(json_data_dict)
+    if not isinstance(json_data_dict, dict):
+        return jsonify({"error": "Transformed JSON data is not a dictionary"}), 400
+
+    # Add file upload details to JSON data
+    if filenames:
+        json_data_dict['filename'] = filenames
+        json_data_dict['content_type'] = content_types
+        json_data_dict['access_uri'] = upload_uris
+
+    # Handle calls from asyncronous processes direct to node
+    if node_id:
+        # Attempt to find the index of the specified node_id in the pipeline's node_ids
+        try:
+            # Identify the index of the node_id
+            node_index = pipeline.get('node_ids').index(node_id)
+            # Modify the pipeline's node_ids to include only nodes from the specified node_id onwards
+            modified_node_ids = pipeline.get('node_ids')[node_index:]
+            jump_status = 1
+        except ValueError:
+            # If node_id is not in node_ids, return an error
+            return jsonify({"error": "Specified node_id not found in pipeline's node_ids"}), 400
+    else:
+        # If no specific node_id is provided, use the original node_ids from the pipeline
+        modified_node_ids = pipeline.get('node_ids')
+        jump_status = -1
+
+    # Create and store the task with either the modified or original node_ids
     task_id = random_string()
     task = Task(
         id=task_id,
         user_id=current_user.uid,
         pipe_id=pipeline.get('pipe_id'),
-        nodes=pipeline.get('node_ids'),
-        document=dict(),
+        nodes=modified_node_ids,
+        document=json_data_dict,
         created_at=datetime.utcnow(),
         retries=0,
         error=None,
         state=TaskState.RUNNING,
-        split_status=-1
+        split_status=-1,
+        jump_status=jump_status
     )
-
-    # store and queue
-    task.document = json_data
 
     try:
         app.config['task_service'].create_task(task)
         return jsonify(task.to_dict()), 200
-    except Exception as ex:
-        print(ex)
-        return jsonify({"error": "task queue is erroring. site admin needs to setup task queue"})
+    except Exception as e:
+        return jsonify({"error": f"Error creating task: {e}"}), 400
 
 
 def custom_serializer(obj):
@@ -497,8 +500,6 @@ def pipeline_upload():
                     if value == "callback_token" and template.get('extras').get('callback_uri') == "[callback_uri]":
                         token = Token.create(current_user.uid, "callback_token", current_user.api_token)
                     else:
-                        print(value)
-                        print(k)
                         tokens_to_update.append(value)
 
         node = Node.create(

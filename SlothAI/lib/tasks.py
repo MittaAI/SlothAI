@@ -40,7 +40,7 @@ class TaskState(Enum):
 
 class Task:
 	
-	def __init__(self, id: str, user_id: str, pipe_id: str, nodes: List[str], document: dict, created_at: datetime, retries: int, error: str, state: TaskState, split_status: int):
+	def __init__(self, id: str, user_id: str, pipe_id: str, nodes: List[str], document: dict, created_at: datetime, retries: int, error: str, state: TaskState, split_status: int, jump_status: int):
 		self.id = id
 		self.user_id = user_id
 		self.pipe_id = pipe_id
@@ -51,7 +51,7 @@ class Task:
 		self.error = error
 		self.state = state
 		self.split_status = split_status
-
+		self.jump_status = jump_status
 	@property
 	def created_at(self):
 		return self._created_at
@@ -70,7 +70,8 @@ class Task:
 			"retries": self.retries,
 			"error": self.error,
 			"state": self.state.value,
-			"split_status": self.split_status
+			"split_status": self.split_status,
+			"jump_status": self.jump_status
 		}
 		
 	@classmethod
@@ -88,7 +89,8 @@ class Task:
 			retries=task_dict['retries'],
 			error=task_dict['error'],
 			state=TaskState.state_from_string(task_dict['state']),
-			split_status=task_dict['split_status']
+			split_status=task_dict['split_status'],
+			jump_status=task_dict['jump_status']
 		)
 
 	def to_json(self) -> str:

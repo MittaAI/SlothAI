@@ -36,10 +36,10 @@ def process_tasks(cron_key):
 		if task_stored[0]['state'] != TaskState.RUNNING.value:
 			raise services.InvalidStateForProcess(task_stored.state.value)
 
-		print(task)
-
+		# run processors
 		task = process(task)
 
+		# remove the current node so we'll move on
 		node = task.remove_node()
 		
 		if len(task.nodes) > 0:

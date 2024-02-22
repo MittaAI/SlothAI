@@ -8,7 +8,7 @@ from google.cloud import ndb
 
 class AbstractTaskStore(ABC):
 	@abstractmethod
-	def create(cls, task_id, user_id, current_node_id, pipe_id, created_at, state, error, retries, split_status):
+	def create(cls, task_id, user_id, current_node_id, pipe_id, created_at, state, error, retries, split_status, jump_status):
 		pass
 
 	@abstractmethod
@@ -45,6 +45,7 @@ class NDBTaskStore(ndb.Model):
     error = ndb.StringProperty()
     retries = ndb.IntegerProperty()
     split_status = ndb.IntegerProperty()
+    jump_status = ndb.IntegerProperty()
 
     @classmethod
     def _get_kind(cls):
@@ -52,7 +53,7 @@ class NDBTaskStore(ndb.Model):
 
     @classmethod
     @ndb_context_manager
-    def create(cls, task_id, user_id, current_node_id, pipe_id, created_at, state, error, retries, split_status):
+    def create(cls, task_id, user_id, current_node_id, pipe_id, created_at, state, error, retries, split_status, jump_status):
         task = cls(
             task_id=task_id,
             user_id=user_id,
@@ -63,6 +64,7 @@ class NDBTaskStore(ndb.Model):
             error=error,
             retries=retries,
             split_status = split_status,
+            jump_status = jump_status
         )
         task.put()
         return task.to_dict()
@@ -116,6 +118,8 @@ class NDBTaskStore(ndb.Model):
             task.retries = kwargs['retries']
         if 'split_status' in kwargs:
             task.split_status = kwargs['split_status']
+        if 'jump_status in kwargs' in kwargs:
+            task.jump_status= kwargs['jump_status']
 
         task.put()
 

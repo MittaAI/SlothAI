@@ -144,13 +144,14 @@ def process(task: Task) -> Task:
     # if "database_id" in node.get('extras'):
     task.document['DATABASE_ID'] = user.get('dbid')
 
-    # processor methods are responsible for adding errors to documents
+    # processor methods to be called below
     task = processors[node.get('processor')](node, task)
 
     # TODO, decide what to do with errors and maybe truncate pipeline
     if task.document.get('error'):
         return task
 
+    # TODO move this or get rid of it
     if "X-API-KEY" in task.document.keys():
         task.document.pop('X-API-KEY', None)
     if "DATABASE_ID" in task.document.keys():
@@ -353,95 +354,79 @@ def callback(node: Dict[str, any], task: Task) -> Task:
 def aigrub(node: Dict[str, any], task: Task) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
-    print(task.document)
+
     # user
     user = User.get_by_uid(uid=task.user_id)
     uid = user.get('uid')
+    username = user.get('name')
+    user_token = user.get('api_token')
 
-    # user document
-    user_document = task.document.get('user_document', {})
+    # Serial pipeline execution brought us here
+    if task.jump_status < 0:
+        # grub config
+        grub_token = app.config["GRUB_TOKEN"]
 
-    # grub config
-    grub_ip = app.config["GRUB_IP"]
-    grub_token = app.config["GRUB_TOKEN"]
+        # openai_token
+        openai_token = task.document.get('openai_token')
+        if not openai_token:
+            raise NonRetriableError("An 'openai_token' must be passed to this processor.")
 
-    # request URL for cluster
-    request_url = f"http://grub:{grub_token}@{grub_ip}/g"
+        # request URL for cluster
+        request_url = f"https://grub.mitta.ai/grub2"
 
-    # verify output fields steampunk style
-    output_fields = template.get('output_fields')
+        # verify input fields steampunk style
+        input_fields = template.get('input_fields')
 
-    # use the first output field, or set one
-    try:
-        output_field = output_fields[0].get('name')
-    except:
-        output_field = "url"
+        # use the first output field, or set one
+        try:
+            input_field = input_fields[0].get('name')
+        except:
+            input_field = "query"
 
-    # verify input fields steampunk style
-    input_fields = template.get('input_fields')
+        # uri to crawl
+        queries = task.document.get(input_field)
 
-    # use the first output field, or set one
-    try:
-        input_field = input_fields[0].get('name')
-    except:
-        input_field = "uri"
+        if not queries:
+            raise NonRetriableError("Grub processor needs a `query` key and text that the LLM will resolve to a URL, or just a URL.")
+        elif isinstance(queries, str):
+            queries = [queries]
 
-    # uri to crawl
-    uris = task.document.get(input_field)
+        # build callback URL
+        pipe_id = task.pipe_id
+        node_id = task.nodes[0] # the current node
 
-    # find the destination pipeline
-    target_pipeline = task.document.get('pipeline')
-    if not target_pipeline:
-        raise NonRetriableError("A valid target pipeline name is required.")
-    else:
-        pipeline = Pipeline.get(uid=task.user_id, name=target_pipeline)
-        if not pipeline:
-            raise NonRetriableError("A valid target pipeline name is required.")
+        if app.config['DEV'] == "True":
+            callback_url = f"{app.config['NGROK_URL']}/pipeline/{pipe_id}/task/{node_id}?token={user_token}"
+        else:
+            callback_url = f"{app.config['BRAND_SERVICE_URL']}/pipeline/{pipe_id}/task/{node_id}?token={user_token}"
 
-        pipe_id = pipeline.get('pipe_id')
+        # loop through user queries
+        for query in queries:
+            config_data = {
+                "grub_token": grub_token ,
+                "username": username,
+                "query": query,
+                "callback_url": callback_url,
+                "openai_token": openai_token
+            }
 
-    if not uris:
-        raise NonRetriableError("Grub processor needs a `uri` key and value of either a URL or a list of URLs.")
-    elif isinstance(uris, str):
-        uris = [uris]
-    
-    if app.config["DEV"] == "True":
-        upload_url = f"{app.config['NGROK_URL']}/pipeline/{pipe_id}/task"
-    else:
-        upload_url = f"https://mitta.ai/pipeline/{pipe_id}/task"
-
-    for uri in uris:    
-        data = {
-            "doc_id": user_document.get('uuid', None),
-            "sidekick_name": user.get('name'),
-            "url": uri,
-            "upload_url": upload_url,
-            "api_token": user.get('api_token')
-        }
-
-        grub_response = requests.post(
+        response = requests.post(
             request_url,
-            data = data,
-            timeout = 10
+            headers={"Content-Type": "application/json"},
+            data=json.dumps(config_data),
+            timeout=10
         )
 
-        if grub_response:
-            grub_response = grub_response.json()
-        
-        if "result" in grub_response:
-            if grub_response.get('result') == "success":
-                task.document['upload_url'] = upload_url
-                task.document['crawl_status'] = "success"
-                if 'grub_url' not in task.document:
-                    task.document['grub_url'] = [uri]
-                else:
-                    task.document['grub_url'].append(uri) 
-            else:
-                raise NonRetriableError("Status of crawl is failed. Try another URL.")
+        if response.json().get('status') == "success":
+            # task doesn't make it past here because we remove all nodes
+            # see you on the other side of the else...
+            task.nodes = [task.next_node()]
+            return task
         else:
-            raise NonRetriableError("Status of crawl is failed with no result. Try another URL.")
+            raise NonRetriableError(f"Error: {response.get('aigrub_error')}")
 
-    return task
+    else:
+        return task
 
 
 @processor

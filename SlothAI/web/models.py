@@ -862,7 +862,7 @@ class Log(flask_login.UserMixin, ndb.Model):
 
         if query_conditions:
             query = ndb.AND(*query_conditions)
-            entities = cls.query(query).order(-cls.created).fetch()
+            entities = cls.query(query).order(cls.created).fetch()
         else:
             entities = None
 

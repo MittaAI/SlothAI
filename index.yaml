@@ -12,6 +12,12 @@ indexes:
 
 - kind: Log
   properties:
+  - name: user_id
+  - name: created
+    direction: asc
+
+- kind: Log
+  properties:
   - name: log_id
   - name: created
     direction: desc

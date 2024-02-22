@@ -169,9 +169,11 @@ $(document).ready(function() {
         let failedCountChanged = prevFailedCount !== response.failed_count;
 
         if (response.log_count == 0) {
-          $('#log_count').text('');
+          if ($('#log_count').text() !== '') $('#log_count').text('');
         } else {
-          $('#log_count').text(response.log_count);
+          if ($('#log_count').text() != response.log_count.toString()) {
+            $('#log_count').text(response.log_count);
+          }
         }
 
         if (response.task_count == 0) {

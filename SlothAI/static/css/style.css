@@ -232,6 +232,16 @@ button.navbar-toggler {
     margin-left: 40px; /* Adjust as needed */
 }
 
+.remove-token {
+  border-bottom-left-radius:  0px;
+  border-top-left-radius: 0px;
+}
+
+.remove-label {
+  border-bottom-right-radius: 0px;
+  border-top-right-radius: 0px;
+}
+
 .button-node {
   flex: 0 0 auto; /* Do not grow, do not shrink, and is automatically sized based on content */
   width: 83px; /* Fixed width */
@@ -657,6 +667,10 @@ div.form-group.email, div.form-group.token {
 
 #userDropdown {
   color: white !important;
+}
+
+#logsTable td, #logsTable th {
+  border-top: none;
 }
 
 /* Sidebar styles */
