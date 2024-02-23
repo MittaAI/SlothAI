@@ -26,7 +26,7 @@ from SlothAI.web.models import Token
 
 from typing import Dict
 
-from pypdf import PdfReader, PdfWriter
+from pypdf import PdfReader
 import fitz
 
 from flask import current_app as app
