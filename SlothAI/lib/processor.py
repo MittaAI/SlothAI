@@ -26,7 +26,7 @@ from SlothAI.web.models import Token
 
 from typing import Dict
 
-import PyPDF2
+from pypdf import PdfReader, PdfWriter
 import fitz
 
 from flask import current_app as app
@@ -646,7 +646,7 @@ def info_file(node: Dict[str, any], task: Task) -> Task:
         if "application/pdf" in content_type:
             # Create a BytesIO object for the PDF content
             pdf_content_stream = BytesIO(file_content)
-            pdf_reader = PyPDF2.PdfReader(pdf_content_stream)
+            pdf_reader = PdfReader(pdf_content_stream)
             pdf_num_pages = len(pdf_reader.pages)
             task.document['pdf_num_pages'].append(pdf_num_pages)
         elif "text/plain" in content_type or "text/csv" in content_type:
