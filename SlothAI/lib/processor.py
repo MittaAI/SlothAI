@@ -463,6 +463,9 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
     username = user.get('name')
     user_token = user.get('api_token')
 
+    # Initialize requirements
+    mitta_uri = None
+
     # Serial pipeline execution brought us here
     if task.jump_status < 0:
 
@@ -481,7 +484,10 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
         output_file = task.document.get('output_file')
 
         # Construct the AIFFMPEG service URL using the selected box details
-        ffmpeg_url = f"{app.config['FFMPEG_URL']}"
+        if app.config['DEV'] == "True":
+            ffmpeg_url = f"http://localhost:5000/convert"
+        else:
+            ffmpeg_url = f"{app.config['FFMPEG_URL']}"
 
         # ffmpeg_request string 
         ffmpeg_string = task.document.get('ffmpeg_request')
@@ -491,19 +497,12 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
             # rewrite as a string
             task.document['ffmpeg_request'] = ffmpeg_string[0]
 
-        # File URL to process (get just the first one)
-        if not task.document.get('mitta_uri'):
+        # mitta_uri handling for the input document
+        mitta_uri_value = task.document.get('mitta_uri')
+        if not mitta_uri_value:
             raise NonRetriableError("The `aiffmpeg` processor expects a `mitta_uri` key in the input fields.")
-        else:
-            if isinstance(mitta_uri, list):
-                mitta_uri = task.document.get('mitta_uri')[0]
-            else:
-                mitta_uri = task.document.get('mitta_uri')
-
-        if not mitta_uri:
-            raise NonRetriableError("The `aiffmpeg` processor requires a `mitta_uri` key with the media file URL. Use the info_file processor to upload or access the file.")
-        else:
-            mitta_uri = f"{mitta_uri}?token={user.get('api_token')}"
+        mitta_uri = mitta_uri_value[0] if isinstance(mitta_uri_value, list) else mitta_uri_value
+        mitta_uri = f"{mitta_uri}?token={user.get('api_token')}" 
 
         # Callback for resuming the pipeline flow
         if app.config['DEV'] == "True":
@@ -567,10 +566,10 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
 
         if ffmpeg_response:
             ffmpeg_response = ffmpeg_response.json()
-            
+           
         # Handle response
-        if "result" in ffmpeg_response:
-            if ffmpeg_response.get('result') == "success":
+        if "status" in ffmpeg_response:
+            if ffmpeg_response.get('status') == "success":
                 # Proceed with the task modification only if all are successful
                 task.nodes = [task.next_node()]
 
@@ -580,7 +579,7 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
                 # exit current task with threads running on external service
                 return task
             else:
-                raise NonRetriableError("Processing failed. Check the file, try another file, or reword the request.")
+                raise NonRetriableError(f"Processing failed: {message}")
         else:
             raise NonRetriableError("Processing failed with no result. Check the file URL or try another file.")
 

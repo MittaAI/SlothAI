@@ -314,11 +314,12 @@ def ingest_post(pipeline_id, task_id=None):
             modified_node_ids = pipeline.get('node_ids')[node_index:]
             jump_status = 1  # Set a flag indicating that a jump in the pipeline has occurred.
             
-            # Merge the current task data (json_data_dict) with the newly loaded data (json_storage_dict).
-            # This ensures that any updates or changes made prior to this point are incorporated
-            # into the task's data moving forward. json_storage_dict takes precedence in the merge,
-            # overriding any duplicate keys in json_data_dict.
-            json_data_dict.update(json_storage_dict)
+            # Ensure newer data from json_data_dict overrides older data in json_storage_dict
+            json_storage_dict.update(json_data_dict)
+
+            # At this point, json_storage_dict contains the merged data with newer updates taking precedence.
+            # The updated data is required to be in json_data_dict, reassign it:
+            json_data_dict = json_storage_dict
             
         except Exception as ex:
             print(ex)
@@ -353,6 +354,7 @@ def ingest_post(pipeline_id, task_id=None):
         app.config['task_service'].create_task(task)
         return jsonify(task.to_dict()), 200
     except Exception as e:
+        print(e)
         return jsonify({"error": f"Error creating task: {e}"}), 400
 
 
