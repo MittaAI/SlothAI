@@ -4,9 +4,6 @@ from faker import Faker
 
 import random
 
-import nltk
-tokenizer = nltk.data.load('./SlothAI/static/english.pickle')
-
 custom_commands = Blueprint('custom_commands', __name__)
 
 @custom_commands.app_template_global()
@@ -71,6 +68,8 @@ def chunk_with_page_filename(texts, filename, length=512, start_page=1, overlap=
     texts_chunks = []
 
     # loop over page's texts
+    import nltk
+    tokenizer = nltk.data.load('./SlothAI/static/english.pickle')
 
     for text in texts:
         # lists for page_chunks and sub_chunks

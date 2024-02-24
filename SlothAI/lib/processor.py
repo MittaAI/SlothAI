@@ -13,8 +13,6 @@ import json
 import openai
 import google.generativeai as genai
 
-import pandas as pd
-
 from itertools import groupby
 
 from google.cloud import vision, storage, documentai
@@ -25,9 +23,6 @@ from SlothAI.lib.template import Template
 from SlothAI.web.models import Token
 
 from typing import Dict
-
-from pypdf import PdfReader
-import fitz
 
 from flask import current_app as app
 from flask import url_for
@@ -646,6 +641,8 @@ def info_file(node: Dict[str, any], task: Task) -> Task:
             raise NonRetriableError("Can't get the size or content_type from the file in storage.")
 
         if "application/pdf" in content_type:
+            from pypdf import PdfReader
+
             # Create a BytesIO object for the PDF content
             pdf_content_stream = BytesIO(file_content)
             pdf_reader = PdfReader(pdf_content_stream)
@@ -1988,6 +1985,7 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
     if not task.document.get(output_field):
         task.document[output_field] = []
 
+    import fitz
     # loop over the filenames
     for index, file_name in enumerate(filename):
         if "application/pdf" in content_type[index]:
@@ -2080,6 +2078,7 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
             task.document[output_field].append("Data exported to 'json_data'")
 
         elif "text/csv" in content_type[index]:
+            import pandas as pd
             # check for prepend string
             if task.document.get('prepend_string'):
                 prepend_string = task.document.get('prepend_string')
