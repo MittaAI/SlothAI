@@ -301,6 +301,7 @@ def callback(node: Dict[str, any], task: Task) -> Task:
     # strip secure stuff out of the document
     document = strip_secure_fields(task.document) # returns document
 
+    # TODO Check if the document contains these and throw a decent error if it does (it gives some error about forgetting commas)
     keys_to_keep = []
     if template.get('output_fields'):
         for field in template.get('output_fields'):
@@ -396,6 +397,7 @@ def aigrub(node: Dict[str, any], task: Task) -> Task:
             callback_url = f"{app.config['NGROK_URL']}/pipeline/{task.pipe_id}/task/{task.id}?token={user_token}"
         else:
             callback_url = f"{app.config['BRAND_SERVICE_URL']}/pipeline/{task.pipe_id}/task/{task.id}?token={user_token}"
+
 
         # Initialize the list to track statuses
         statuses = []
