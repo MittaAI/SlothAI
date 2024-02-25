@@ -14,7 +14,7 @@
       <p>If you need assistance using or building a pipeline, be sure to pop into <a href="{{ brand.get('slack_url') }}">Slack</a>.</p>
 
       {% for cookbook in cookbooks %}
-      <h3 class="header">{{ cookbook.header }}</h3>
+      <h3 class="gradient-text header mt-3">{{ cookbook.header }}</h3>
       <p>{{ cookbook.description }}</p>
 
       <div class="row cookbook-cards">
@@ -44,12 +44,7 @@
         <iframe width="100%" height="315" src="{{ cookbook.youtube_url }}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
       </div>
       {% endif %}
-
-      {% if not loop.last %}
-      <hr/>
-      {% endif %}
       {% endfor %}
-
     </div>
   </div>
 </div>

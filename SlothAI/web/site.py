@@ -118,6 +118,9 @@ def get_brand(app):
     brand['youtube_url'] = app.config['BRAND_YOUTUBE_URL']
     return brand
 
+@site.route("/_ah/warmup")
+def warmup():
+    return "", 200, {}
 
 @site.route('/sitemap.txt')
 def sitemap():

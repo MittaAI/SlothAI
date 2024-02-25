@@ -428,10 +428,6 @@ button.navbar-toggler {
   color:  #212529;
 }
 
-.demos h3, .cookbooks h3 {
-  text-decoration: underline;
-}
-
 h3.modal-title {
   font-size: 24px;
 }
@@ -470,6 +466,7 @@ h3.modal-title {
 .cookbook-cards {
   justify-content: flex-start !important;
 }
+
 
 .cookbook-cards p {
   font-size: 13px;
