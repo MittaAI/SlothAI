@@ -55,7 +55,7 @@ class AppEngineTaskQueue(ABC):
 			# Calculate future_time to be 15 seconds per retry
 			future_time = datetime.utcnow() + timedelta(seconds=15 * retries)
 		else:
-			delay = random.randint(100, 300)
+			delay = random.randint(50, 100)
 			future_time = datetime.utcnow() + timedelta(milliseconds=delay)
 
 		# Set the timestamp using the calculated future time

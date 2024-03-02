@@ -355,6 +355,35 @@ button.navbar-toggler {
   text-align: left;
 }
 
+.blurb {
+  width: 73%;
+  margin: 0 auto;
+  display: block;
+}
+
+#comms:not(input) {
+  color: #f4e8c1;
+  max-width: 480px;
+  min-width: 480px;
+  font-size: 15px;
+}
+
+#mitta {
+  cursor: pointer;
+}
+
+.pro {
+  background: radial-gradient(circle at center center, rgba(128, 128, 128, 0.3) 0%, rgba(128, 128, 128, 0) 100%);
+  background-size: cover;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #f4f4f4;
+  padding: 20px;
+  transition:  all 0.5s ease;
+}
+
 .pricing, .about{
   min-height: 999px;
 }

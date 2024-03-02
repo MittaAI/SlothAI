@@ -27,7 +27,7 @@ from typing import Dict
 from flask import current_app as app
 from flask import url_for
 
-from jinja2 import Environment
+from jinja2 import Environment, DictLoader
 
 from enum import Enum
 
@@ -37,7 +37,7 @@ import datetime
 import warnings
 warnings.filterwarnings("ignore")
 
-from SlothAI.web.custom_commands import random_word, random_sentence, chunk_with_page_filename, filter_shuffle, random_entry
+from SlothAI.web.custom_commands import random_word, random_sentence, random_chars, chunk_with_page_filename, filter_shuffle, random_entry
 from SlothAI.web.models import User, Node, Pipeline
 
 from SlothAI.lib.tasks import Task, process_data_dict_for_insert, auto_field_data, transform_data, get_values_by_json_paths, box_required, validate_dict_structure, TaskState, NonRetriableError, RetriableError, MissingInputFieldError, MissingOutputFieldError, UserNotFoundError, PipelineNotFoundError, NodeNotFoundError, TemplateNotFoundError
@@ -47,6 +47,7 @@ from SlothAI.lib.util import strip_secure_fields, filter_document, random_string
 import SlothAI.lib.services as services
 
 env = Environment(trim_blocks=True, lstrip_blocks=True)
+env.globals['random_chars'] = random_chars
 env.globals['random_word'] = random_word
 env.globals['random_sentence'] = random_sentence
 env.globals['random_entry'] = random_entry
@@ -82,6 +83,7 @@ retriable_status_codes = [408, 409, 425, 429, 500, 503, 504]
 processors = {}
 processor = lambda f: processors.setdefault(f.__name__, f)
 
+# Main process entry
 def process(task: Task) -> Task:
     user = User.get_by_uid(task.user_id)
     if not user:
@@ -142,6 +144,13 @@ def process(task: Task) -> Task:
     # processor methods to be called below
     task = processors[node.get('processor')](node, task)
 
+    # add post processors
+    post_processors = ['jinja2']
+
+    for post_proc_name in post_processors:
+        if node.get('processor') != post_proc_name:
+            task = processors.get(post_proc_name, lambda x,y, **kwargs: y)(node, task, is_post_processor=True) 
+
     # TODO, decide what to do with errors and maybe truncate pipeline
     if task.document.get('error'):
         return task
@@ -162,7 +171,7 @@ def process(task: Task) -> Task:
     return task
 
 @processor
-def jinja2(node: Dict[str, any], task: Task) -> Task:
+def jinja2(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     # set the time for the template
     current_epoch_time = int(time.time())
     task.document['current_epoch'] = current_epoch_time
@@ -176,20 +185,56 @@ def jinja2(node: Dict[str, any], task: Task) -> Task:
     template_text = Template.remove_fields_and_extras(template.get('text'))
     template_text = template_text.strip()
 
-    try:
-        if template_text:
-            jinja_template = env.from_string(template_text)
-            jinja = jinja_template.render(task.document)
-    except Exception as e:
-        raise NonRetriableError(f"Unable to render jinja: {e}. You may want to use |safe_tojson to handle null entries and check your syntax.")
+    # If we have text we try to get the JSON out of it
+    if template_text:
+        # Test if this is a post_processor run
+        if is_post_processor:
+            # Define a fake template to project json into
+            templates = {
+                "base": """
+                    {% block json %}
+                    {% endblock %}
+                """}
 
-    try:
-        jinja_json = json.loads(jinja.strip())
-        for k,v in jinja_json.items():
-            task.document[k] = v
+            # child template gets the template_text from the node, extends base and is updated to templates
+            child = "{% extends 'base' %}\n" + template_text
+            templates.update({"child": child})
 
-    except Exception as e:
-        raise NonRetriableError(f"jinja2 processor: unable to load jinja output as JSON. Try throwing a pair of curly braces at the bottom or consider fixing this error: {e}")
+            # set the environment and load custom functions
+            json_env = Environment(loader=DictLoader(templates))
+            json_env.globals['random_chars'] = random_chars
+            json_env.globals['random_word'] = random_word
+            json_env.globals['random_sentence'] = random_sentence
+            json_env.globals['random_entry'] = random_entry
+            json_env.globals['chunk_with_page_filename'] = chunk_with_page_filename
+            json_env.filters['shuffle'] = filter_shuffle
+
+            # Set new environment with the dictloader, grab the child template
+            child_template = json_env.get_template('child')
+
+            try:
+                # render the template with the document
+                jinja_json = child_template.render(task.document)
+            except Exception as e:
+                raise NonRetriableError(f"jinja2 processor: {e}")
+        else:
+            try:
+                # Render the entire template, as we are running the jinja2 processor
+                app.logger.info(template_text)
+                jinja_template = env.from_string(template_text)
+                jinja_json = jinja_template.render(task.document)
+                print(jinja_json)
+            except Exception as e:
+                raise NonRetriableError(f"jinja processor: {e}")
+
+        # update the task.document with the rendered dict
+        try:
+            app.logger.info(jinja_json.strip())
+            task.document.update(json.loads(jinja_json.strip()))
+        except Exception:
+            app.logger.info("Passing on doing anything with Jinja2")
+            # From now on, we'll just ignore that we don't have a dict in the template loaded by this processor
+            pass
 
     return task
 
@@ -253,13 +298,21 @@ def jump_task(node: Dict[str, any], task: Task) -> Task:
     except Exception as e:
         raise NonRetriableError(f"Unable to render jinja: {e}. You may want to use |safe_tojson to handle null entries and check your syntax.")
 
-    # Parse the rendered text as JSON and attempt to jump
+    # attempt to jump
     try:
         rendered_json = json.loads(rendered_text.strip())
+        # load it into the document
+        try:
+            for k,v in rendered_json.items():
+                task.document[k] = v
+        except:
+            raise NonRetriableError("Your JSON didn't validate. Check syntax and formatting.")
+
         # Check for 'jump_to_node' key in the rendered JSON
         jump_node_name = rendered_json.get('jump_node')
+        jump_task = rendered_json.get('jump_task', False)
 
-        if jump_node_name:
+        if jump_node_name and jump_task:
             # Attempt to get the node_id from the node name
             jump_node = Node.get(name=jump_node_name)
 
@@ -475,21 +528,19 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
             if field_name not in task.document:
                 raise NonRetriableError(f"Input field '{field_name}' is not present in the document.")
 
-        # output file name
-        if not task.document.get('output_file'):
-            task.document['output_file'] = random_string(13)
-        output_file = task.document.get('output_file')
-
         # Construct the AIFFMPEG service URL using the selected box details
         if app.config['DEV'] == "True":
             ffmpeg_url = f"http://localhost:5000/convert"
+            ffmpeg_url = f"{app.config['FFMPEG_URL']}"
         else:
             ffmpeg_url = f"{app.config['FFMPEG_URL']}"
 
         # ffmpeg_request string 
         ffmpeg_string = task.document.get('ffmpeg_request')
         if not ffmpeg_string:
-            raise NonRetriableError("The `aiffmpeg` processor or requires a `ffmpeg_request` key with the request to run.")
+            task_document['ffmpeg_result'] = "The model didn't return an FFMpeg string. Reword the request to convert and ensure the file doesn't have an odd name."
+            return task
+
         if isinstance(ffmpeg_string, list):
             # rewrite as a string
             task.document['ffmpeg_request'] = ffmpeg_string[0]
@@ -550,6 +601,8 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
             "output_file": ai_dict.get('output_file'),
             "input_file": task.document.get('filename')[0]
         }
+        
+        task.document['ffmpeg_command'] = ai_dict.get('ffmpeg_command')
 
         # Post request to AIFFMPEG service
         try:
@@ -1491,6 +1544,7 @@ def aistruct(node: Dict[str, any], task: Task) -> Task:
 
     iterator = task.document.get(iterate_field_name, ["False"]) if iterate_field_name != "False" else ["False"]
     is_list_of_lists = isinstance(iterator, list) and all(isinstance(elem, list) for elem in iterator)
+    app.logger.info(is_list_of_lists)    
 
     # build a custom model from the output fields
     output_fields = template.get('output_fields')

@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template
 from flask import current_app as app
 from faker import Faker
+from SlothAI.lib.util import random_string
 
 import random
 
@@ -24,6 +25,10 @@ def reverse_word(word):
 def random_word():
     fake = Faker()
     return fake.word()
+
+@custom_commands.app_template_global()
+def random_chars(len=13):
+    return random_string(len)
 
 @custom_commands.app_template_global()
 def random_entry(texts):

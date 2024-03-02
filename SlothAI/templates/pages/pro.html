@@ -5,11 +5,11 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid auth">
+<div class="container-fluid pro">
   <div class="row">
     <div class="col-lg-12">
-      <h1><span class="greater-than">&gt;</span> PRO</h1>
-      <p>Please fill out this form and we will be in contact with you shortly.</p>
+      <h3 id="mitta"><span class="greater-than">&gt;</span> GET IN TOUCH</h3>
+      <p id="comms">Please fill out the form. We will be in contact with you shortly.</p>
       <form autocomplete="off" id="form" action="/pro" method="post">
         <div class="form-group">
           <label for="email" class="form-label">Email Address</label>
@@ -28,7 +28,7 @@
           <input type="phone" class="form-control" id="phone" name="phone" placeholder="Phone Number" value="{{phone}}" aria-label="Phone Number">
         </div>
         <div class="form-group">
-          <label for="why" class="form-label">Describe an AI work flow you are considering</label>
+          <label for="why" class="form-label">Describe what you want built and how we can help.</label>
           <textarea class="form-control" id="why" name="why" aria-label="Description">{{why}}</textarea>
         </div>
 
@@ -47,7 +47,10 @@
 {% block javascript %}
 <script type="text/javascript">
 $(document).ready(function() {
-
+  // Advertising
+  $('#mitta').on('click', function() {
+    window.location = "https://mitta.ai";
+  });
 });
 </script>
 {% endblock %}
