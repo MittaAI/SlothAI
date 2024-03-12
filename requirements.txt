@@ -40,5 +40,5 @@ htmlmin==0.1.12
 PyMuPDF==1.23.22
 python-magic==0.4.27
 tenacity==8.2.3
-weaviate==4.5.0
-anthropic==0.19.1
+weaviate-client==4.5.1
+anthropic==0.19.1 
