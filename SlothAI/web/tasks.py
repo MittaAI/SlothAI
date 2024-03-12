@@ -15,56 +15,68 @@ tasks = Blueprint('tasks', __name__)
 
 @tasks.route('/tasks/process/<cron_key>', methods=['POST'])
 def process_tasks(cron_key):
+    try:
+        # validate call with a key
+        if cron_key != app.config['CRON_KEY']:
+            raise NonRetriableError("invalid cron key")
 
-	try:
-		# validate call with a key
-		if cron_key != app.config['CRON_KEY']:
-			raise NonRetriableError("invalid cron key")
+        task_service = app.config['task_service']
 
-		task_service = app.config['task_service']
+        # Parse the task payload sent in the request.
+        task = Task.from_json(request.get_data(as_text=True))
 
-		# Parse the task payload sent in the request.
-		task = Task.from_json(request.get_data(as_text=True))
+        # clear any errors
+        task.error = None
+        task_stored = task_service.fetch_tasks(task_id=task.id)
+        app.logger.debug(task_stored)
 
-		task_stored = task_service.fetch_tasks(task_id=task.id)
-		if len(task_stored) == 0:
-			raise TaskNotFoundError(task.id)
-		
-		if len(task_stored) != 1:
-			raise Exception("Logic error: multiple tasks with same id")
-				
-		if task_stored[0]['state'] != TaskState.RUNNING.value:
-			raise services.InvalidStateForProcess(task_stored.state.value)
+        if len(task_stored) == 0:
+            app.logger.debug(f"Task {task.id} not found. Removing from queue.")
+            return "Task not found", 200
 
-		# run processors
-		task = process(task)
+        if len(task_stored) != 1:
+            raise Exception("Logic error: multiple tasks with same id")
 
-		# remove the current node so we'll move on
-		node = task.remove_node()
-		
-		if len(task.nodes) > 0:
-			task_service.queue_task(task)			
-		else:
-			task_service.update_task(task_id=task.id, state=TaskState.COMPLETED)
+        if task_stored[0]['state'] != TaskState.RUNNING.value:
+            raise services.InvalidStateForProcess(task_stored.state.value)
 
-		app.logger.info(f"successfully processed task with id {task.id} on node with id {node} in pipeline with id {task.pipe_id}")
+        # run processors
+        task = process(task)
 
-	except RetriableError as e:
-		task.error = str(e)
-		app.logger.error(f"processing task with id {task.id} on node with id {task.next_node()} in pipeline with id {task.pipe_id}: {str(e)}: retrying task.")
-		task_service.retry_task(task)
-	except services.InvalidStateForProcess as e:
-		# state likely changed during processing a task, don't requeue
-		# TODO: this could be drop task but drop_task should accept a final state.
-		return "invalid state for processing", 200
-	except Exception as e:
-		print(task.to_dict())
-		traceback.print_exc()
-		task.error = str(e)
-		app.logger.error(f"processing task with id {task.id} on node with id {task.next_node()} in pipeline with id {task.pipe_id}: {str(e)}: dropping task.")
-		task_service.drop_task(task)
-		
-	return f"successfully completed node", 200
+        # remove the current node so we'll move on
+        node = task.remove_node()
+
+        # queue the next ndoe
+        if len(task.nodes) > 0:
+            task_service.queue_task(task)
+        else:
+            task_service.update_task(task_id=task.id, state=TaskState.COMPLETED)
+
+        app.logger.info(f"Successfully processed task with id {task.id} on node with id {node} in pipeline with id {task.pipe_id}")
+
+    except RetriableError as e:
+        task.error = str(e)
+        app.logger.error(f"Processing task with id {task.id} on node with id {task.next_node()} in pipeline with id {task.pipe_id}: {str(e)}: retrying task.")
+        task_service.retry_task(task)
+
+    except NonRetriableError as e:
+        task.error = str(e)
+        app.logger.error(f"Processing task with id {task.id} on node with id {task.next_node()} in pipeline with id {task.pipe_id}: {str(e)}: dropping task.")
+        task_service.drop_task(task)
+        return f"Error in task: {task.error}", 200
+
+    except services.InvalidStateForProcess as e:
+        # state likely changed during processing a task, don't requeue
+        # TODO: this could be drop task but drop_task should accept a final state.
+        return "Invalid state for processing", 200
+
+    except Exception as e:
+        traceback.print_exc()
+        task.error = str(e)
+        app.logger.error(f"Processing task with id {task.id} on node with id {task.next_node()} in pipeline with id {task.pipe_id}: {str(e)}: dropping task.")
+        task_service.drop_task(task)
+
+    return "Successfully completed node", 200
 
 
 @tasks.route('/tasks', methods=['DELETE'])

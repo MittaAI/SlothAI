@@ -12,7 +12,7 @@ from flask_login import current_user
 from SlothAI.web.models import User, Token
 from SlothAI.lib.util import random_string
 
-from SlothAI.lib.database import featurebase_query
+from SlothAI.lib.database import featurebase_query, weaviate_get_all_schemas
 
 settings_handler = Blueprint('settings', __name__)
 
@@ -69,6 +69,53 @@ def disconnect_db(dbid):
 
     user = User.update_db(uid, None, None)
     return jsonify({"success": "FeatureBase account removed."})
+
+
+@settings_handler.route('/casino', methods=['POST'])
+@flask_login.login_required
+def connect_weaviate():
+    uid = flask_login.current_user.uid
+
+    try:
+        data = request.get_json()
+    except:
+        return jsonify({"error": "Data must be posted as a dictionary containing the weaviate_url and weaviate_token keys."}), 406
+
+    weaviate_url = data.get('weaviate_url')
+    weaviate_token = data.get('weaviate_token')
+    print(weaviate_url, weaviate_token)
+
+    if not weaviate_url or not weaviate_token:
+        return jsonify({"error": "Both the weaviate_url and weaviate_token fields are required."}), 406
+
+    auth = {"weaviate_url": weaviate_url, "weaviate_token": weaviate_token}
+    
+    # Attempt to list all schemas as a way to check connectivity and authentication
+    schemas = weaviate_get_all_schemas(auth)
+    if schemas is None:
+        return jsonify({"error": "Error authenticating with Weaviate. Check your URL and token."}), 401
+
+    # Assuming update_weaviate is similar to update_db in your User model
+    user_updated = User.update_weaviate(uid, weaviate_url, weaviate_token)
+
+    if not user_updated:
+        return jsonify({"error": "Failed to update user with Weaviate credentials. Try again."}), 409
+
+    return jsonify({"success": "Weaviate connection successfully established."})
+
+@settings_handler.route('/disco/<weaviate_url>', methods=['DELETE'])
+@flask_login.login_required
+def disconnect_weaviate(weaviate_url):
+    uid = flask_login.current_user.uid
+    if not uid:
+        return jsonify({"error": "Error authenticating. Please check your credentials."}), 401
+
+    # Assuming None values are used to remove the Weaviate connection
+    user = User.update_weaviate(uid, None, None)
+    if not user:
+        return jsonify({"error": "Failed to disconnect Weaviate. Try again."}), 409
+
+    return jsonify({"success": "Weaviate connection successfully removed."})
 
 
 @settings_handler.route('/tokens', methods=['GET'])

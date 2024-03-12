@@ -329,7 +329,7 @@ def transform_data(output_keys, data):
 
 	return out
 
-
+"""
 # check boxes and start if needed
 def box_required(box_type=None):
 	boxes = Box.get_boxes()  # Retrieve all boxes
@@ -375,7 +375,61 @@ def box_required(box_type=None):
 
 	# No boxes available to start
 	return False, None
+"""
 
+# AI improved check boxes
+def box_required(box_type=None):
+    boxes = Box.get_boxes()  # Retrieve all boxes
+    if not boxes:
+        return False, None  # Indicates no box is available
+
+    active_t4s = []
+    halted_t4s = []
+    starting_t4s = []
+
+    for box in boxes:
+        status = box.get('status')
+        box_ip = box.get('ip_address')
+        box_id = box.get('box_id')
+
+        # Check if the called type matches the box_type
+        if box_type and box_id.split("-")[0] != box_type:
+            continue
+
+        # Check for active boxes
+        if status == "RUNNING":
+            if box_ip and ping(box_ip, timeout=2.0) and check_webserver_connection(box_ip, 9898):
+                active_t4s.append(box)
+            else:
+                starting_t4s.append(box)  # Consider boxes that fail ping as starting
+
+        # Add boxes in START, PROVISIONING, STAGING to starting_t4s
+        elif status in ["START", "PROVISIONING", "STAGING"]:
+            starting_t4s.append(box)
+
+        # Add boxes in TERMINATED to halted_t4s
+        elif status == "TERMINATED":
+            halted_t4s.append(box)
+
+    # Return a random active box if available
+    if active_t4s:
+        return False, random.choice(active_t4s)
+
+    # Check if a box is already being started or a running box is potentially starting
+    if starting_t4s:
+        return True, random.choice(starting_t4s)
+
+    # No active or starting boxes, attempt to start a halted box
+    if halted_t4s:
+        alternate_box = random.choice(halted_t4s)
+        print("Starting box", alternate_box.get('box_id'))
+        box_start(alternate_box.get('box_id'), alternate_box.get('zone'))
+        Box.start_box(alternate_box.get('box_id'), "START")
+        return True, alternate_box
+
+    # No boxes available to start
+    return False, None
+    
 
 class RetriableError(Exception):
 	def __init__(self, message):

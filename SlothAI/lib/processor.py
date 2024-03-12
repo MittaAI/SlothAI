@@ -18,7 +18,7 @@ from itertools import groupby
 from google.cloud import vision, storage, documentai
 from google.api_core.client_options import ClientOptions
 
-from SlothAI.lib.util import random_string, random_name, get_file_extension, upload_to_storage, upload_to_storage_requests, storage_pickle, split_image_by_height, download_as_bytes
+from SlothAI.lib.util import random_string, random_name, get_file_extension, upload_to_storage, upload_to_storage_requests, storage_pickle, split_image_by_height, download_as_bytes, local_callback_url
 from SlothAI.lib.template import Template
 from SlothAI.web.models import Token
 
@@ -41,7 +41,10 @@ from SlothAI.web.custom_commands import random_word, random_sentence, random_cha
 from SlothAI.web.models import User, Node, Pipeline
 
 from SlothAI.lib.tasks import Task, process_data_dict_for_insert, auto_field_data, transform_data, get_values_by_json_paths, box_required, validate_dict_structure, TaskState, NonRetriableError, RetriableError, MissingInputFieldError, MissingOutputFieldError, UserNotFoundError, PipelineNotFoundError, NodeNotFoundError, TemplateNotFoundError
+
 from SlothAI.lib.database import table_exists, add_column, create_table, get_columns, featurebase_query
+from SlothAI.lib.database import weaviate_batch, weaviate_delete_collection, weaviate_hybrid_search, weaviate_similarity, extract_weaviate_params
+
 from SlothAI.lib.util import strip_secure_fields, filter_document, random_string
 
 import SlothAI.lib.services as services
@@ -81,7 +84,184 @@ class DocumentValidator(Enum):
 retriable_status_codes = [408, 409, 425, 429, 500, 503, 504]
 
 processors = {}
-processor = lambda f: processors.setdefault(f.__name__, f)
+
+def processor(f):
+    def wrapper(node, task, is_post_processor=False):
+        if isinstance(task, NonRetriableError):
+            app.logger.debug(f"Skipping processor '{f.__name__}' as task is a NonRetriableError instance")
+            return task
+        app.logger.debug(f"Entering processor '{f.__name__}' for task with id {task.id}")
+        result = f(node, task, is_post_processor)
+        app.logger.debug(f"Exiting processor '{f.__name__}' for task with id {task.id}")
+        return result
+    processors.setdefault(f.__name__, wrapper)
+    return wrapper
+
+def send_callback(task, node, error_message):
+    if not task.document.get('callback_uri'):
+        app.logger.info("Making callback")
+        local_callback = local_callback_url(user.get('name'), user.get('api_token'))
+        task.document.update({"callback_uri": local_callback})
+
+    callback_uri = task.document.get('callback_uri')
+    app.logger.info(f"Sending data to callback: {callback_uri}")
+    if callback_uri:
+        try:
+            # Prepare the data for the callback
+            data = {
+                'node_id': node.get('node_id'),
+                'pipe_id': task.pipe_id,
+                'error': error_message,
+            }
+            data.update(strip_secure_fields(task.document))
+
+            # Replace the token in the callback_uri with asterisks
+            modified_uri = re.sub(r'token=([^\s&]+)', lambda match: 'token=' + '*' * len(match.group(1)), callback_uri)
+            data['callback_uri'] = modified_uri
+
+            # Send the POST request to the callback URL
+            headers = {'Content-Type': 'application/json'}
+            resp = requests.post(callback_uri, data=json.dumps(data), headers=headers)
+
+            if resp.status_code != 200:
+                message = f'got status code {resp.status_code} from callback'
+                raise NonRetriableError(message)
+        except (
+            requests.ConnectionError,
+            requests.HTTPError,
+            requests.Timeout,
+            requests.TooManyRedirects,
+            requests.ConnectTimeout,
+        ) as exception:
+            app.logger.error(f"Error sending callback: {str(exception)}")
+        except Exception as exception:
+            app.logger.error(f"Error sending callback: {str(exception)}")
+
+"""
+# Main process entry
+def process(task: Task) -> Task:
+    user = User.get_by_uid(task.user_id)
+    if not user:
+        raise UserNotFoundError(task.user_id)
+    
+    pipeline = Pipeline.get(uid=task.user_id, pipe_id=task.pipe_id)
+    if not pipeline:
+        raise PipelineNotFoundError(pipeline_id=task.pipe_id)
+    
+    node_id = task.next_node()
+    node = Node.get(uid=task.user_id, node_id=node_id)
+    if not node:
+        raise NodeNotFoundError(node_id=node_id)
+
+    missing_field = validate_document(node, task, DocumentValidator.INPUT_FIELDS)
+    if missing_field:
+        raise MissingInputFieldError(missing_field, node.get('name'))
+
+    # get tokens from service tokens
+    # and process values for numbers
+    _extras = {}
+    
+    for key, value in node.get('extras').items():
+        # cast certain strings to other things
+        if isinstance(value, str):  
+            if f"[{key}]" in value:
+                token = Token.get_by_uid_name(task.user_id, key)
+                if not token:
+                    raise NonRetriableError(f"You need a service token created for '{key}'.")
+                value = token.get('value')
+            # convert ints and floats from strings
+            elif value.isdigit():
+                # convert to int
+                value = int(value)
+            elif '.' in value and all(c.isdigit() or c == '.' for c in value):
+                # convert it to a float
+                value = float(value)
+
+        _extras[key] = value
+
+    # update node extras
+    node['extras'] = _extras
+
+    # template the extras off the node
+    extras = evaluate_extras(node, task)
+
+    if extras:
+        task.document.update(extras)
+
+    # get the user
+    user = User.get_by_uid(uid=task.user_id)
+
+    # if "x-api-key" in node.get('extras'):
+    # This is likely NOT in use....
+    task.document['X-API-KEY'] = user.get('db_token')
+    # if "database_id" in node.get('extras'):
+    task.document['DATABASE_ID'] = user.get('dbid')
+
+    # Move this if you are cleaning up
+    try:
+        task.document['weaviate_url'] = user.weaviate_url
+        task.doucment['weaviate_token'] = user.weaviate_token
+    except:
+        pass
+
+    try:
+        # Call the main processor
+        app.logger.debug(f"Calling main processor '{node.get('processor')}' for task with id {task.id}")
+        task = processors[node.get('processor')](node, task)
+    except RetriableError as e:
+        app.logger.debug(f"RetriableError occurred in main processor for task with id {task.id}: {str(e)}")
+        raise
+    except NonRetriableError as e:
+        app.logger.debug(f"NonRetriableError occurred in main processor for task with id {task.id}: {str(e)}")
+        task.error = str(e)  # Store the error in the task object
+        send_callback(task, node, task.error)
+        raise
+    except Exception as e:
+        app.logger.error(f"Error in main processor: {str(e)}")
+        send_callback(task, node, str(e))
+        raise
+
+    app.logger.debug(f"Returned from main processor '{node.get('processor')}' for task with id {task.id}")
+
+    # Add post-processors
+    post_processors = ['jinja2']
+    for post_proc_name in post_processors:
+        if node.get('processor') != post_proc_name:
+            try:
+                app.logger.debug(f"Calling post-processor '{post_proc_name}' for task with id {task.id}")
+                task = processors.get(post_proc_name, lambda x, y, **kwargs: y)(node, task, is_post_processor=True)
+            except NonRetriableError as e:
+                app.logger.debug(f"NonRetriableError occurred in post-processor '{post_proc_name}' for task with id {task.id}: {str(e)}")
+                task.error = str(e)  # Store the error in the task object
+                break
+            except Exception as e:
+                app.logger.error(f"Error in post-processor '{post_proc_name}': {str(e)}")
+                raise
+            else:
+                app.logger.debug(f"Returned from post-processor '{post_proc_name}' for task with id {task.id}")
+
+
+    # TODO, decide what to do with errors and maybe truncate pipeline
+    if task.document.get('error'):
+        return task
+
+    # TODO move this or get rid of it
+    if "X-API-KEY" in task.document.keys():
+        task.document.pop('X-API-KEY', None)
+    if "DATABASE_ID" in task.document.keys():
+        task.document.pop('DATABASE_ID', None)
+    if "weaviate_token" in task.document.keys():
+        task.document.pop('weaviate_token', None)
+
+    # strip out the sensitive extras
+    clean_extras(_extras, task)
+
+    missing_field = validate_document(node, task, DocumentValidator.OUTPUT_FIELDS)
+    if missing_field:
+        raise MissingOutputFieldError(missing_field, node.get('name'))
+
+    return task
+"""
 
 # Main process entry
 def process(task: Task) -> Task:
@@ -141,15 +321,125 @@ def process(task: Task) -> Task:
     # if "database_id" in node.get('extras'):
     task.document['DATABASE_ID'] = user.get('dbid')
 
-    # processor methods to be called below
-    task = processors[node.get('processor')](node, task)
+    # Move this if you are cleaning up
+    try:
+        task.document['weaviate_url'] = user.get('weaviate_url')
+        task.document['weaviate_token'] = user.get('weaviate_token')
+    except Exception as ex:
+        print(f"exception loading user weaviate auth: {ex}")
+        pass
 
-    # add post processors
+    try:
+        # Call the main processor
+        app.logger.debug(f"Calling main processor '{node.get('processor')}' for task with id {task.id}")
+        task = processors[node.get('processor')](node, task)
+    except RetriableError as e:
+        app.logger.debug(f"RetriableError occurred in main processor for task with id {task.id}: {str(e)}")
+        raise
+    except NonRetriableError as e:
+        app.logger.debug(f"NonRetriableError occurred in main processor for task with id {task.id}: {str(e)}")
+        task.error = str(e)  # Store the error in the task object
+
+        # Send a POST request to the callback URL with the task document
+        if not task.document.get('callback_uri'):
+            app.logger.info("Making callback")
+            local_callback = local_callback_url(user.get('name'), user.get('api_token'))
+            task.document.update({"callback_uri": local_callback})
+
+        callback_uri = task.document.get('callback_uri')
+        app.logger.info(f"Sending data to callback: {callback_uri}")
+        if callback_uri:
+            try:
+                # Prepare the data for the callback
+                data = {
+                    'node_id': node.get('node_id'),
+                    'pipe_id': task.pipe_id,
+                    'error': task.error,
+                    'document': strip_secure_fields(task.document)
+                }
+
+                # Send the POST request to the callback URL
+                headers = {'Content-Type': 'application/json'}
+                resp = requests.post(callback_uri, data=json.dumps(data), headers=headers)
+
+                if resp.status_code != 200:
+                    message = f'got status code {resp.status_code} from callback'
+                    raise NonRetriableError(message)
+            except (
+                requests.ConnectionError,
+                requests.HTTPError,
+                requests.Timeout,
+                requests.TooManyRedirects,
+                requests.ConnectTimeout,
+            ) as exception:
+                app.logger.error(f"Error sending callback: {str(exception)}")
+            except Exception as exception:
+                app.logger.error(f"Error sending callback: {str(exception)}")
+
+        raise
+
+    except Exception as e:
+        app.logger.error(f"Error in main processor: {str(e)}")
+
+        task.error = str(e)  # Store the error in the task object
+
+        # Send a POST request to the callback URL with the task document
+        if not task.document.get('callback_uri'):
+            app.logger.info("Making callback")
+            local_callback = local_callback_url(user.get('name'), user.get('api_token'))
+            task.document.update({"callback_uri": local_callback})
+
+        callback_uri = task.document.get('callback_uri')
+        app.logger.info(f"Sending data to callback: {callback_uri}")
+        if callback_uri:
+            try:
+                # Prepare the data for the callback
+                data = {
+                    'node_id': node.get('node_id'),
+                    'pipe_id': task.pipe_id,
+                    'error': str(e),
+                    'document': strip_secure_fields(task.document)
+                }
+
+                # Send the POST request to the callback URL
+                headers = {'Content-Type': 'application/json'}
+                resp = requests.post(callback_uri, data=json.dumps(data), headers=headers)
+
+                if resp.status_code != 200:
+                    message = f'got status code {resp.status_code} from callback'
+                    app.logger.error(message)
+            except (
+                requests.ConnectionError,
+                requests.HTTPError,
+                requests.Timeout,
+                requests.TooManyRedirects,
+                requests.ConnectTimeout,
+            ) as exception:
+                app.logger.error(f"Error sending callback: {str(exception)}")
+            except Exception as exception:
+                app.logger.error(f"Error sending callback: {str(exception)}")
+
+        raise
+
+    app.logger.debug(f"Returned from main processor '{node.get('processor')}' for task with id {task.id}")
+
+    # Add post-processors
     post_processors = ['jinja2']
-
     for post_proc_name in post_processors:
         if node.get('processor') != post_proc_name:
-            task = processors.get(post_proc_name, lambda x,y, **kwargs: y)(node, task, is_post_processor=True) 
+            try:
+                app.logger.debug(f"Calling post-processor '{post_proc_name}' for task with id {task.id}")
+                task = processors.get(post_proc_name, lambda x, y, **kwargs: y)(node, task, is_post_processor=True)
+            except NonRetriableError as e:
+                app.logger.debug(f"NonRetriableError occurred in post-processor '{post_proc_name}' for task with id {task.id}: {str(e)}")
+                task.error = str(e)  # Store the error in the task object
+                break
+            except Exception as e:
+                app.logger.error(f"Error in post-processor '{post_proc_name}': {str(e)}")
+                raise
+            else:
+                app.logger.debug(f"Returned from post-processor '{post_proc_name}' for task with id {task.id}")
+
 
     # TODO, decide what to do with errors and maybe truncate pipeline
     if task.document.get('error'):
@@ -160,6 +450,8 @@ def process(task: Task) -> Task:
         task.document.pop('X-API-KEY', None)
     if "DATABASE_ID" in task.document.keys():
         task.document.pop('DATABASE_ID', None)
+    if "weaviate_token" in task.document.keys():
+        task.document.pop('weaviate_token', None)
 
     # strip out the sensitive extras
     clean_extras(_extras, task)
@@ -170,77 +462,93 @@ def process(task: Task) -> Task:
 
     return task
 
+
 @processor
 def jinja2(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
-    # set the time for the template
-    current_epoch_time = int(time.time())
-    task.document['current_epoch'] = current_epoch_time
+    try:
+        app.logger.debug(f"Entering post-processor 'jinja2' for task with id {task.id}")
 
-    template_service = app.config['template_service']
+        # set the time for the template
+        current_epoch_time = int(time.time())
+        task.document['current_epoch'] = current_epoch_time
 
-    template = template_service.get_template(template_id=node.get('template_id'))
-    if not template:
-        raise TemplateNotFoundError(template_id=node.get('template_id'))
+        # load templates
+        template_service = app.config['template_service']
+        template = template_service.get_template(template_id=node.get('template_id'))
 
-    template_text = Template.remove_fields_and_extras(template.get('text'))
-    template_text = template_text.strip()
+        if not template:
+            raise TemplateNotFoundError(template_id=node.get('template_id'))
 
-    # If we have text we try to get the JSON out of it
-    if template_text:
-        # Test if this is a post_processor run
-        if is_post_processor:
-            # Define a fake template to project json into
-            templates = {
-                "base": """
+        template_text = Template.remove_fields_and_extras(template.get('text'))
+        template_text = template_text.strip()
+
+        # If we have text we try to get the JSON out of it
+        if template_text:
+            # Test if this is a post_processor run
+            if is_post_processor:
+                # Define a fake template to project json into
+                templates = {
+                    "base": """
                     {% block json %}
                     {% endblock %}
-                """}
+                    """
+                }
 
-            # child template gets the template_text from the node, extends base and is updated to templates
-            child = "{% extends 'base' %}\n" + template_text
-            templates.update({"child": child})
+                # child template gets the template_text from the node, extends base and is updated to templates
+                child = "{% extends 'base' %}\n" + template_text
+                templates.update({"child": child})
 
-            # set the environment and load custom functions
-            json_env = Environment(loader=DictLoader(templates))
-            json_env.globals['random_chars'] = random_chars
-            json_env.globals['random_word'] = random_word
-            json_env.globals['random_sentence'] = random_sentence
-            json_env.globals['random_entry'] = random_entry
-            json_env.globals['chunk_with_page_filename'] = chunk_with_page_filename
-            json_env.filters['shuffle'] = filter_shuffle
+                # set the environment and load custom functions
+                json_env = Environment(loader=DictLoader(templates))
+                json_env.globals['random_chars'] = random_chars
+                json_env.globals['random_word'] = random_word
+                json_env.globals['random_sentence'] = random_sentence
+                json_env.globals['random_entry'] = random_entry
+                json_env.globals['chunk_with_page_filename'] = chunk_with_page_filename
+                json_env.filters['shuffle'] = filter_shuffle
 
-            # Set new environment with the dictloader, grab the child template
-            child_template = json_env.get_template('child')
+                # Set new environment with the dictloader, grab the child template
+                try:
+                    child_template = json_env.get_template('child')
+                except:
+                    # template had issues TODO fix this
+                    app.logger.debug("Passing on doing anything with Jinja2 due to not finding the child template from above?")
+                    return task
 
+                try:
+                    # render the template with the document
+                    jinja_json = child_template.render(task.document)
+                except Exception as e:
+                    raise NonRetriableError(f"jinja2 processor: {e}")
+            else:
+                try:
+                    # Render the entire template, as we are running the jinja2 processor
+                    jinja_template = env.from_string(template_text)
+                    jinja_json = jinja_template.render(task.document)
+                except Exception as e:
+                    raise NonRetriableError(f"jinja processor: {e}")
+
+            # update the task.document with the rendered dict
             try:
-                # render the template with the document
-                jinja_json = child_template.render(task.document)
-            except Exception as e:
-                raise NonRetriableError(f"jinja2 processor: {e}")
-        else:
-            try:
-                # Render the entire template, as we are running the jinja2 processor
-                app.logger.info(template_text)
-                jinja_template = env.from_string(template_text)
-                jinja_json = jinja_template.render(task.document)
-                print(jinja_json)
-            except Exception as e:
-                raise NonRetriableError(f"jinja processor: {e}")
+                task.document.update(json.loads(jinja_json.strip()))
+            except Exception:
+                app.logger.debug("Passing on doing anything with Jinja2, got an error trying to evaluate the dictionary.")
+                # From now on, we'll just ignore that we don't have a dict in the template loaded by this processor
+                pass
 
-        # update the task.document with the rendered dict
-        try:
-            app.logger.info(jinja_json.strip())
-            task.document.update(json.loads(jinja_json.strip()))
-        except Exception:
-            app.logger.info("Passing on doing anything with Jinja2")
-            # From now on, we'll just ignore that we don't have a dict in the template loaded by this processor
-            pass
+    except NonRetriableError as e:
+        app.logger.error(f"NonRetriableError in post-processor 'jinja2' for task with id {task.id}: {str(e)}")
+        raise
+    except Exception as e:
+        app.logger.error(f"Error in post-processor 'jinja2' for task with id {task.id}: {str(e)}")
+        raise NonRetriableError(str(e))
 
+    app.logger.debug(f"Exiting post-processor 'jinja2' for task with id {task.id}")
     return task
 
 
 @processor
-def halt_task(node: Dict[str, any], task: Task) -> Task:
+def halt_task(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     # Set the current epoch time in the task document
     current_epoch_time = int(time.time())
     task.document['current_epoch'] = current_epoch_time
@@ -276,7 +584,7 @@ def halt_task(node: Dict[str, any], task: Task) -> Task:
 
 
 @processor
-def jump_task(node: Dict[str, any], task: Task) -> Task:
+def jump_task(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     # Set the current epoch time in the task document
     current_epoch_time = int(time.time())
     task.document['current_epoch'] = current_epoch_time
@@ -329,7 +637,7 @@ def jump_task(node: Dict[str, any], task: Task) -> Task:
 
 
 @processor
-def callback(node: Dict[str, any], task: Task) -> Task:
+def callback(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
     if not template:
@@ -400,7 +708,7 @@ def callback(node: Dict[str, any], task: Task) -> Task:
 
 
 @processor
-def aigrub(node: Dict[str, any], task: Task) -> Task:
+def aigrub(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
 
@@ -479,6 +787,7 @@ def aigrub(node: Dict[str, any], task: Task) -> Task:
                     statuses.append("failed")  # Considered failed if status is not success
 
             except Exception as e:
+                app.logger.debug(e)
                 # Handle exceptions for request errors or .json() parsing errors
                 statuses.append("failed")
 
@@ -502,7 +811,7 @@ def aigrub(node: Dict[str, any], task: Task) -> Task:
 
 
 @processor
-def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
+def aiffmpeg(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     # Retrieve the template
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
@@ -586,6 +895,9 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
             retries=3
         )
 
+        if not isinstance(ai_dict, dict):
+            raise NonRetriableError("The AI refused to return a dictionary for us. We can not proceed.")
+
         if "ffmpeg_command" not in ai_dict:
             raise NonRetriableError("The AI didn't return an `ffmpeg_command`. Try rewording your query.")
         if "output_file" not in ai_dict:
@@ -639,7 +951,7 @@ def aiffmpeg(node: Dict[str, any], task: Task) -> Task:
 
 
 @processor
-def info_file(node: Dict[str, any], task: Task) -> Task:
+def info_file(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
 
@@ -729,7 +1041,7 @@ def info_file(node: Dict[str, any], task: Task) -> Task:
 
 
 @processor
-def split_task(node: Dict[str, any], task: Task) -> Task:
+def split_task(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
     input_fields = template.get('input_fields')
@@ -863,15 +1175,15 @@ def split_task(node: Dict[str, any], task: Task) -> Task:
 
 
 @processor
-def embedding(node: Dict[str, any], task: Task) -> Task:
+def embedding(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
-    
+
     # do we need this?
     extras = node.get('extras', None)
     if not extras:
         raise NonRetriableError("embedding processor: extras not found but is required")
-    
+
     model = extras.get('model')
     if not model:
         raise NonRetriableError("Model not found in extras but is required.")
@@ -887,9 +1199,10 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
         # Ensure output_fields is a list of names only
         output_fields = [field['name'] for field in output_fields if 'name' in field]
 
-        if len(output_fields) != len(input_fields):
-            raise NonRetriableError("Input and output fields must be of the same length.")
+    if len(output_fields) != len(input_fields):
+        raise NonRetriableError("Input and output fields must be of the same length.")
 
+    # use batches of strings to send to embeddings endpoints
     if task.document.get('batch_size'):
         batch_size = int(task.document.get('batch_size'))
         if batch_size < 1:
@@ -907,8 +1220,23 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
         # Define the output field name for embeddings
         output_field = output_fields[index]
 
+        # Check if the input field is empty or None
+        if input_data is None or (isinstance(input_data, list) and len(input_data) == 0):
+            # Set the output field to an empty list and continue to the next input field
+            task.document[output_field] = []
+            continue
+
+        # embeddings are processed from lists of lists
+        # convert lists of objects to lists of lists of objects
+        if not isinstance(input_data, list):
+            input_data = [input_data]
+
         # Initialize a list to store the embeddings
         embeddings = []
+
+        if "voyage" in model:
+            pass
+            # add voyageai.com embeddings
 
         if model == "text-embedding-ada-002":
             openai.api_key = task.document.get('openai_token')
@@ -949,7 +1277,7 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
                 raise NonRetriableError(f"Exception talking to Gemini embedding: {ex}")
 
         elif "mistral-embed" in model:
-            from mistralai.client import MistralClient
+            from mitta_mistralai.client import MistralClient
 
             if not task.document.get('mistral_token'):
                 raise NonRetriableError(f"You'll need to specify a 'mistral_token' in extras to use the {model} model.")
@@ -974,7 +1302,6 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
         elif "instructor" in model:
             # check required services (GPU boxes)
             defer, selected_box = box_required(box_type="instructor")
-
             if defer:
                 if selected_box:
                     # Logic to start or wait for the box to be ready
@@ -983,44 +1310,48 @@ def embedding(node: Dict[str, any], task: Task) -> Task:
                 else:
                     # No box is available, raise a non-retriable error
                     raise NonRetriableError("No available Instructor machine to run embeddings.")
-     
+
             embedding_url = f"http://instructor:{app.config['CONTROLLER_TOKEN']}@{selected_box.get('ip_address')}:9898/embed"
 
             try:
                 # Initialize a list to store the embeddings
                 embeddings = []
-
                 for i in range(0, len(input_data), batch_size):
                     batch = input_data[i:i + batch_size]
-
                     # Prepare the data for the POST request
                     embedding_data = {
                         "text": batch,
                         "model": model
                     }
-
                     # Send the POST request to the Instructor embedding service
                     response = requests.post(embedding_url, json=embedding_data, headers={"Content-Type": "application/json"}, timeout=60)
-
                     # Check the response and extract embeddings
                     if response.status_code == 200:
                         batch_embeddings = response.json().get("embeddings")
                         embeddings.extend(batch_embeddings)
-                    else:
+                    elif response.status_code == 502:
                         raise RetriableError(f"Embedding server is starting with status: {response.status_code}.")
+                    else:
+                        raise NonRetriableError(f"Unexpected status code from Instructor embedding endpoint: {response.status_code}.")
 
                 # Add the embeddings to the output field in the task document
                 task.document[output_field] = embeddings
+
+            except RetriableError as ex:
+                app.logger.info(f"embedding processor: {ex}")
+                raise  # Re-raise the RetriableError to be caught by the process function
+
             except Exception as ex:
                 app.logger.info(f"embedding processor: {ex}")
                 raise NonRetriableError(f"Exception talking to Instructor embedding endpoint: {ex}")
+
 
     return task
 
 
 # complete strings
 @processor
-def aichat(node: Dict[str, any], task: Task) -> Task:
+def aichat(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     # output and input fields
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
@@ -1096,17 +1427,93 @@ def aichat(node: Dict[str, any], task: Task) -> Task:
             answer = completion.choices[0].message.content
 
             if answer:
-                task.document[output_field] = answer
+                task.document[output_field] = [answer]
                 return task
 
         else:               
             raise NonRetriableError(f"Tried {retries} times to get an answer from the AI, but failed.")    
+        
+
+    elif "claude" in task.document.get('model'):
+        model = task.document.get('model')
+        if not task.document.get('anthropic_token'):
+            raise NonRetriableError(f"You'll need to specify an 'anthropic_token' in extras to use the {model} model.")
+
+        import anthropic
+        client = anthropic.Client(api_key=task.document.get('anthropic_token'))
+
+        template_text = Template.remove_fields_and_extras(template.get('text'))
+        if template_text:
+            jinja_template = env.from_string(template_text)
+            prompt = jinja_template.render(task.document)
+        else:
+            raise NonRetriableError("Couldn't find template text.")
+
+        system_prompt = task.document.get('system_prompt', "You are a helpful assistant.")
+
+        # we always reverse the lists, so it's easier to do without timestamps
+        message_history = task.document.get('message_history', [])
+        role_history = task.document.get('role_history', [])
+
+        if message_history or role_history:
+            if len(message_history) != len(role_history):
+                raise NonRetriableError("'role_history' length must match 'message_history' length.")
+            else:
+                message_history.reverse()
+                role_history.reverse()
+
+        messages = []
+
+        # Iterate through the user history
+        for idx, message in enumerate(message_history):
+            # Determine the role (user or assistant) based on the index
+            role = role_history[idx]
+
+            # Create a message object and append it to the messages list
+            messages.append({
+                "role": role,
+                "content": message
+            })
+
+        # add the user input from the template as the last message
+        messages.append({"role": "user", "content": prompt})
+
+        app.logger.debug(messages)
+
+        retries = 3
+
+        # try a few times
+        for _try in range(retries):
+            response = client.messages.create(
+                model=model,
+                max_tokens=1000,
+                messages=messages
+            )
+
+            content_blocks = response.content
+
+            if content_blocks:
+                # Iterate over the content blocks and extract the text
+                answer = ''.join(block.text for block in content_blocks)
+                task.document[output_field] = [answer]
+
+                # Retrieve the usage information and store it in the task document
+                usage = response.usage
+                task.document['anthropic_usage'] = {
+                    'input_tokens': usage.input_tokens,
+                    'output_tokens': usage.output_tokens
+                }
+
+                return task
+            else:
+                raise NonRetriableError(f"Tried {retries} times to get an answer from the AI, but failed.")
     
+
     elif "gemini-pro" in task.document.get('model'):
         model = task.document.get('model')
-
         if not task.document.get('gemini_token'):
             raise NonRetriableError(f"You'll need to specify a 'gemini_token' in extras to use the {model} model.")
+
         genai.configure(api_key=task.document.get('gemini_token'))
 
         template_text = Template.remove_fields_and_extras(template.get('text'))
@@ -1118,13 +1525,58 @@ def aichat(node: Dict[str, any], task: Task) -> Task:
 
         system_prompt = task.document.get('system_prompt', "You are a helpful assistant.")
 
-        # upgrade model to genai
         model = genai.GenerativeModel(model)
-        response = model.generate_content(f"system: {system_prompt}\n\n{prompt}")
-        
-        task.document[output_field] = [response.text]
 
-        return task
+        # we always reverse the lists, so it's easier to do without timestamps
+        message_history = task.document.get('message_history', [])
+        role_history = task.document.get('role_history', [])
+
+        if message_history or role_history:
+            if len(message_history) != len(role_history):
+                raise NonRetriableError("'role_history' length must match 'message_history' length.")
+            else:
+                message_history.reverse()
+                role_history.reverse()
+
+            chat = model.start_chat(history=[])
+
+            # Iterate through the user history
+            for idx, message in enumerate(message_history):
+                # Determine the role (user or assistant) based on the index
+                role = role_history[idx]
+
+                if role == "user":
+                    response = chat.send_message(message)
+                else:
+                    # Skip assistant messages as they are not sent to the model
+                    continue
+
+        retries = 3
+
+        # try a few times
+        for _try in range(retries):
+            if message_history or role_history:
+                response = chat.send_message(prompt)
+            else:
+                response = model.generate_content(f"system: {system_prompt}\n\n{prompt}")
+
+            if response.text:
+                task.document[output_field] = [response.text]
+
+                if response.candidates:
+                    task.document['gemini_candidates'] = [
+                        {
+                            'content': str(candidate.content),
+                            'token_count': candidate.token_count,
+                            'finish_reason': candidate.finish_reason.name
+                        }
+                        for candidate in response.candidates
+                    ]
+                
+                return task
+            else:
+                raise NonRetriableError(f"Tried {retries} times to get an answer from the AI, but failed.")
+
 
     elif "perplexity" in task.document.get('model'):
         full_model_name = task.document.get('model')
@@ -1188,8 +1640,8 @@ def aichat(node: Dict[str, any], task: Task) -> Task:
                 response.raise_for_status()  # Raise an error for bad responses
                 answer = response.json()
                 if answer and answer.get('choices')[0]:
-                    task.document[output_field] = answer.get('choices')[0].get('message').get('content')
-                    task.document['processor_output'] = answer
+                    task.document[output_field] = [answer.get('choices')[0].get('message').get('content')]
+                    task.document['processor_output'] = [answer]
                     return task
             except Exception as ex:
                 print(ex)
@@ -1260,7 +1712,7 @@ def aichat(node: Dict[str, any], task: Task) -> Task:
                 response.raise_for_status()  # Raise an error for bad responses
                 answer = response.json()
                 if answer and answer.get('output').get('choices')[0]:
-                    task.document[output_field] = answer.get('output').get('choices')[0].get('text')
+                    task.document[output_field] = [answer.get('output').get('choices')[0].get('text')]
                     task.document['processor_output'] = answer
                     return task
             except Exception as ex:
@@ -1271,8 +1723,8 @@ def aichat(node: Dict[str, any], task: Task) -> Task:
     elif "mistral" in task.document.get('model'):
         model = task.document.get('model')
 
-        from mistralai.client import MistralClient
-        from mistralai.models.chat_completion import ChatMessage
+        from mitta_mistralai.client import MistralClient
+        from mitta_mistralai.models.chat_completion import ChatMessage
 
         if not task.document.get('mistral_token'):
             raise NonRetriableError(f"You'll need to specify a 'mistral_token' in extras to use the {model} model.")
@@ -1321,7 +1773,7 @@ def aichat(node: Dict[str, any], task: Task) -> Task:
                 completion = mistral.chat(model=model, messages=chat_messages)
                 answer = completion.choices[0].message.content
                 if answer:
-                    task.document[output_field] = answer
+                    task.document[output_field] = [answer]
                     return task
             except Exception as ex:
                 raise NonRetriableError(f"Model {model}: {ex}")
@@ -1399,7 +1851,7 @@ def ai_prompt_to_dict(task=None, model="gpt-3.5-turbo-1106", prompt="", retries=
     return err, ai_dict
 
 @processor
-def aidict(node: Dict[str, any], task: Task) -> Task:
+def aidict(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     # templates
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
@@ -1514,7 +1966,7 @@ def aidict(node: Dict[str, any], task: Task) -> Task:
 
 
 @processor
-def aistruct(node: Dict[str, any], task: Task) -> Task:
+def aistruct(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     from openai import OpenAI
     from typing import List
     from pydantic import create_model
@@ -1653,7 +2105,7 @@ def aistruct(node: Dict[str, any], task: Task) -> Task:
 
 # look at a picture and get stuff
 @processor
-def aivision(node: Dict[str, any], task: Task) -> Task:
+def aivision(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     # Output and input fields
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
@@ -1867,7 +2319,7 @@ def aivision(node: Dict[str, any], task: Task) -> Task:
 
 # generate images off a prompt
 @processor
-def aiimage(node: Dict[str, any], task: Task) -> Task:
+def aiimage(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     # Output and input fields
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
@@ -1978,7 +2430,7 @@ def aiimage(node: Dict[str, any], task: Task) -> Task:
 
 
 @processor
-def read_file(node: Dict[str, any], task: Task) -> Task:
+def read_file(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
     if not template:
@@ -2278,7 +2730,7 @@ def read_file(node: Dict[str, any], task: Task) -> Task:
 
 
 @processor
-def read_uri(node: Dict[str, any], task: Task) -> Task:
+def read_uri(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
 
@@ -2393,7 +2845,7 @@ def read_uri(node: Dict[str, any], task: Task) -> Task:
 
 
 @processor
-def aispeech(node: Dict[str, any], task: Task) -> Task:
+def aispeech(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
 
@@ -2523,7 +2975,7 @@ def aispeech(node: Dict[str, any], task: Task) -> Task:
 
 # audio input, text output
 @processor
-def aiaudio(node: Dict[str, any], task: Task) -> Task:
+def aiaudio(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
 
@@ -2685,186 +3137,342 @@ def aiaudio(node: Dict[str, any], task: Task) -> Task:
 
 
 @processor
-def read_fb(node: Dict[str, any], task: Task) -> Task:
+def mod_store(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     user = User.get_by_uid(task.user_id)
-
-    # if the user has a dbid, then use their database
-    if user.get('dbid'):    
-        doc = {
-            "dbid": user.get('dbid'),
-            "db_token": user.get('db_token'),
-            "sql": task.document['sql']
-        }
-    else:
-        # use a shared database
-        if task.document.get('table'):
-            try:
-                # swap the table name on the fly
-                table = task.document.get('table')
-                sql = task.document.get('sql')
-                username = user.get('name')
-                pattern = f'\\b{table}\\b'
-                sql = re.sub(pattern, f"{username}_{table}", sql)
-
-                doc = {
-                    "dbid": app.config['SHARED_FEATUREBASE_ID'],
-                    "db_token": app.config['SHARED_FEATUREBASE_TOKEN'],
-                    "sql": sql
-                }
-            except:
-                raise NonRetriableError("Unable to template your SQL to the shared database. Check syntax.")
-        else:
-            raise NonRetriableError("Specify a 'table' key and value and template the table in your SQL.")
-
-
-    # Check if the query matches "show tables" but not "show create table"
-    pattern_show_tables = r'\bshow\s+tables\b'
-    pattern_show_create_table = r'\bshow\s+create\s+table\b'
-
-    # Convert SQL to lowercase to make regex search case-insensitive
-    sql_lower = sql.lower()
-
-    # First, check if the allowed phrase "show create table" is in the query
-    if re.search(pattern_show_create_table, sql_lower):
-        # This is an allowed query, so you might not want to do anything, or process it as valid.
-        pass
-    else:
-        # If the allowed phrase is not found, then check for "show tables"
-        if re.search(pattern_show_tables, sql_lower):
-            # If "show tables" is found and it's not part of "show create table", block the query
-            raise NonRetriableError("SHOW TABLE functions are disabled for shared database access. Add a FeatureBase account to settings to enable advanced queries.")
-
-    resp, err = featurebase_query(document=doc)
-    if err:
-        if "exception" in err:
-            raise RetriableError(err)
-        else:
-            # if dropping and doesn't exist
-            if "DROP" in err and "not found" in err:
-                return task
-            # good response from the server but query error
-            raise NonRetriableError(err)
-
-    # response data
-    fields = []
-    data = {}
-
-    for field in resp.schema['fields']:
-        fields.append(field['name'])
-        data[field['name']] = []
-
-    for tuple in resp.data:
-        for i, value in enumerate(tuple):
-            data[fields[i]].append(value)
-
-    template_service = app.config['template_service']
-    template = template_service.get_template(template_id=node.get('template_id'))
-    if not template:
-        raise TemplateNotFoundError(template_id=node.get('template_id'))
     
-    _keys = template.get('output_fields')
-    if _keys:
-        keys = [n['name'] for n in _keys]
-        task.document.update(transform_data(keys, data))
-    else:
-        task.document.update(data)
-
-    return task
-
-
-from SlothAI.lib.schemar import Schemar
-@processor
-def write_fb(node: Dict[str, any], task: Task) -> Task:
-    user = User.get_by_uid(task.user_id)
-
-    # if the user has a dbid, then use their database
-    if user.get('dbid'):    
-        # auth = {"dbid": task.document['DATABASE_ID'], "db_token": task.document['X-API-KEY']}
-        auth = {
-            "dbid": user.get('dbid'),
-            "db_token": user.get('db_token')
-        }
-        table = task.document['table']
-    else:
-        # use a shared database
-        if task.document.get('table'):
-            auth = {
-                "dbid": app.config['SHARED_FEATUREBASE_ID'],
-                "db_token": app.config['SHARED_FEATUREBASE_TOKEN']
-            }
-        else:
-            raise NonRetriableError("Specify a 'table' key and value and template the table in your SQL.")
-        table = f"{user.get('name')}_{task.document.get('table')}"
-
     # create template service
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
 
-    # check for auto detect
-    if task.document.get('auto_fields'):
-        data = auto_field_data(task.document)
-    else:
-        _keys = template.get('input_fields') # must be input fields but not enforced
-        keys = [n['name'] for n in _keys]
-        data = get_values_by_json_paths(keys, task.document)
+    if "weaviate" in task.document.get('model'):
+        # Weaviate authentication
+        weaviate_url = task.document.get('weaviate_url')
+        weaviate_token = task.document.get('weaviate_token')
+        
+        if not weaviate_url or not weaviate_token:
+            raise NonRetriableError("The 'weaviate' storage model needs a 'weaviate_url' and 'weaviate_token'.")
+        else:
+            auth = {"weaviate_url": weaviate_url, "weaviate_token": weaviate_token}
+        
+        # Weaviate collection (table object)
+        weaviate_collection = task.document.get('table')
+        if not weaviate_collection:
+            weaviate_collection = task.document.get('collection')
+        if not weaviate_collection:
+            raise NonRetriableError("The `weaviate` storage model needs a 'table' or 'collection' name.")
 
-    # check table
-    tbl_exists, err = table_exists(table, auth)
-    if err:
-        raise NonRetriableError("Can't connect to database. Check your FeatureBase connection.")
+        if weaviate_delete_collection(weaviate_collection, auth):
+            app.logger.debug(f"Weaviate collection '{weaviate_collection}' flushed.")
+            task.document['mod_store_result'] = ["success"]
+        else:
+            app.logger.debug(f"Weaviate collection '{weaviate_collection}' not flushed.")
+            task.document['mod_store_result'] = ["failed"]
+
+    return task
+
+
+@processor
+def read_store(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
+    user = User.get_by_uid(task.user_id)
     
-    # if it doesn't exists, create it
-    if not tbl_exists:
-        create_schema = Schemar(data=data).infer_create_table_schema() # check data.. must be lists
-        err = create_table(table, create_schema, auth)
+    # create template service
+    template_service = app.config['template_service']
+    template = template_service.get_template(template_id=node.get('template_id'))
+
+    if "weaviate" in task.document.get('model'):
+        # let extract warn them about not having either
+        success, result = extract_weaviate_params(task.document)
+        if success:
+            weaviate_params = result
+        else:
+            error_message = result["error"]
+            raise NonRetriableError(error_message)
+
+        if "weaviate-similarity" in task.document.get('model'):
+            results = []
+            for i in range(len(weaviate_params["queries"])):
+                result = weaviate_similarity(
+                    weaviate_params["weaviate_collection"],
+                    weaviate_params["query_vectors"][i],
+                    limit=weaviate_params["limits"][i],
+                    offset=weaviate_params["offsets"][i],
+                    filters=weaviate_params["filters"][i],
+                    keyterms=weaviate_params["keyterms_list"][i],
+                    auth=weaviate_params["auth"]
+                )
+                results.append(result)
+
+            properties_lists = {}
+            for res in result:
+                if 'properties' in res:
+                    properties = res['properties']
+                    for key in properties.keys():
+                        if key not in properties_lists:
+                            properties_lists[key] = []
+                        properties_lists[key].append(properties[key])
+
+            for key, value in properties_lists.items():
+                if key not in task.document:
+                    task.document[key] = []
+                task.document[key].append(value)
+
+            task.document['weaviate_results'] = results
+            return task
+
+        if "weaviate-hybrid" in task.document.get('model'):
+            results = []
+            for i in range(len(weaviate_params["queries"])):
+                result = weaviate_hybrid_search(
+                    weaviate_params["weaviate_collection"],
+                    weaviate_params["queries"][i],
+                    query_vector=weaviate_params["query_vectors"][i],
+                    alpha=weaviate_params["alphas"][i],
+                    limit=weaviate_params["limits"][i],
+                    offset=weaviate_params["offsets"][i],
+                    fusion_type=weaviate_params["fusion_types"][i],
+                    filters=weaviate_params["filters"][i],
+                    keyterms=weaviate_params["keyterms_list"][i],
+                    auth=weaviate_params["auth"]
+                )
+                results.append(result)
+
+            properties_lists = {}
+            for res in result:
+                if 'properties' in res:
+                    properties = res['properties']
+                    for key in properties.keys():
+                        if key not in properties_lists:
+                            properties_lists[key] = []
+                        properties_lists[key].append(properties[key])
+
+            for key, value in properties_lists.items():
+                if key not in task.document:
+                    task.document[key] = []
+                task.document[key].append(value)
+
+            task.document['weaviate_results'] = results
+            return task
+   
+    else:
+        # FeatureBase handles it
+        # if the user has a dbid, then use their database
+        if user.get('dbid'):    
+            doc = {
+                "dbid": user.get('dbid'),
+                "db_token": user.get('db_token'),
+                "sql": task.document['sql']
+            }
+        else:
+            # use a shared database
+            if task.document.get('table'):
+                try:
+                    # swap the table name on the fly
+                    table = task.document.get('table')
+                    sql = task.document.get('sql')
+                    username = user.get('name')
+                    pattern = f'\\b{table}\\b'
+                    sql = re.sub(pattern, f"{username}_{table}", sql)
+
+                    doc = {
+                        "dbid": app.config['SHARED_FEATUREBASE_ID'],
+                        "db_token": app.config['SHARED_FEATUREBASE_TOKEN'],
+                        "sql": sql
+                    }
+                except:
+                    raise NonRetriableError("Unable to template your SQL to the shared database. Check syntax.")
+            else:
+                raise NonRetriableError("Specify a 'table' key and value and template the table in your SQL.")
+
+
+        # Check if the query matches "show tables" but not "show create table"
+        pattern_show_tables = r'\bshow\s+tables\b'
+        pattern_show_create_table = r'\bshow\s+create\s+table\b'
+
+        # Convert SQL to lowercase to make regex search case-insensitive
+        sql_lower = sql.lower()
+
+        # First, check if the allowed phrase "show create table" is in the query
+        if re.search(pattern_show_create_table, sql_lower):
+            # This is an allowed query, so you might not want to do anything, or process it as valid.
+            pass
+        else:
+            # If the allowed phrase is not found, then check for "show tables"
+            if re.search(pattern_show_tables, sql_lower):
+                # If "show tables" is found and it's not part of "show create table", block the query
+                raise NonRetriableError("SHOW TABLE functions are disabled for shared database access. Add a FeatureBase account to settings to enable advanced queries.")
+
+        resp, err = featurebase_query(document=doc)
         if err:
-            if "already exists" in err:
-                # between checking if the table existed and trying to create the
-                # table, the table was created.
-                pass
-            elif "exception" in err:
-                # issue connecting to FeatureBase cloud
+            if "exception" in err:
                 raise RetriableError(err)
             else:
-                # good response from the server but there was a query error.
-                raise NonRetriableError(f"FeatureBase returned: {err}. Check your fields are valid with a callback.")
-            
-    # get columns from the table
-    column_type_map, task.document['error'] = get_columns(table, auth)
-    if task.document.get("error", None):
-        raise Exception("unable to get columns from table in FeatureBase cloud")
+                # if dropping and doesn't exist
+                if "DROP" in err and "not found" in err:
+                    return task
+                # good response from the server but query error
+                raise NonRetriableError(err)
 
-    columns = [k for k in column_type_map.keys()]
+        # response data
+        fields = []
+        data = {}
 
-    # add columns if data key cannot be found as an existing column
-    for key in data.keys():
-        if key not in columns:
-            if not task.document.get("schema", None):
-                task.document['schema'] = Schemar(data=data).infer_schema()
+        for field in resp.schema['fields']:
+            fields.append(field['name'])
+            data[field['name']] = []
 
-            err = add_column(table, {'name': key, 'type': task.document["schema"][key]}, auth)
+        for tuple in resp.data:
+            for i, value in enumerate(tuple):
+                data[fields[i]].append(value)
+        
+        _keys = template.get('output_fields')
+        if _keys:
+            keys = [n['name'] for n in _keys]
+            task.document.update(transform_data(keys, data))
+        else:
+            task.document.update(data)
+
+        return task
+
+# alias old name
+read_fb = read_store
+
+from SlothAI.lib.schemar import Schemar
+
+@processor
+def write_store(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
+    user = User.get_by_uid(task.user_id)
+    
+    # create template service
+    template_service = app.config['template_service']
+    template = template_service.get_template(template_id=node.get('template_id'))
+
+    if task.document.get('model') == "weaviate":
+        weaviate_url = task.document.get('weaviate_url')
+        weaviate_token = task.document.get('weaviate_token')
+
+        if not weaviate_url or not weaviate_token:
+            return NonRetriableError("The 'weaviate' storage model needs a 'weaviate_url' and 'weaviate_token'.")
+        else:
+            auth = {"weaviate_url": weaviate_url, "weaviate_token": weaviate_token}
+
+        weaviate_collection = task.document.get('table')
+        if not weaviate_collection:
+            weaviate_collection = task.document.get('collection')
+            if not weaviate_collection:
+                raise NonRetriableError("The `weaviate` storage model needs a 'table' or 'collection' name.")
+
+        # insert defined input fields
+        _keys = template.get('input_fields')
+        keys = [n['name'] for n in _keys]
+
+        data = {}
+        for key in keys:
+            if key in task.document:
+                data[key] = task.document[key]
+            else:
+                raise NonRetriableError(f"Key '{key}' not in document. Check outputs and inputs.")
+
+        # Check if all keys have values of equal length lists
+        list_lengths = {key: len(value) for key, value in data.items() if isinstance(value, list)}
+        if len(set(list_lengths.values())) != 1:
+            raise NonRetriableError("All input fields must have lists of equal size.")
+
+        # update into weaviate
+        weaviate_response = weaviate_batch(weaviate_collection, data, auth)
+        if weaviate_response.get('status') == "error":
+            raise NonRetriableError(f"Weaviate insert failed: {weaviate_response.get('message')}")
+
+        task.document['weaviate_uuids'] = weaviate_response.get('uuids')
+        return task
+
+    else: # Featurebase
+        # if the user has a dbid, then use their database
+        if user.get('dbid'):    
+            # auth = {"dbid": task.document['DATABASE_ID'], "db_token": task.document['X-API-KEY']}
+            auth = {
+                "dbid": user.get('dbid'),
+                "db_token": user.get('db_token')
+            }
+            table = task.document['table']
+        else:
+            # use a shared database
+            if task.document.get('table'):
+                auth = {
+                    "dbid": app.config['SHARED_FEATUREBASE_ID'],
+                    "db_token": app.config['SHARED_FEATUREBASE_TOKEN']
+                }
+            else:
+                raise NonRetriableError("Specify a 'table' key and value and template the table in your SQL.")
+            table = f"{user.get('name')}_{task.document.get('table')}"
+
+        # check for auto detect
+        if task.document.get('auto_fields'):
+            data = auto_field_data(task.document)
+        else:
+            _keys = template.get('input_fields') # must be input fields but not enforced
+            keys = [n['name'] for n in _keys]
+            data = get_values_by_json_paths(keys, task.document)
+
+        # check table
+        tbl_exists, err = table_exists(table, auth)
+        if err:
+            raise NonRetriableError("Can't connect to database. Check your FeatureBase connection.")
+        
+        # if it doesn't exists, create it
+        if not tbl_exists:
+            create_schema = Schemar(data=data).infer_create_table_schema() # check data.. must be lists
+            err = create_table(table, create_schema, auth)
             if err:
-                if "exception" in err:
+                if "already exists" in err:
+                    # between checking if the table existed and trying to create the
+                    # table, the table was created.
+                    pass
+                elif "exception" in err:
+                    # issue connecting to FeatureBase cloud
                     raise RetriableError(err)
                 else:
-                    # good response from the server but query error
-                    raise NonRetriableError(err)
+                    # good response from the server but there was a query error.
+                    raise NonRetriableError(f"FeatureBase returned: {err}. Check your fields are valid with a callback.")
+                
+        # get columns from the table
+        column_type_map, task.document['error'] = get_columns(table, auth)
+        if task.document.get("error", None):
+            raise Exception("unable to get columns from table in FeatureBase cloud")
 
-            column_type_map[key] = task.document["schema"][key]
+        columns = [k for k in column_type_map.keys()]
 
-    columns, records = process_data_dict_for_insert(data, column_type_map, table)
+        # add columns if data key cannot be found as an existing column
+        for key in data.keys():
+            if key not in columns:
+                if not task.document.get("schema", None):
+                    task.document['schema'] = Schemar(data=data).infer_schema()
 
-    sql = f"INSERT INTO {table} ({','.join(columns)}) VALUES {','.join(records)};"
+                err = add_column(table, {'name': key, 'type': task.document["schema"][key]}, auth)
+                if err:
+                    if "exception" in err:
+                        raise RetriableError(err)
+                    else:
+                        # good response from the server but query error
+                        raise NonRetriableError(err)
 
-    _, err = featurebase_query({"sql": sql, "dbid": auth.get('dbid'), "db_token": auth.get('db_token')})
-    if err:
-        if "exception" in err:
-            raise RetriableError(err)
-        else:
-            # good response from the server but query error
-            raise NonRetriableError(err)
-    
-    return task
+                column_type_map[key] = task.document["schema"][key]
+
+        columns, records = process_data_dict_for_insert(data, column_type_map, table)
+
+        sql = f"INSERT INTO {table} ({','.join(columns)}) VALUES {','.join(records)};"
+
+        _, err = featurebase_query({"sql": sql, "dbid": auth.get('dbid'), "db_token": auth.get('db_token')})
+        if err:
+            if "exception" in err:
+                raise RetriableError(err)
+            else:
+                # good response from the server but query error
+                raise NonRetriableError(err)
+        
+        return task
+
+# alias old name
+write_fb = write_store
 
 
 # helper functions

@@ -66,6 +66,20 @@
 <script type="text/javascript">
 $(document).ready(function() {
 
+  // Mouse movement detection
+  var lastMouseMoveTime = new Date().getTime();
+  $(document).mousemove(function() {
+    lastMouseMoveTime = new Date().getTime();
+  });
+
+  // Reload page if no mouse movement for 1 minute
+  setInterval(function() {
+    var currentTime = new Date().getTime();
+    if (currentTime - lastMouseMoveTime > 60000) {
+      location.reload();
+    }
+  }, 60000);
+
   function storeState(name, value) {
     document.cookie = name + "=" + JSON.stringify(value) + "; expires=Fri, 31 Dec 9999 23:59:59 GMT";
   }

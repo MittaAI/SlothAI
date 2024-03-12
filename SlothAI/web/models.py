@@ -601,6 +601,10 @@ class User(flask_login.UserMixin, ndb.Model):
     dbid = ndb.StringProperty()
     db_token = ndb.StringProperty()
 
+    # Weaviate settings
+    weaviate_url = ndb.StringProperty()
+    weaviate_token = ndb.StringProperty()
+    
     # status
     authenticated = ndb.BooleanProperty(default=False)
     active = ndb.BooleanProperty(default=True)
@@ -676,6 +680,17 @@ class User(flask_login.UserMixin, ndb.Model):
         user.put()
         return user.to_dict()
 
+    @classmethod
+    @ndb_context_manager
+    def update_weaviate(cls, uid, weaviate_url="", weaviate_token=""):
+        user = cls.query(cls.uid == uid).get()
+        if user:
+            user.weaviate_url = weaviate_url
+            user.weaviate_token = weaviate_token
+            user.put()
+            return user.to_dict()
+        return None
+        
     @classmethod
     @ndb_context_manager
     def remove_by_uid(cls, uid):

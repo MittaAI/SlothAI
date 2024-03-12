@@ -58,17 +58,33 @@
       
       {% if dbid %}
       <h4>Database and Vector Store</h4>
-      <p>Your FeatureBase account is connected to MittaAI. Click the ID to disconnect.</p>
+      <p>Your FeatureBase account is connected to Mitta. Click the ID to disconnect.</p>
       <button type="button" id="removeDatabaseButton" class="btn btn-danger">
-        <i class="fas fa-eraser"></i> {{dbid}}
+        <i class="fas fa-times-circle"></i> {{dbid}}
       </button>
       <p></p>
       <p class="card-text"><strong>Note:</strong> Disconnecting from your FeatureBase account or deleting your account will not affect your data on FeatureBase Cloud. You may elect to remove it manually <a href="https://cloud.featurebase.com/">there</a>.</p>
       {% else %}
-      <h4>Connect Database and Vector Store</h4>
-      <p>Mitta provides transparent database table creation and querying for all users. If you want to manage and query your database directly, you will need to setup a <a href="https://featurebase.com/cloud">FeatureBase Cloud</a> account.</p>
+      <h4>Binary Database and Simplified Vector Store</h4>
+      <p>Mitta provides a transparent database layer for fast set operations/intersections and a simple cosine distance function for vectors, all conducted with SQL statements. If you want to manage and query your database directly, you will need to setup a <a href="https://featurebase.com/cloud">FeatureBase Cloud</a> account.</p>
       <button type="button" id="addDatabaseButton" class="btn btn-success" data-toggle="modal" data-target="#fbFormModal">
-        <i class="fas fa-plus"></i> Connect FeatureBase
+        <i class="fas fa-link"></i> Connect FeatureBase
+      </button>
+      {% endif %}
+
+      <hr/>
+      <h4>Advanced Vector Store</h4>
+      {% if weaviate %}
+      <p>Your Mitta account is connected to Weaviate. Click the ID to disconnect.</p>
+      <button type="button" id="removeWeaviteButton" class="btn btn-danger">
+        <i class="fas fa-times-circle"></i> {{weaviate}}
+      </button>
+      <p></p>
+      <p class="card-text"><strong>Note:</strong> Disconnecting from your Weaviate account or deleting your account will not affect your data on Weaviate Cloud. You may elect to remove it manually <a href="https://console.weaviate.cloud/">there</a>.</p>
+      {% else %}
+      <p>Mitta integrates support for <a href="https://weaviate.io/platform">Weaviate Cloud</a>. This enables efficient vector operations, providing not only traditional queries but also advanced similarity/hybrid searches and vector field operations. You may connect a Weaviate instance here, which will be accessible to each task run through your pipelines. <a href="https://weaviate.com/cloud">Weaviate Cloud</a> account.</p>
+      <button type="button" id="addWeaviateButton" class="btn btn-success" data-toggle="modal" data-target="#weaviateFormModal">
+        <i class="fas fa-link"></i> Connect Weaviate
       </button>
       {% endif %}
 
@@ -103,6 +119,35 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
         <button type="button" class="btn btn-success" id="addDatabase"><i class="fas fa-plus"></i> Connect</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="weaviateFormModal" tabindex="-1" role="dialog" aria-labelledby="weaviateModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="weaviateModalLabel">Connect Weaviate</h3>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Add your Weaviate form fields here -->
+        <div class="form-group">
+          <label for="weaviateUrl">Weaviate URL</label>
+          <input type="text" class="form-control" placeholder="Enter your Weaviate URL" id="weaviateUrl">
+        </div>
+        <div class="form-group">
+          <label for="weaviateToken">Weaviate API Token</label>
+          <input type="password" class="form-control" placeholder="Enter your Weaviate API token" id="weaviateToken">
+        </div>
+        <p><strong>Note:</strong> Make sure you have a valid Weaviate instance running and provide the correct URL and API token for authentication.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-success" id="addWeaviate"><i class="fas fa-plus"></i> Connect</button>
       </div>
     </div>
   </div>
@@ -207,6 +252,60 @@ $(document).ready(function() {
         toastr.error('Error connecting FeatureBase. ' + error.responseJSON.error);
       }
     });
+  });
+
+  $("#addWeaviate").click(function() {
+      var weaviateUrl = $("#weaviateUrl").val();
+      var weaviateToken = $("#weaviateToken").val();
+
+      if (!weaviateUrl || !weaviateToken) {
+          toastr.error("You must enter values for both the Weaviate URL and token fields.");
+          return false; // Make sure this is `false`, not `False`
+      }
+
+      var postData = {
+          weaviate_url: weaviateUrl,
+          weaviate_token: weaviateToken
+      };
+      $.ajax({
+          url: '/casino',
+          type: 'POST',
+          data: JSON.stringify(postData),
+          contentType: 'application/json',
+          success: function(data) {
+              $('#weaviateFormModal').modal('hide'); // Ensure this matches the ID used in your HTML
+              toastr.success("Weaviate connection successfully established.");
+              window.location.reload(); // Refresh the page to reflect the new state
+          },
+          error: function(error) {
+              console.error(error);
+              toastr.error('Error connecting to Weaviate. ' + (error.responseJSON && error.responseJSON.error ? error.responseJSON.error : 'Unknown error'));
+          }
+      });
+  });
+
+  $("#removeWeaviteButton").click(function() {
+      if (confirm("Are you sure you want to disconnect the Weaviate connection? This may affect running pipelines.")) {
+        // Assuming we're using a data attribute to store the Weaviate URL or an ID. Adjust as necessary.
+        var weaviateUrl = $(this).data('weaviate-url'); // Ensure this matches how you're storing the identifier
+        
+        // Encode the Weaviate URL to ensure it's safely transmitted in the URL path
+        var encodedWeaviateUrl = encodeURIComponent(weaviateUrl);
+
+        // Send a DELETE request to the /disco/<weaviateUrl> endpoint
+        $.ajax({
+          url: '/disco/' + encodedWeaviateUrl,
+          type: 'DELETE',
+          success: function(data) {
+            toastr.info("Weaviate connection removed.")
+            window.location.reload(); // Refresh the page to reflect the change
+          },
+          error: function(error) {
+            toastr.error('This is likely frustrating. ' + (error.responseJSON && error.responseJSON.error ? error.responseJSON.error : 'Unknown error'));
+            window.location.reload(); // Consider whether you want to reload the page on error as well
+          }
+        });
+      }
   });
 
   $("#removeDatabaseButton").click(function() {

@@ -118,6 +118,9 @@ $(document).ready(function() {
     });
   }
 
+  $('#reload').on('click', function() {
+    window.location.reload();
+  });
 
   $('#clearCompleted').off('click').on('click', function() {
     $.ajax({

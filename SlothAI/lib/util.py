@@ -400,6 +400,17 @@ def should_be_service_token(name):
     else:
         return False
 
+def local_callback_url(username, api_token):
+    # hostname and protocol
+    hostname = request.host
+    if "localhost" in hostname:
+        protocol = "http"
+    else:
+        protocol = "https"
+
+    callback_uri =  protocol + "://" + request.host + f"/{username}/callback?token={api_token}"
+    return callback_uri
+
 
 def callback_extras(extras):
     # hostname and protocol

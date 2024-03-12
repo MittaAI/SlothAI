@@ -155,9 +155,9 @@
 {% block javascript %}
 <script type="text/javascript">
 $(document).ready(function() {
-  // badge popovers
-  $('.extras').popover({
-    trigger: 'focus'
+  $('.extras').each(function() {
+    var $this = $(this);  
+    var content = $this.attr('data-content');
   });
   $('.processors').popover({
     trigger: 'focus'

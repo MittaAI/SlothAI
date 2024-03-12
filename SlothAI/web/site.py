@@ -4,6 +4,8 @@ import io
 import requests
 import htmlmin
 
+from urllib.parse import urlparse
+
 from google.cloud import ndb
 
 from flask import Blueprint, render_template, jsonify, send_from_directory
@@ -29,26 +31,27 @@ current_date = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
 # hard coded, for now
 processors = [
-    {"value": "jinja2", "label": "Jinja2 Processor", "icon": "file"},
-    {"value": "callback", "label": "Callback Processor", "icon": "ethernet"},
-    {"value": "read_file", "label": "Read Processor (File)", "icon": "book-reader"},
-    {"value": "read_uri", "label": "Read Processor (URI)", "icon": "globe"},
-    {"value": "aigrub", "label": "Read Processor (URI)", "icon": "desktop"},
-    {"value": "aiffmpeg", "label": "FFmpeg Processor", "icon": "photo-video"},
-    {"value": "info_file", "label": "Info Processor (File)", "icon": "info"},
-    {"value": "read_fb", "label": "Read Processor (FeatureBase)", "icon": "database"},
-    {"value": "split_task", "label": "Split Task Processor", "icon": "columns"},
-    {"value": "halt_task", "label": "Halt Task Processor", "icon": "stop-circle"},
-    {"value": "jump_task", "label": "Jump Task Processor", "icon": "code-branch"},
-    {"value": "write_fb", "label": "Write Processor (FeatureBase)", "icon": "database"},
-    {"value": "aidict", "label": "Generative Completion Processor", "icon": "code"},
-    {"value": "aistruct", "label": "Generative Structure Processor", "icon": "building"},
-    {"value": "aichat", "label": "Generative Chat Processor", "icon": "comment-dots"},
-    {"value": "aiimage", "label": "Generative Image Processor", "icon": "images"},
-    {"value": "embedding", "label": "Embedding Vectors Processor", "icon": "table"},
-    {"value": "aivision", "label": "Vision Processor", "icon": "glasses"},
-    {"value": "aiaudio", "label": "Audio Processor", "icon": "headphones"},
-    {"value": "aispeech", "label": "Speech Processor", "icon": "volume-down"}
+    {"value": "jinja2", "label": "Jinja2 (Code)", "icon": "file"},
+    {"value": "callback", "label": "Callback (Dict)", "icon": "ethernet"},
+    {"value": "read_file", "label": "Read File (Text)", "icon": "book-reader"},
+    {"value": "info_file", "label": "File Info (Metadata)", "icon": "info"},
+    {"value": "read_uri", "label": "Read Raw URI (Data)", "icon": "globe"},
+    {"value": "aigrub", "label": "Screenshot URI (Image)", "icon": "desktop"},
+    {"value": "aiffmpeg", "label": "FFmpeg Conversion (Media)", "icon": "photo-video"},
+    {"value": "split_task", "label": "Split Task (Control)", "icon": "columns"},
+    {"value": "halt_task", "label": "Halt Task (Control)", "icon": "stop-circle"},
+    {"value": "jump_task", "label": "Jump Task (Control)", "icon": "code-branch"},
+    {"value": "embedding", "label": "Create Embeding (Vectors)", "icon": "table"},
+    {"value": "write_store", "label": "Write Storage (Data Store)", "icon": "database"},
+    {"value": "read_store", "label": "Read Storage (Data Store)", "icon": "database"},
+    {"value": "mod_store", "label": "Modify Storage (Data Store)", "icon": "pen-alt"},
+    {"value": "aidict", "label": "Generative Dictionary (Loose Typed Dict)", "icon": "code"},
+    {"value": "aistruct", "label": "Generative Structured Data (Strong Typed Dict)", "icon": "building"},
+    {"value": "aichat", "label": "Generative Chat (Texts)", "icon": "comment-dots"},
+    {"value": "aiimage", "label": "Generative Image (Image)", "icon": "images"},
+    {"value": "aispeech", "label": "Generative Speech (Audio)", "icon": "volume-down"},
+    {"value": "aivision", "label": "Extract from Image (Text or Objects)", "icon": "glasses"},
+    {"value": "aiaudio", "label": "Extract from Audio (Text)", "icon": "headphones"}
 ]
 
 # template examples
@@ -62,6 +65,7 @@ template_examples = [
     {"name": "Convert text to an OpenAI embedding", "template_name": "text_to_ada_embedding", "processor_type": "embedding"},
     {"name": "Write to table", "template_name": "write_table", "processor_type": "write_fb"},
     {"name": "Write file chunks to a table", "template_name": "chunks_embeddings_pages_to_table", "processor_type": "write_fb"},
+    {"name": "Write file chunks and embeddings to Weaviate", "template_name": "chunks_embeddings_pages_to_weaviate", "processor_type": "write_store"},
     {"name": "Read from table", "template_name": "read_table", "processor_type": "read_fb"},
     {"name": "Read embedding distance from a table", "template_name": "read_embedding_from_table", "processor_type": "read_fb"},
     {"name": "Drop a table", "template_name": "drop_table", "processor_type": "read_fb"},
@@ -764,10 +768,19 @@ def settings():
     api_token = current_user.api_token
     dbid = current_user.dbid
 
+    try:
+        weaviate_url = current_user.weaviate_url
+        parsed_url = urlparse(weaviate_url)
+        hostname = parsed_url.hostname
+        hostname_parts = hostname.split('.')
+        weaviate = hostname_parts[0] if len(hostname_parts) > 2 else hostname_parts[-2]
+    except:
+        weaviate = None
+
     tokens = Token.get_all_by_uid(current_user.uid)
 
     return render_template(
-        'pages/settings.html', username=username, email=email, brand=get_brand(app), api_token=api_token, dbid=dbid, tokens=tokens
+        'pages/settings.html', username=username, email=email, brand=get_brand(app), api_token=api_token, dbid=dbid, weaviate=weaviate, tokens=tokens
     )
 
 
