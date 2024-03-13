@@ -488,6 +488,7 @@ def weaviate_batch(weaviate_collection_name, objects, auth, batch_size=200):
     }
 
 
+# Will be upgraded to do schema comparisons
 def extract_weaviate_params(task_document):
     try:
         # Weaviate authentication
