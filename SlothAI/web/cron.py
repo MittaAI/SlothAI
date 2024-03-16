@@ -42,7 +42,7 @@ def status_handler(box_id="all", cron_key=""):
    box_list = [box.get('box_id') for box in boxes]
 
    for box in boxes:
-       if "instructor-" in box.get('box_id') or "pdf-" in box.get('box_id'):
+       if "instructor-" in box.get('box_id') or "ocr-" in box.get('box_id'):
            # run create (which updates Box object in datastore - the cache of current boxes)
            Box.create(box.get('box_id'), box.get('ip_address'), box.get('zone'), box.get('status'))
 
