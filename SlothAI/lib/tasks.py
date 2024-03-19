@@ -383,9 +383,9 @@ def box_required(box_type=None):
     if not boxes:
         return False, None  # Indicates no box is available
 
-    active_t4s = []
-    halted_t4s = []
-    starting_t4s = []
+    active_gpus = []
+    halted_gpus = []
+    starting_gpus = []
 
     for box in boxes:
         status = box.get('status')
@@ -399,29 +399,29 @@ def box_required(box_type=None):
         # Check for active boxes
         if status == "RUNNING":
             if box_ip and ping(box_ip, timeout=2.0) and check_webserver_connection(box_ip, 9898):
-                active_t4s.append(box)
+                active_gpus.append(box)
             else:
-                starting_t4s.append(box)  # Consider boxes that fail ping as starting
+                starting_gpus.append(box)  # Consider boxes that fail ping as starting
 
-        # Add boxes in START, PROVISIONING, STAGING to starting_t4s
+        # Add boxes in START, PROVISIONING, STAGING to starting_gpus
         elif status in ["START", "PROVISIONING", "STAGING"]:
-            starting_t4s.append(box)
+            starting_gpus.append(box)
 
-        # Add boxes in TERMINATED to halted_t4s
+        # Add boxes in TERMINATED to halted_gpus
         elif status == "TERMINATED":
-            halted_t4s.append(box)
+            halted_gpus.append(box)
 
     # Return a random active box if available
-    if active_t4s:
-        return False, random.choice(active_t4s)
+    if active_gpus:
+        return False, random.choice(active_gpus)
 
     # Check if a box is already being started or a running box is potentially starting
-    if starting_t4s:
-        return True, random.choice(starting_t4s)
+    if starting_gpus:
+        return True, random.choice(starting_gpus)
 
     # No active or starting boxes, attempt to start a halted box
-    if halted_t4s:
-        alternate_box = random.choice(halted_t4s)
+    if halted_gpus:
+        alternate_box = random.choice(halted_gpus)
         print("Starting box", alternate_box.get('box_id'))
         box_start(alternate_box.get('box_id'), alternate_box.get('zone'))
         Box.start_box(alternate_box.get('box_id'), "START")

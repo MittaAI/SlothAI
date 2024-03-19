@@ -137,131 +137,6 @@ def send_callback(task, node, error_message):
         except Exception as exception:
             app.logger.error(f"Error sending callback: {str(exception)}")
 
-"""
-# Main process entry
-def process(task: Task) -> Task:
-    user = User.get_by_uid(task.user_id)
-    if not user:
-        raise UserNotFoundError(task.user_id)
-    
-    pipeline = Pipeline.get(uid=task.user_id, pipe_id=task.pipe_id)
-    if not pipeline:
-        raise PipelineNotFoundError(pipeline_id=task.pipe_id)
-    
-    node_id = task.next_node()
-    node = Node.get(uid=task.user_id, node_id=node_id)
-    if not node:
-        raise NodeNotFoundError(node_id=node_id)
-
-    missing_field = validate_document(node, task, DocumentValidator.INPUT_FIELDS)
-    if missing_field:
-        raise MissingInputFieldError(missing_field, node.get('name'))
-
-    # get tokens from service tokens
-    # and process values for numbers
-    _extras = {}
-    
-    for key, value in node.get('extras').items():
-        # cast certain strings to other things
-        if isinstance(value, str):  
-            if f"[{key}]" in value:
-                token = Token.get_by_uid_name(task.user_id, key)
-                if not token:
-                    raise NonRetriableError(f"You need a service token created for '{key}'.")
-                value = token.get('value')
-            # convert ints and floats from strings
-            elif value.isdigit():
-                # convert to int
-                value = int(value)
-            elif '.' in value and all(c.isdigit() or c == '.' for c in value):
-                # convert it to a float
-                value = float(value)
-
-        _extras[key] = value
-
-    # update node extras
-    node['extras'] = _extras
-
-    # template the extras off the node
-    extras = evaluate_extras(node, task)
-
-    if extras:
-        task.document.update(extras)
-
-    # get the user
-    user = User.get_by_uid(uid=task.user_id)
-
-    # if "x-api-key" in node.get('extras'):
-    # This is likely NOT in use....
-    task.document['X-API-KEY'] = user.get('db_token')
-    # if "database_id" in node.get('extras'):
-    task.document['DATABASE_ID'] = user.get('dbid')
-
-    # Move this if you are cleaning up
-    try:
-        task.document['weaviate_url'] = user.weaviate_url
-        task.doucment['weaviate_token'] = user.weaviate_token
-    except:
-        pass
-
-    try:
-        # Call the main processor
-        app.logger.debug(f"Calling main processor '{node.get('processor')}' for task with id {task.id}")
-        task = processors[node.get('processor')](node, task)
-    except RetriableError as e:
-        app.logger.debug(f"RetriableError occurred in main processor for task with id {task.id}: {str(e)}")
-        raise
-    except NonRetriableError as e:
-        app.logger.debug(f"NonRetriableError occurred in main processor for task with id {task.id}: {str(e)}")
-        task.error = str(e)  # Store the error in the task object
-        send_callback(task, node, task.error)
-        raise
-    except Exception as e:
-        app.logger.error(f"Error in main processor: {str(e)}")
-        send_callback(task, node, str(e))
-        raise
-
-    app.logger.debug(f"Returned from main processor '{node.get('processor')}' for task with id {task.id}")
-
-    # Add post-processors
-    post_processors = ['jinja2']
-    for post_proc_name in post_processors:
-        if node.get('processor') != post_proc_name:
-            try:
-                app.logger.debug(f"Calling post-processor '{post_proc_name}' for task with id {task.id}")
-                task = processors.get(post_proc_name, lambda x, y, **kwargs: y)(node, task, is_post_processor=True)
-            except NonRetriableError as e:
-                app.logger.debug(f"NonRetriableError occurred in post-processor '{post_proc_name}' for task with id {task.id}: {str(e)}")
-                task.error = str(e)  # Store the error in the task object
-                break
-            except Exception as e:
-                app.logger.error(f"Error in post-processor '{post_proc_name}': {str(e)}")
-                raise
-            else:
-                app.logger.debug(f"Returned from post-processor '{post_proc_name}' for task with id {task.id}")
-
-
-    # TODO, decide what to do with errors and maybe truncate pipeline
-    if task.document.get('error'):
-        return task
-
-    # TODO move this or get rid of it
-    if "X-API-KEY" in task.document.keys():
-        task.document.pop('X-API-KEY', None)
-    if "DATABASE_ID" in task.document.keys():
-        task.document.pop('DATABASE_ID', None)
-    if "weaviate_token" in task.document.keys():
-        task.document.pop('weaviate_token', None)
-
-    # strip out the sensitive extras
-    clean_extras(_extras, task)
-
-    missing_field = validate_document(node, task, DocumentValidator.OUTPUT_FIELDS)
-    if missing_field:
-        raise MissingOutputFieldError(missing_field, node.get('name'))
-
-    return task
-"""
 
 # Main process entry
 def process(task: Task) -> Task:
@@ -2109,6 +1984,7 @@ def aivision(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     # Output and input fields
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
+
     if not template:
         raise TemplateNotFoundError(template_id=node.get('template_id'))
 
@@ -2159,227 +2035,332 @@ def aivision(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
         if content_parts not in supported_content_types:
             raise NonRetriableError(f"Unsupported file type for {file_name}: {content_type[index]}")
 
-    if model == "easyocr":
-        # check required services (GPU boxes)
-        defer, selected_box = box_required(box_type="ocr")
-        if defer:
-            if selected_box:
-                # Logic to start or wait for the box to be ready
-                # Possibly setting up the box or waiting for it to transition from halted to active
-                raise RetriableError("EasyOCR box is being started to run text extraction.")
-            else:
-                # No box is available, raise a non-retriable error
-                raise NonRetriableError("No available EasyOCR machine to run extraction.")
+    # loop through the detection filenames
+    for index, file_name in enumerate(filename):
 
-        # Build the list of mitta_uris from filenames and username, with user token added for access
-        mitta_uris = [f"https://{app.config.get('APP_DOMAIN')}/d/{user.get('name')}/{file_name}?token={user.get('api_token')}" for file_name in filename]
-
-        # Get the page numbers from task.document, or create a default list if not provided
-        page_nums = task.document.get('page_num') or task.document.get('page_nums')
-        if not page_nums:
-            page_nums = [1] * len(mitta_uris)
-        elif not isinstance(page_nums, list):
-            raise NonRetriableError("Page numbers must be provided as a list.")
-
-        # Check if the number of page numbers matches the number of mitta_uris
-        if len(page_nums) != len(mitta_uris):
-            raise NonRetriableError("The number of page numbers must match the number of mitta_uris.")
-
-        # url for the ocr box
-        ocr_url = f"http://instructor:{app.config['CONTROLLER_TOKEN']}@{selected_box.get('ip_address')}:9898/embed"
-
-        try:
-            # make the call
-            ocr_data = {
-                "mitta_uri": mitta_uris,
-                "page_numbers": page_nums
-            }
-
-            response = requests.post(ocr_url, json=ocr_data, headers={"Content-Type": "application/json"}, timeout=60)
-
-            if response.status_code == 200:
-                texts = response.json().get("texts")
-                coords = response.json().get("coords")
-
-                # Check if the output field is valid for text extraction
-                if output_field not in ["text", "texts", "ocr_text", "ocr_texts"]:
-                    raise NonRetriableError(f"Invalid output field '{output_field}' for text extraction. Expected 'text', 'texts', 'ocr_text', or 'ocr_texts'.")
-
-                # Extend the texts to the output field in task.document
-                if not task.document.get(output_field):
-                    task.document[output_field] = []
-                task.document[output_field].extend(texts)
-
-                # Store the bounding box coordinates in task.document['text_coords']
-                if not task.document.get('text_coords'):
-                    task.document['text_coords'] = []
-                task.document['text_coords'].extend(coords)
-
-                # Store the page numbers in task.document['page_nums']
-                if not task.document.get('page_nums'):
-                    task.document['page_nums'] = []
-                task.document['page_nums'].extend(page_nums)
-
-            elif response.status_code >= 500:
-                raise RetriableError(f"EasyOCR server is starting with status: {response.status_code}.")
-            else:
-                raise NonRetriableError(f"Unexpected status code from EasyOCR embedding endpoint: {response.status_code}.")
-
-        except Exception as ex:
-            raise NonRetriableError(f"Error occurred while processing EasyOCR request: {str(ex)}")
-    else:
-        # loop through the detection filenames
-        for index, file_name in enumerate(filename):
-            
-            # models are gv-objects, gpt-scene, and gv-ocr
-            if model == "gv-objects":
-                # Now run the code for image processing
-                image_uri = f"gs://{app.config['CLOUD_STORAGE_BUCKET']}/{uid}/{file_name}"
-
-                client = vision.ImageAnnotatorClient()
-                response = client.annotate_image({
-                    'image': {'source': {'image_uri': image_uri}},
-                    'features': [{'type_': vision.Feature.Type.LABEL_DETECTION}]
-                })
-
-                # Get a list of detected labels (objects)
-                labels = [label.description.lower() for label in response.label_annotations]
-
-                # Append the labels list to task.document[output_field]
-                if not task.document.get(output_field):
-                    task.document[output_field] = []
-                task.document[output_field].append(labels)
-
-            elif "gemini-pro-vision" in model:
-                from PIL import Image
-                if not task.document.get('gemini_token'):
-                    raise NonRetriableError(f"You'll need to specify a 'gemini_token' in extras to use the {model} model.")
-
-                if task.document.get('system_prompt'):
-                    system_prompt = task.document.get('system_prompt')
+        # EasyOCR
+        if model == "easyocr":
+            # check required services (GPU boxes)
+            defer, selected_box = box_required(box_type="ocr")
+            if defer:
+                if selected_box:
+                    # Logic to start or wait for the box to be ready
+                    # Possibly setting up the box or waiting for it to transition from halted to active
+                    raise RetriableError("EasyOCR box is being started to run text extraction.")
                 else:
-                    system_prompt = "Describe in detail the image scene."
+                    # No box is available, raise a non-retriable error
+                    raise NonRetriableError("No available EasyOCR machine to run extraction.")
 
-                genai.configure(api_key=task.document.get('gemini_token'))
+            # Build the list of mitta_uris from filenames and username, with user token added for access
+            mitta_uris = [f"https://{app.config.get('APP_DOMAIN')}/d/{user.get('name')}/{file_name}?token={user.get('api_token')}"]
 
-                # Get the document
-                gcs = storage.Client()
-                bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
-                blob = bucket.blob(f"{uid}/{file_name}")
+            # Get the page numbers from task.document, or create a default list if not provided
+            page_nums = task.document.get('page_num') or task.document.get('page_nums')
 
-                # even though the exceptions says it takes a Blob, we use PIL instead
-                image_bytes = blob.download_as_bytes()
-                image_stream = BytesIO(image_bytes)
-                img = Image.open(image_stream)
+            if not page_nums:
+                page_nums = [1]
+            elif not isinstance(page_nums, list):
+                raise NonRetriableError("Page numbers must be provided as a list.")
+            else:
+                page_nums = page_nums[index]
 
-                # generate 
+            # url for the ocr box
+            ocr_url = f"http://ocr:{app.config['CONTROLLER_TOKEN']}@{selected_box.get('ip_address')}:9898/read"
+
+            try:
+                # make the call
+                ocr_data = {
+                    "mitta_uri": mitta_uris,
+                    "page_numbers": page_nums
+                }
+
+                response = requests.post(ocr_url, json=ocr_data, headers={"Content-Type": "application/json"}, timeout=60)
+
+                if response.status_code == 200:
+                    texts = response.json().get("texts")
+                    coords = response.json().get("coords")
+
+                    # Extend the texts to the output field in task.document
+                    if not task.document.get(output_field):
+                        task.document[output_field] = []
+                    task.document[output_field].extend(texts)
+
+                    # Store the bounding box coordinates in task.document['text_coords']
+                    if not task.document.get('text_coords'):
+                        task.document['text_coords'] = []
+                    task.document['text_coords'].extend(coords)
+
+                    # Store the page numbers in task.document['page_nums']
+                    if not task.document.get('page_nums'):
+                        task.document['page_nums'] = []
+                    task.document['page_nums'].extend(page_nums)
+
+                elif response.status_code == 502:
+                    raise RetriableError(f"EasyOCR server is starting with status: {response.status_code}.")
+                else:
+                    raise NonRetriableError(f"Unexpected status code from EasyOCR endpoint: {response.status_code}.")
+                    
+            except RetriableError as ex:
+                app.logger.info(f"ocr processor: {ex}")
+                raise  # Re-raise the RetriableError to be caught by the process function
+
+            except Exception as ex:
+                app.logger.info(f"ocr processor: {ex}")
+                raise NonRetriableError(f"Exception talking to EasyOCR embedding endpoint: {ex}")
+
+
+        # Google Vision OCR
+        elif model == "gv-ocr":
+            # Now run the code for image processing
+            image_uri = f"gs://{app.config['CLOUD_STORAGE_BUCKET']}/{uid}/{file_name}"
+
+            # Download the file contents as bytes
+            content = download_as_bytes(uid,file_name)
+
+            # Split the image into segments by height
+            image_segments = split_image_by_height(BytesIO(content))
+
+            # Initialize the Vision API client
+            vision_client = vision.ImageAnnotatorClient()
+
+            _texts = [] # array by image segment (page)
+
+            try:
+                for i, segment_bytesio in enumerate(image_segments):
+                    # Create a vision.Image object for each segment
+                    segment_image = vision.Image(content=segment_bytesio.read())
+
+                    # Detect text in the segment
+                    response = vision_client.document_text_detection(image=segment_image)
+                    app.logger.info(response)
+                    # Get text annotations for the segment
+                    texts = response.text_annotations
+
+                    # Extract only the descriptions (the actual text)
+                    for text in texts:
+                        # append it to our new array
+                        _texts.append(text.description)
+                        break
+
+            except Exception as ex:
+                raise NonRetriableError(f"Something went wrong with character detection. Contact support: {ex}")
+
+            if not task.document.get(output_field):
+                task.document[output_field] = []
+            task.document[output_field].append(_texts)
+
+        # Google Vision Objects
+        elif model == "gv-objects":
+            # Now run the code for image processing
+            image_uri = f"gs://{app.config['CLOUD_STORAGE_BUCKET']}/{uid}/{file_name}"
+
+            client = vision.ImageAnnotatorClient()
+            response = client.annotate_image({
+                'image': {'source': {'image_uri': image_uri}},
+                'features': [{'type_': vision.Feature.Type.LABEL_DETECTION}]
+            })
+
+            # Get a list of detected labels (objects)
+            labels = [label.description.lower() for label in response.label_annotations]
+
+            # Append the labels list to task.document[output_field]
+            if not task.document.get(output_field):
+                task.document[output_field] = []
+            task.document[output_field].append(labels)
+
+        # Gemini Pro Vision Scene
+        elif "gemini-pro-vision" in model:
+            from PIL import Image
+            import time
+
+            if not task.document.get('gemini_token'):
+                raise NonRetriableError(f"You'll need to specify a 'gemini_token' in extras to use the {model} model.")
+
+            if task.document.get('system_prompt'):
+                system_prompt = task.document.get('system_prompt')
+            else:
+                system_prompt = "Describe in detail the image scene."
+
+            genai.configure(api_key=task.document.get('gemini_token'))
+
+            # Get the document
+            gcs = storage.Client()
+            bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
+            blob = bucket.blob(f"{uid}/{file_name}")
+
+            # even though the exceptions says it takes a Blob, we use PIL instead
+            image_bytes = blob.download_as_bytes()
+            image_stream = BytesIO(image_bytes)
+            img = Image.open(image_stream)
+
+            # generate (troubled APIs get retries)
+            max_retries = 3
+            retry_delay = 4  # seconds
+
+            for attempt in range(max_retries):
                 try:
                     model = genai.GenerativeModel(model)
                     response = model.generate_content([system_prompt, img], stream=True)
                     response.resolve()
+                    break  # Exit the retry loop if successful
                 except Exception as ex:
-                    raise NonRetriableError(f"Gemini error: {ex}")
+                    if attempt < max_retries - 1:  # Retry if there are attempts left
+                        time.sleep(retry_delay)
+                    else:  # Raise the exception if all retries are exhausted
+                        error_message = f"Gemini error: {ex}"
+                        error_details = f"Error type: {type(ex).__name__}\nError message: {str(ex)}\nError traceback:\n{traceback.format_exc()}"
+                        raise NonRetriableError(f"{error_message}\n\nError details:\n{error_details}")
 
-                if not task.document.get(output_field):
-                    task.document[output_field] = []
+            # Create an internal list to store the content for the current file
+            file_content = [response.text]
 
-                # oh google
-                task.document[output_field].append(response.text)
+            # Append the internal list to the task.document[output_field]
+            if not task.document.get(output_field):
+                task.document[output_field] = []
 
-            elif "gpt" in model:
-                # Get the document
-                gcs = storage.Client()
-                bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
-                blob = bucket.blob(f"{uid}/{file_name}")
+            task.document[output_field].append(file_content)
 
-                # download to file
-                content = blob.download_as_bytes()
-                base64_data = base64.b64encode(content).decode('utf-8')
+        # GPT Scene
+        elif "gpt" in model:
+            # Get the document
+            gcs = storage.Client()
+            bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
+            blob = bucket.blob(f"{uid}/{file_name}")
 
-                # move this to util and clean up
-                headers = {
-                  "Content-Type": "application/json",
-                  "Authorization": f"Bearer {task.document.get('openai_token')}"
-                }
-                if 'system_prompt' in task.document:
-                    system_prompt = task.document.get('system_prompt')
-                else:
-                    system_prompt = "What is in the image?"
+            # download to file
+            content = blob.download_as_bytes()
+            base64_data = base64.b64encode(content).decode('utf-8')
 
-                payload = {
-                  "model": model,
-                  "messages": [
+            # move this to util and clean up
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {task.document.get('openai_token')}"
+            }
+
+            if 'system_prompt' in task.document:
+                system_prompt = task.document.get('system_prompt')
+            else:
+                system_prompt = "What is in the image?"
+
+            payload = {
+                "model": model,
+                "messages": [
                     {
-                      "role": "user",
-                      "content": [
-                        {
-                          "type": "text",
-                          "text": system_prompt
-                        },
-                        {
-                          "type": "image_url",
-                          "image_url": {
-                            "url": f"data:image/jpeg;base64,{base64_data}"
-                          }
-                        }
-                      ]
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": system_prompt
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{base64_data}"
+                                }
+                            }
+                        ]
                     }
-                  ],
-                  "max_tokens": 300
-                }
+                ],
+                "max_tokens": 300,
+                "n": 3  # Specify the number of choices to generate
+            }
 
-                response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
-                if 'error' in response.json():
-                    raise NonRetriableError(response.json().get('error').get('message'))
+            response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
 
-                # Append the labels list to task.document[output_field]
+            if 'error' in response.json():
+                raise NonRetriableError(response.json().get('error').get('message'))
+
+            # Extract all the choices from the response
+            choices = response.json().get('choices')
+
+            # Create an internal list to store the content for the current file
+            file_content = []
+
+            for choice in choices:
                 try:
-                    scene = response.json().get('choices')[0].get('message').get('content')
+                    content = choice.get('message').get('content')
+                    file_content.append(content)
                 except:
                     raise NonRetriableError("Couldn't decode a response from the AI.")
 
+            # Append the internal list to the task.document[output_field]
+            if not task.document.get(output_field):
+                task.document[output_field] = []
+
+            task.document[output_field].append(file_content)
+
+        # Claude Scene
+        elif "claude" in model:
+            if not task.document.get('anthropic_token'):
+                raise NonRetriableError(f"You'll need to specify an 'anthropic_token' in extras to use the {model} model.")
+
+            import anthropic
+            client = anthropic.Client(api_key=task.document.get('anthropic_token'))
+
+            # Set the system prompt based on task document or use a default
+            if 'system_prompt' in task.document:
+                system_prompt = task.document.get('system_prompt')
+            else:
+                system_prompt = "What is in the image?"
+
+
+            # Get the document
+            gcs = storage.Client()
+            bucket = gcs.bucket(app.config['CLOUD_STORAGE_BUCKET'])
+            blob = bucket.blob(f"{uid}/{file_name}")
+
+            # download to file
+            content = blob.download_as_bytes()
+            base64_data = base64.b64encode(content).decode('utf-8')
+
+            # Use the system_prompt variable as the prompt for Claude
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": content_type[index],
+                                "data": base64_data,
+                            },
+                        },
+                        {
+                            "type": "text",
+                            "text": system_prompt  # Use the system prompt
+                        }
+                    ],
+                }
+            ]
+
+            # Make a request to the Claude API
+            try:
+                response = client.messages.create(
+                    model=model,  # Specify the appropriate model
+                    max_tokens=1024,
+                    messages=messages,
+                )
+                app.logger.info(response.content)
+
+                # Extract the response content
+                content_blocks = response.content
+
+                # Create an internal list to store the text content for the current file
+                file_content = []
+
+                for block in content_blocks:
+                    if block.type == 'text':
+                        file_content.append(block.text)
+
+                # Append the internal list to the task.document[output_field]
                 if not task.document.get(output_field):
                     task.document[output_field] = []
-                task.document[output_field].append(scene)
-        
-            elif model == "gv-ocr":
-                # Now run the code for image processing
-                image_uri = f"gs://{app.config['CLOUD_STORAGE_BUCKET']}/{uid}/{file_name}"
 
-                # Download the file contents as bytes
-                content = download_as_bytes(uid,file_name)
+                task.document[output_field].append(file_content)
 
-                # Split the image into segments by height
-                image_segments = split_image_by_height(BytesIO(content))
-
-                # Initialize the Vision API client
-                vision_client = vision.ImageAnnotatorClient()
-
-                _texts = [] # array by image segment (page)
-
-                try:
-                    for i, segment_bytesio in enumerate(image_segments):
-                        # Create a vision.Image object for each segment
-                        segment_image = vision.Image(content=segment_bytesio.read())
-
-                        # Detect text in the segment
-                        response = vision_client.document_text_detection(image=segment_image)
-
-                        # Get text annotations for the segment
-                        texts = response.text_annotations
-
-                        # Extract only the descriptions (the actual text)
-                        for text in texts:
-                            # append it to our new array
-                            _texts.append(text.description)
-                            break
-
-                except Exception as ex:
-                    raise NonRetriableError(f"Something went wrong with character detection. Contact support: {ex}")
-
-                if not task.document.get(output_field):
-                    task.document[output_field] = []
-                task.document[output_field].append(_texts)
+            except Exception as e:
+                raise NonRetriableError(f"Error in Claude API call: {str(e)}")
 
     return task
 

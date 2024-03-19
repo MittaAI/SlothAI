@@ -597,6 +597,7 @@ def node_detail(node_id=None, template_id=None):
         processor = template.get('extras').get('processor')
         if not processor:
             processor = template.get('processor')
+        
             if not processor:
                 processor = "jinja2"
 
@@ -619,18 +620,24 @@ def node_detail(node_id=None, template_id=None):
                     value = f"[{key}]"
 
             _extras[key] = value
-            
-        # create a new node
-        node = Node.create(
-            name=random_name(2).split('-')[1],
-            uid=uid,
-            extras=_extras,
-            processor=processor,
-            template_id=template.get('template_id')
-        )
 
-        # redirect to ourselves
-        return redirect(url_for('site.node_detail', node_id=node.get('node_id')))
+        while True:
+            # create a new node
+            new_node_name = random_name(2).split("-")[1]
+            app.logger.info(f"checking {new_node_name}")
+
+            # test if we have the name
+            if not Node.get(name=new_node_name, uid=uid):
+                node = Node.create(
+                    name=new_node_name,
+                    uid=uid,
+                    extras=_extras,
+                    processor=processor,
+                    template_id=template.get('template_id')
+                )
+
+                # redirect to ourselves
+                return redirect(url_for('site.node_detail', node_id=node.get('node_id')))
 
 
     pipelines = Pipeline.get_by_uid_node_id(uid, node.get('node_id'))
