@@ -1,0 +1,13 @@
+
+
+
+
+
+Vectors, OCR and DAGs
+
+- Vector storage using Weaviate
+- Two data store options
+- Extracting text challenges
+- Vision with Claude and EasyOCR
+- Some thoughts on DAGs
+- Changes in UI and system objects

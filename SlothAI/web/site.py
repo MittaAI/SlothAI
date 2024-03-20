@@ -31,6 +31,7 @@ current_date = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
 # hard coded, for now
 processors = [
+    {"value": "iching", "label": "I Ching (Random)", "icon": "dice-two"},
     {"value": "jinja2", "label": "Jinja2 (Code)", "icon": "file"},
     {"value": "callback", "label": "Callback (Dict)", "icon": "ethernet"},
     {"value": "read_file", "label": "Read File (Text)", "icon": "book-reader"},

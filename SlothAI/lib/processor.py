@@ -18,7 +18,7 @@ from itertools import groupby
 from google.cloud import vision, storage, documentai
 from google.api_core.client_options import ClientOptions
 
-from SlothAI.lib.util import random_string, random_name, get_file_extension, upload_to_storage, upload_to_storage_requests, storage_pickle, split_image_by_height, download_as_bytes, local_callback_url
+from SlothAI.lib.util import random_string, random_name, get_file_extension, upload_to_storage, upload_to_storage_requests, storage_pickle, cast_iching, split_image_by_height, download_as_bytes, local_callback_url
 from SlothAI.lib.template import Template
 from SlothAI.web.models import Token
 
@@ -334,6 +334,40 @@ def process(task: Task) -> Task:
     missing_field = validate_document(node, task, DocumentValidator.OUTPUT_FIELDS)
     if missing_field:
         raise MissingOutputFieldError(missing_field, node.get('name'))
+
+    return task
+
+
+# The I Ching, or "Book of Changes," is an ancient Chinese divination text that has been used for centuries
+# to provide guidance and insight into life's challenges and opportunities. In this context, we are not
+# using the I Ching for its esoteric or spiritual significance, but rather as a tool for introducing
+# randomness and serendipity into our AI communication process.
+
+# By generating I Ching hexagrams and their associated interpretations during moments of confusion or
+# uncertainty in the AI's interactions with users, we aim to create a more dynamic, adaptable, and
+# context-aware AI system. The random insights and prompts provided by the I Ching may serve as a source
+# of inspiration, reframing, and guidance for the AI, helping it to navigate complex communication
+# challenges and foster a more collaborative and supportive dynamic with users.
+
+# Ultimately, the goal is to develop an AI that can embrace and learn from the full spectrum of human
+# experience, including moments of confusion and doubt, and to provide a space for open-ended exploration
+# and self-discovery. By integrating the I Ching as a randomization tool, we seek to create an emotionally
+# intelligent AI that can serve as a valuable companion and guide for personal growth and transformation.
+@processor
+def iching(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
+    template_service = app.config['template_service']
+    template = template_service.get_template(template_id=node.get('template_id'))
+
+    # verify input fields steampunk style
+    input_fields = template.get('input_fields')
+
+    # use the first output field, or set one
+    try:
+        input_field = input_fields[0].get('name')
+    except:
+        input_field = "iching"
+
+    task.document[input_field] = cast_iching()
 
     return task
 

@@ -279,6 +279,47 @@ def load_template(name="default"):
     return template
 
 
+from requests.exceptions import RequestException
+
+def cast_iching(model="gpt-3.5-turbo"):
+    url = "https://www.random.org/integers/?num=6&min=0&max=15&col=1&base=10&format=plain&rnd=new"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # This will raise an HTTPError if the HTTP request returned an unsuccessful status code.
+        data = response.text.strip().split("\n")
+        throws = [int(i) for i in data]
+    except RequestException as e:
+        # Fallback to local randomness if there's any issue with the request
+        import secrets
+        throws = [secrets.randbelow(16) for _ in range(6)]
+        print(f"Request failed: {e}")
+
+    # Convert throws to their corresponding I Ching values
+    prob = [6, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 9, 9, 9]
+    hexagram = [prob[i] for i in throws]
+
+    # Convert hexagram to binary representation
+    binary_hexagram = ''.join(['1' if x in (7, 9) else '0' for x in hexagram])
+
+    # Construct the GPT-3 prompt
+    prompt = f"I Ching casting resulted in: {binary_hexagram}. What does it mean?"
+
+    # call gpt-3.5-turbo
+    openai.api_key = app.config['OPENAI_TOKEN']
+
+    completion = openai.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": "You produce a detailed I Ching reading."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+
+    answer = f"{prompt}\n{completion.choices[0].message.content}"
+
+    return answer
+
+
 def gpt_completion(document=None, template="just_a_dict", model="gpt-3.5-turbo"):
     # Load OpenAI key
     try:
