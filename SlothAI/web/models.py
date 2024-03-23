@@ -596,6 +596,7 @@ class User(flask_login.UserMixin, ndb.Model):
     mail_token = ndb.StringProperty()
     mail_confirm = ndb.BooleanProperty(default=False)
     mail_tries = ndb.IntegerProperty(default=0)
+    email_mute = ndb.BooleanProperty(default=False)
 
     # database settings
     dbid = ndb.StringProperty()
@@ -750,6 +751,16 @@ class User(flask_login.UserMixin, ndb.Model):
     def get_by_mail_token(cls, mail_token):
         with client.context():
             return cls.query(cls.mail_token == mail_token).get()
+
+    @classmethod
+    @ndb_context_manager
+    def mute(cls, uid, mute=True):
+        user = cls.query(cls.uid == uid).get()
+        if user:
+            user.email_mute = mute
+            user.put()
+            return user.to_dict()
+        return None
 
 
 class Token(ndb.Model):

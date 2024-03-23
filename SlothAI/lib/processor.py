@@ -101,6 +101,7 @@ def send_callback(task, node, error_message):
     if not task.document.get('callback_uri'):
         app.logger.info("Making callback")
         local_callback = local_callback_url(user.get('name'), user.get('api_token'))
+        app.logger.info(local_callback)
         task.document.update({"callback_uri": local_callback})
 
     callback_uri = task.document.get('callback_uri')
@@ -367,7 +368,7 @@ def iching(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     except:
         input_field = "iching"
 
-    task.document[input_field] = cast_iching()
+    task.document[input_field] = cast_iching(model="gpt-3.5-turbo")
 
     return task
 
@@ -922,6 +923,9 @@ def info_file(node: Dict[str, any], task: Task, is_post_processor=False) -> Task
             pdf_reader = PdfReader(pdf_content_stream)
             pdf_num_pages = len(pdf_reader.pages)
             task.document['pdf_num_pages'].append(pdf_num_pages)
+
+            # TODO scan the document for pages and then see if we have OCR'd text
+
         elif "text/plain" in content_type or "text/csv" in content_type:
             with BytesIO(file_content) as file:
                 txt_num_lines = sum(1 for line in file)
@@ -2011,8 +2015,24 @@ def aistruct(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     else:
         raise NonRetriableError("The aistruct processor expects a supported model.")
 
+@processor
+def split_file():
+    # read PDFs. read images. 
+    # PDFs come from our drives, email, slack, etc.
+    # images files come from cameras,  video files need to be split up.
+    # video to images? that is a aiffmpeg command though (which implies work on it must be done)
+    # website screenshost
+    # image, you may need overlap
+    # do that with pdfs too, but no overlap, so split on pages, pages--->images 1:1
+    # build the lists that are needed for the processors.
+    pass
 
 # look at a picture and get stuff
+# TODO
+# we must assume at this point we are operating on images only, and expect to return text from them
+# we don't read PDFs or any other formats like that with this processor, it is what is seen only
+# we may, however, expect to SEE text or objects, or maybe even other types of things (people).
+# this means this processor is always called with lists of files, which could be a single file
 @processor
 def aivision(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     # Output and input fields
@@ -2611,6 +2631,8 @@ def read_file(node: Dict[str, any], task: Task, is_post_processor=False) -> Task
                     texts.append(text)
                 # Assuming task.document[output_field] is a list where you want to store the extracted texts
                 task.document[output_field].extend(texts)
+
+                # TODO ensure we extracted the texts and if we didn't, be sure that jump task processors can know this
         
         elif "text/plain" in content_type[index]:
             # grab document

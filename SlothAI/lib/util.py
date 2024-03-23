@@ -292,7 +292,6 @@ def cast_iching(model="gpt-3.5-turbo"):
         # Fallback to local randomness if there's any issue with the request
         import secrets
         throws = [secrets.randbelow(16) for _ in range(6)]
-        print(f"Request failed: {e}")
 
     # Convert throws to their corresponding I Ching values
     prob = [6, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 9, 9, 9]
@@ -443,13 +442,14 @@ def should_be_service_token(name):
 
 def local_callback_url(username, api_token):
     # hostname and protocol
-    hostname = request.host
-    if "localhost" in hostname:
+    if app.config['DEV'] == "True":
         protocol = "http"
+        hostname = request.host
     else:
         protocol = "https"
+        hostname = app.config['APP_DOMAIN']
 
-    callback_uri =  protocol + "://" + request.host + f"/{username}/callback?token={api_token}"
+    callback_uri =  f"{protocol}://{hostname}/{username}/callback?token={api_token}"
     return callback_uri
 
 
