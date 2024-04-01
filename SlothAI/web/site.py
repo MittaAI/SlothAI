@@ -36,6 +36,7 @@ processors = [
     {"value": "callback", "label": "Callback (Dict)", "icon": "ethernet"},
     {"value": "read_file", "label": "Read File (Text)", "icon": "book-reader"},
     {"value": "info_file", "label": "File Info (Metadata)", "icon": "info"},
+    {"value": "split_file", "label": "Split File (PDF)", "icon": "clone"},
     {"value": "read_uri", "label": "Read Raw URI (Data)", "icon": "globe"},
     {"value": "aigrub", "label": "Screenshot URI (Image)", "icon": "desktop"},
     {"value": "aiffmpeg", "label": "FFmpeg Conversion (Media)", "icon": "photo-video"},

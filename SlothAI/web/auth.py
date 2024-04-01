@@ -127,10 +127,8 @@ def login_post():
     try:
         # check email and options
         valid = validate_email(request.form.get('email'))
-        email = valid.email
-
+        email = valid.normalized
         auth_ok = True
-
     except Exception as ex:
         print(ex)
         # reset the offer

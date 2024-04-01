@@ -18,7 +18,7 @@ from itertools import groupby
 from google.cloud import vision, storage, documentai
 from google.api_core.client_options import ClientOptions
 
-from SlothAI.lib.util import random_string, random_name, get_file_extension, upload_to_storage, upload_to_storage_requests, storage_pickle, cast_iching, split_image_by_height, download_as_bytes, local_callback_url
+from SlothAI.lib.util import random_string, random_name, get_file_extension, upload_to_storage, load_from_storage,upload_to_storage_requests, storage_pickle, cast_iching, split_image_by_height, download_as_bytes, local_callback_url
 from SlothAI.lib.template import Template
 from SlothAI.web.models import Token
 
@@ -2015,17 +2015,87 @@ def aistruct(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     else:
         raise NonRetriableError("The aistruct processor expects a supported model.")
 
+
+from pdf2image import convert_from_bytes
+import fitz
+
 @processor
-def split_file():
-    # read PDFs. read images. 
-    # PDFs come from our drives, email, slack, etc.
-    # images files come from cameras,  video files need to be split up.
-    # video to images? that is a aiffmpeg command though (which implies work on it must be done)
-    # website screenshost
-    # image, you may need overlap
-    # do that with pdfs too, but no overlap, so split on pages, pages--->images 1:1
-    # build the lists that are needed for the processors.
-    pass
+def split_file(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
+    # Check if filename and content_type are present in the task document
+    if not task.document.get('filename') or not task.document.get('content_type'):
+        raise NonRetriableError("Document must contain 'filename' and 'content_type'.")
+
+    filenames = task.document.get('filename')
+    content_types = task.document.get('content_type')
+
+    # Ensure filenames and content_types are lists
+    if not isinstance(filenames, list):
+        filenames = [filenames]
+    if not isinstance(content_types, list):
+        content_types = [content_types]
+
+    # Check if the number of filenames matches the number of content_types
+    if len(filenames) != len(content_types):
+        raise NonRetriableError("The number of filenames and content_types must match.")
+
+    # Check if the files are PDFs
+    for content_type in content_types:
+        if content_type != 'application/pdf':
+            raise NonRetriableError("Only PDF files are supported.")
+
+    # Get the uid
+    user = User.get_by_uid(uid=task.user_id)
+    uid = user.get('uid')
+
+    # Get the offset and number of pages (default to all pages if not provided)
+    offset = task.document.get('offset', 0)
+    num_pages = task.document.get('num_pages')
+
+    # Process each PDF file
+    new_filenames = []
+    new_content_types = []
+    new_page_nums = []
+
+    for filename in filenames:
+        # Load the PDF from Google Storage
+        pdf_bytes = load_from_storage(uid, filename).read()
+
+        # Create a PyMuPDF Document object
+        doc = fitz.open(stream=pdf_bytes, filetype='pdf')
+
+        # Set the number of pages to extract (default to all pages if not provided)
+        if num_pages is None:
+            num_pages = doc.page_count - offset
+
+        # Extract the specified range of pages
+        for page_num in range(offset, offset + num_pages):
+            if page_num >= doc.page_count:
+                break
+
+            # Convert the page to a PNG image using PyMuPDF
+            page = doc.load_page(page_num)
+            pix = page.get_pixmap(matrix=fitz.Matrix(300/72, 300/72))
+            image_bytes = BytesIO(pix.tobytes())
+
+            # Generate a new filename for the converted image
+            new_filename = f"{filename.rsplit('.', 1)[0]}_{page_num + 1}.png"
+
+            # Upload the converted image to Google Storage
+            upload_to_storage_requests(uid, new_filename, image_bytes.getvalue(), 'image/png')
+
+            # Append the new filename, content_type, and page_num to the respective lists
+            new_filenames.append(new_filename)
+            new_content_types.append('image/png')
+            new_page_nums.append(page_num + 1)
+
+
+    # Update the task document with the new filenames, content_types, and page_nums
+    task.document['filename'] = new_filenames
+    task.document['content_type'] = new_content_types
+    task.document['page_num'] = new_page_nums
+
+    return task
+
 
 # look at a picture and get stuff
 # TODO

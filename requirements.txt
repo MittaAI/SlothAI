@@ -25,6 +25,7 @@ ping3==4.0.4
 apscheduler==3.10.4
 Faker==19.11.0
 pypdf>=3.9.0
+pdf2image==1.17.0
 nltk==3.8.1
 phonenumbers==8.13.25
 email_validator==2.1.0
