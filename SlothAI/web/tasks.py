@@ -28,7 +28,7 @@ def process_tasks(cron_key):
         # clear any errors
         task.error = None
         task_stored = task_service.fetch_tasks(task_id=task.id)
-        app.logger.debug(task_stored)
+        # app.logger.debug(task_stored)
 
         if len(task_stored) == 0:
             app.logger.debug(f"Task {task.id} not found. Removing from queue.")

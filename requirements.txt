@@ -43,3 +43,4 @@ python-magic==0.4.27
 tenacity==8.2.3
 weaviate-client==4.5.1
 anthropic==0.19.1 
+pdf2image==1.17.0

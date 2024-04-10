@@ -422,7 +422,7 @@ def box_required(box_type=None):
     # No active or starting boxes, attempt to start a halted box
     if halted_gpus:
         alternate_box = random.choice(halted_gpus)
-        print("Starting box", alternate_box.get('box_id'))
+        app.logger.info(f"Starting box: {alternate_box.get('box_id')}")
         box_start(alternate_box.get('box_id'), alternate_box.get('zone'))
         Box.start_box(alternate_box.get('box_id'), "START")
         return True, alternate_box

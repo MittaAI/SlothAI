@@ -2179,14 +2179,15 @@ def aivision(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
             mitta_uris = [f"https://{app.config.get('APP_DOMAIN')}/d/{user.get('name')}/{file_name}?token={user.get('api_token')}"]
 
             # Get the page numbers from task.document, or create a default list if not provided
-            page_nums = task.document.get('page_num') or task.document.get('page_nums')
+            page_num = task.document.get('page_num') or task.document.get('page_nums')
 
-            if not page_nums:
-                page_nums = [1]
-            elif not isinstance(page_nums, list):
+            if not page_num:
+                page_num = [1]
+            elif not isinstance(page_num, list):
                 raise NonRetriableError("Page numbers must be provided as a list.")
             else:
-                page_nums = page_nums[index]
+                # build a single list of one page from the list of page_nums
+                page_nums = [page_num[index]]
 
             # url for the ocr box
             ocr_url = f"http://ocr:{app.config['CONTROLLER_TOKEN']}@{selected_box.get('ip_address')}:9898/read"
@@ -2195,7 +2196,7 @@ def aivision(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
                 # make the call
                 ocr_data = {
                     "mitta_uri": mitta_uris,
-                    "page_numbers": page_nums
+                    "page_nums": page_nums
                 }
 
                 response = requests.post(ocr_url, json=ocr_data, headers={"Content-Type": "application/json"}, timeout=60)
@@ -2221,17 +2222,13 @@ def aivision(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
 
                 elif response.status_code == 502:
                     raise RetriableError(f"EasyOCR server is starting with status: {response.status_code}.")
+
                 else:
                     raise NonRetriableError(f"Unexpected status code from EasyOCR endpoint: {response.status_code}.")
-                    
+
             except RetriableError as ex:
                 app.logger.info(f"ocr processor: {ex}")
                 raise  # Re-raise the RetriableError to be caught by the process function
-
-            except Exception as ex:
-                app.logger.info(f"ocr processor: {ex}")
-                raise NonRetriableError(f"Exception talking to EasyOCR embedding endpoint: {ex}")
-
 
         # Google Vision OCR
         elif model == "gv-ocr":
