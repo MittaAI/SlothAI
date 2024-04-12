@@ -18,7 +18,7 @@ from flask_login import current_user
 
 from google.cloud import storage
 
-from SlothAI.lib.util import email_user, random_name, gpt_dict_completion, build_mermaid, github_cookbooks, load_template, load_from_storage, merge_extras, should_be_service_token, callback_extras
+from SlothAI.lib.util import email_user, random_name, gpt_dict_completion, github_cookbooks, load_template, load_from_storage, merge_extras, should_be_service_token, callback_extras
 from SlothAI.web.models import Pipeline, Node, Log, User, Token
 
 site = Blueprint('site', __name__, static_folder='static')
@@ -468,9 +468,6 @@ def pipeline_view(pipe_id):
         return node_order_mapping.get(item['node_id'], len(pipeline.get('node_ids')))
     _nodes = sorted(_nodes, key=custom_sort_key)
 
-    # build the graph for inspection
-    mermaid_string = build_mermaid(pipeline, _nodes)
-
     # build an example POST usin generative AI
     head_input_fields = _nodes[0].get('input_fields', [])
     try:
@@ -531,7 +528,7 @@ def pipeline_view(pipe_id):
     _nodes_sorted_by_processor = sorted(nodes, key=lambda x: x.get('processor'))
 
     # render the page
-    return render_template('pages/pipeline.html', brand=get_brand(app), username=username, email=email, pipeline=pipeline, nodes=_nodes, all_nodes=_nodes_sorted_by_processor,  curl_code=curl_code, python_code=python_code, mermaid_string=mermaid_string, processors=processors)
+    return render_template('pages/pipeline.html', brand=get_brand(app), username=username, email=email, pipeline=pipeline, nodes=_nodes, all_nodes=_nodes_sorted_by_processor,  curl_code=curl_code, python_code=python_code, processors=processors)
 
 
 @site.route('/nodes', methods=['GET'])

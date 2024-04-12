@@ -917,14 +917,34 @@ def info_file(node: Dict[str, any], task: Task, is_post_processor=False) -> Task
 
         if "application/pdf" in content_type:
             from pypdf import PdfReader
-
+            
             # Create a BytesIO object for the PDF content
             pdf_content_stream = BytesIO(file_content)
             pdf_reader = PdfReader(pdf_content_stream)
             pdf_num_pages = len(pdf_reader.pages)
             task.document['pdf_num_pages'].append(pdf_num_pages)
-
-            # TODO scan the document for pages and then see if we have OCR'd text
+            
+            # Check if the PDF has metadata
+            has_metadata = False
+            metadata_num_pages = 0
+            
+            try:
+                metadata = pdf_reader.metadata
+                if metadata is not None:
+                    has_metadata = True
+                    metadata_num_pages = metadata.get('/Pages', 0)
+            except:
+                pass
+            
+            task.document['pdf_has_metadata'] = has_metadata
+            task.document['pdf_metadata_num_pages'] = metadata_num_pages
+            
+            # Check if the number of metadata pages matches the number of pages in the PDF
+            metadata_pages_match = False
+            if has_metadata and metadata_num_pages == pdf_num_pages:
+                metadata_pages_match = True
+            
+            task.document['pdf_metadata_pages_match'] = metadata_pages_match
 
         elif "text/plain" in content_type or "text/csv" in content_type:
             with BytesIO(file_content) as file:
@@ -2112,8 +2132,23 @@ def aivision(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     if not template:
         raise TemplateNotFoundError(template_id=node.get('template_id'))
 
+    # user
     user = User.get_by_uid(uid=task.user_id)
     uid = user.get('uid')
+    username = user.get('name')
+    user_token = user.get('api_token')
+
+    # check if we are jumped into
+    if task.jump_status > -1:
+        return task
+
+    # Callback for resuming the pipeline flow
+    if app.config['DEV'] == "True":
+        callback_url = f"{app.config['NGROK_URL']}/pipeline/{task.pipe_id}/task/{task.id}?token={user_token}"
+    else:
+        callback_url = f"{app.config['BRAND_SERVICE_URL']}/pipeline/{task.pipe_id}/task/{task.id}?token={user_token}"
+
+    # model
     model = task.document.get('model', "gv-objects")
 
     # use the first output field
@@ -2159,79 +2194,78 @@ def aivision(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
         if content_parts not in supported_content_types:
             raise NonRetriableError(f"Unsupported file type for {file_name}: {content_type[index]}")
 
-    # loop through the detection filenames
+    # EasyOCR
+    # we can use the easyocr service to handle the entire payload because it does callbacks
+    # the process will "split" the workload across multiple jobs/tasks, by doing a "jump_into" process.
+    # this jump into process handler is defined in the ingest endpoint in the pipeline web handler
+    if model == "easyocr":
+        # check required services (GPU boxes)
+        defer, selected_box = box_required(box_type="ocr")
+        if defer:
+            if selected_box:
+                # Logic to start or wait for the box to be ready
+                # Possibly setting up the box or waiting for it to transition from halted to active
+                raise RetriableError("EasyOCR box is being started to run text extraction.")
+            else:
+                # No box is available, raise a non-retriable error
+                raise NonRetriableError("No available EasyOCR machine to run extraction.")
+
+        # Build the list of mitta_uris from filenames and username, with user token added for access
+        mitta_uris = [f"https://{app.config.get('APP_DOMAIN')}/d/{user.get('name')}/{file_name}?token={user.get('api_token')}" for file_name in filename]
+
+        # Get the page numbers from task.document, or create a default list if not provided
+        page_nums = task.document.get('page_num') or task.document.get('page_nums')
+        if not page_nums:
+            page_nums = [1] * len(mitta_uris)  # Create a list of 1s with the same length as mitta_uris
+        elif not isinstance(page_nums, list):
+            raise NonRetriableError("Page numbers must be provided as a list.")
+
+        # url for the ocr box
+        ocr_url = f"http://ocr:{app.config['CONTROLLER_TOKEN']}@{selected_box.get('ip_address')}:9898/read"
+
+        # Callback for resuming the pipeline flow
+        if app.config['DEV'] == "True":
+            callback_url = f"{app.config['NGROK_URL']}/pipeline/{task.pipe_id}/task/{task.id}?token={user.get('api_token')}"
+        else:
+            callback_url = f"{app.config['BRAND_SERVICE_URL']}/pipeline/{task.pipe_id}/task/{task.id}?token={user.get('api_token')}"
+
+        try:
+            # make the call
+            ocr_data = {
+                "mitta_uri": mitta_uris,
+                "page_nums": page_nums,
+                "callback_url": callback_url
+            }
+            response = requests.post(ocr_url, json=ocr_data, headers={"Content-Type": "application/json"}, timeout=60)
+
+            if response.status_code == 200:
+                response_json = response.json()
+                if response_json.get('status') == "success":
+                    app.logger.info("OCR request submitted successfully. Waiting for callback.")
+                    
+                    # Modify the task
+                    task.nodes = [task.next_node()]
+
+                    # Save the document
+                    bucket_uri = storage_pickle(user.get('uid'), task.document, task.id, task.nodes[0])
+                    return task
+                else:
+                    raise NonRetriableError(f"OCR request failed with status: {response_json.get('status')}")
+            elif response.status_code == 500 or response.status_code == 502:
+                raise RetriableError(f"EasyOCR server is starting with status: {response.status_code}.")
+            else:
+                raise NonRetriableError(f"Unexpected status code from EasyOCR endpoint: {response.status_code}.")
+
+        except RetriableError as ex:
+            app.logger.info(f"ocr processor: {ex}")
+            raise  # Re-raise the RetriableError to be caught by the process function
+
+
+    # loop through the detection filenames to make calls
     for index, file_name in enumerate(filename):
 
-        # EasyOCR
-        if model == "easyocr":
-            # check required services (GPU boxes)
-            defer, selected_box = box_required(box_type="ocr")
-            if defer:
-                if selected_box:
-                    # Logic to start or wait for the box to be ready
-                    # Possibly setting up the box or waiting for it to transition from halted to active
-                    raise RetriableError("EasyOCR box is being started to run text extraction.")
-                else:
-                    # No box is available, raise a non-retriable error
-                    raise NonRetriableError("No available EasyOCR machine to run extraction.")
-
-            # Build the list of mitta_uris from filenames and username, with user token added for access
-            mitta_uris = [f"https://{app.config.get('APP_DOMAIN')}/d/{user.get('name')}/{file_name}?token={user.get('api_token')}"]
-
-            # Get the page numbers from task.document, or create a default list if not provided
-            page_num = task.document.get('page_num') or task.document.get('page_nums')
-
-            if not page_num:
-                page_num = [1]
-            elif not isinstance(page_num, list):
-                raise NonRetriableError("Page numbers must be provided as a list.")
-            else:
-                # build a single list of one page from the list of page_nums
-                page_nums = [page_num[index]]
-
-            # url for the ocr box
-            ocr_url = f"http://ocr:{app.config['CONTROLLER_TOKEN']}@{selected_box.get('ip_address')}:9898/read"
-
-            try:
-                # make the call
-                ocr_data = {
-                    "mitta_uri": mitta_uris,
-                    "page_nums": page_nums
-                }
-
-                response = requests.post(ocr_url, json=ocr_data, headers={"Content-Type": "application/json"}, timeout=60)
-
-                if response.status_code == 200:
-                    texts = response.json().get("texts")
-                    coords = response.json().get("coords")
-
-                    # Extend the texts to the output field in task.document
-                    if not task.document.get(output_field):
-                        task.document[output_field] = []
-                    task.document[output_field].extend(texts)
-
-                    # Store the bounding box coordinates in task.document['text_coords']
-                    if not task.document.get('text_coords'):
-                        task.document['text_coords'] = []
-                    task.document['text_coords'].extend(coords)
-
-                    # Store the page numbers in task.document['page_nums']
-                    if not task.document.get('page_nums'):
-                        task.document['page_nums'] = []
-                    task.document['page_nums'].extend(page_nums)
-
-                elif response.status_code == 502:
-                    raise RetriableError(f"EasyOCR server is starting with status: {response.status_code}.")
-
-                else:
-                    raise NonRetriableError(f"Unexpected status code from EasyOCR endpoint: {response.status_code}.")
-
-            except RetriableError as ex:
-                app.logger.info(f"ocr processor: {ex}")
-                raise  # Re-raise the RetriableError to be caught by the process function
-
         # Google Vision OCR
-        elif model == "gv-ocr":
+        if model == "gv-ocr":
             # Now run the code for image processing
             image_uri = f"gs://{app.config['CLOUD_STORAGE_BUCKET']}/{uid}/{file_name}"
 

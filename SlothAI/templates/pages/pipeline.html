@@ -158,15 +158,6 @@
       <button id="describeButton" data-pipeline_id="{{pipeline.pipe_id}}" class="btn btn-outline-dark"><i class="fas fa-info"></i> Get Description</button>
     </div>
   </div>
-  <hr/>
-  <div class="row">
-    <div class="col col-lg-12 mt-3">
-      <h4>Graph Layout</h4>
-      <div class="mermaid" style="display: none;">
-        {{mermaid_string}}
-      </div>
-    </div>
-  </div>
 </div>
 
 <div class="modal fade" id="nodeFormModal" tabindex="-1" role="dialog" aria-labelledby="nodeFormModalLabel" aria-hidden="true">
@@ -215,18 +206,6 @@
 {% endblock %}
 
 {% block javascript %}
-<script type="module">
-  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-
-  // Initialize Mermaid when the page is loaded
-  document.addEventListener('DOMContentLoaded', function () {
-    mermaid.initialize({ startOnLoad: true });
-
-  });
-  const mermaidDiv = document.querySelector('.mermaid');
-  mermaidDiv.style.display = 'block';
-
-</script>
 <script type="text/javascript">
 $(document).ready(function() {
   // grab the nodes from the template and make them available via getNodeInfo
