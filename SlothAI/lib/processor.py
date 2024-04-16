@@ -33,6 +33,12 @@ from enum import Enum
 
 import datetime
 
+# Image processing
+from pdf2image import convert_from_bytes
+import fitz
+from io import BytesIO
+from PIL import Image
+
 # supress OpenAI resource warnings for unclosed sockets
 import warnings
 warnings.filterwarnings("ignore")
@@ -717,6 +723,7 @@ def aigrub(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
 
     else:
         # we were jumped into so we now complete and move on
+        task.jump_status = -1
         return task
 
 
@@ -2036,9 +2043,6 @@ def aistruct(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
         raise NonRetriableError("The aistruct processor expects a supported model.")
 
 
-from pdf2image import convert_from_bytes
-import fitz
-
 @processor
 def split_file(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     # Check if filename and content_type are present in the task document
@@ -2058,11 +2062,6 @@ def split_file(node: Dict[str, any], task: Task, is_post_processor=False) -> Tas
     if len(filenames) != len(content_types):
         raise NonRetriableError("The number of filenames and content_types must match.")
 
-    # Check if the files are PDFs
-    for content_type in content_types:
-        if content_type != 'application/pdf':
-            raise NonRetriableError("Only PDF files are supported.")
-
     # Get the uid
     user = User.get_by_uid(uid=task.user_id)
     uid = user.get('uid')
@@ -2071,43 +2070,67 @@ def split_file(node: Dict[str, any], task: Task, is_post_processor=False) -> Tas
     offset = task.document.get('offset', 0)
     num_pages = task.document.get('num_pages')
 
-    # Process each PDF file
+    # Process each file
     new_filenames = []
     new_content_types = []
     new_page_nums = []
 
-    for filename in filenames:
-        # Load the PDF from Google Storage
-        pdf_bytes = load_from_storage(uid, filename).read()
+    for filename, content_type in zip(filenames, content_types):
+        if content_type == 'application/pdf':
+            # Load the PDF from Google Storage
+            pdf_bytes = load_from_storage(uid, filename).read()
 
-        # Create a PyMuPDF Document object
-        doc = fitz.open(stream=pdf_bytes, filetype='pdf')
+            # Create a PyMuPDF Document object
+            doc = fitz.open(stream=pdf_bytes, filetype='pdf')
 
-        # Set the number of pages to extract (default to all pages if not provided)
-        if num_pages is None:
-            num_pages = doc.page_count - offset
+            # Set the number of pages to extract (default to all pages if not provided)
+            if num_pages is None:
+                num_pages = doc.page_count - offset
 
-        # Extract the specified range of pages
-        for page_num in range(offset, offset + num_pages):
-            if page_num >= doc.page_count:
-                break
+            # Extract the specified range of pages
+            for page_num in range(offset, offset + num_pages):
+                if page_num >= doc.page_count:
+                    break
 
-            # Convert the page to a PNG image using PyMuPDF
-            page = doc.load_page(page_num)
-            pix = page.get_pixmap(matrix=fitz.Matrix(300/72, 300/72))
-            image_bytes = BytesIO(pix.tobytes())
+                # Convert the page to a PNG image using PyMuPDF
+                page = doc.load_page(page_num)
+                pix = page.get_pixmap(matrix=fitz.Matrix(300/72, 300/72))
+                image_bytes = BytesIO(pix.tobytes())
 
-            # Generate a new filename for the converted image
-            new_filename = f"{filename.rsplit('.', 1)[0]}_{page_num + 1}.png"
+                # Generate a new filename for the converted image
+                new_filename = f"{filename.rsplit('.', 1)[0]}_{page_num + 1}.png"
 
-            # Upload the converted image to Google Storage
-            upload_to_storage_requests(uid, new_filename, image_bytes.getvalue(), 'image/png')
+                # Upload the converted image to Google Storage
+                upload_to_storage_requests(uid, new_filename, image_bytes.getvalue(), 'image/png')
 
-            # Append the new filename, content_type, and page_num to the respective lists
-            new_filenames.append(new_filename)
-            new_content_types.append('image/png')
-            new_page_nums.append(page_num + 1)
+                # Append the new filename, content_type, and page_num to the respective lists
+                new_filenames.append(new_filename)
+                new_content_types.append('image/png')
+                new_page_nums.append(page_num + 1)
 
+        elif content_type in ['image/png', 'image/jpeg']:
+            # Load the image from Google Storage
+            image_bytes = load_from_storage(uid, filename).read()
+            image_bytesio = BytesIO(image_bytes)
+
+            # Split the image by height
+            segmented_images = split_image_by_height(image_bytesio)
+
+            # Process each segmented image
+            for segment_index, segment_bytesio in enumerate(segmented_images):
+                # Generate a new filename for the segmented image
+                new_filename = f"{filename.rsplit('.', 1)[0]}_{segment_index + 1}.png"
+
+                # Upload the segmented image to Google Storage
+                upload_to_storage_requests(uid, new_filename, segment_bytesio.getvalue(), 'image/png')
+
+                # Append the new filename, content_type, and segment_index to the respective lists
+                new_filenames.append(new_filename)
+                new_content_types.append('image/png')
+                new_page_nums.append(segment_index + 1)
+
+        else:
+            raise NonRetriableError(f"Unsupported file type: {content_type}")
 
     # Update the task document with the new filenames, content_types, and page_nums
     task.document['filename'] = new_filenames
@@ -2115,7 +2138,6 @@ def split_file(node: Dict[str, any], task: Task, is_post_processor=False) -> Tas
     task.document['page_num'] = new_page_nums
 
     return task
-
 
 # look at a picture and get stuff
 # TODO
@@ -2129,6 +2151,7 @@ def aivision(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
 
+    app.logger.info("IN AI VISION")
     if not template:
         raise TemplateNotFoundError(template_id=node.get('template_id'))
 
@@ -2140,6 +2163,8 @@ def aivision(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
 
     # check if we are jumped into
     if task.jump_status > -1:
+        app.logger.info("returning task")
+        task.jump_status = -1
         return task
 
     # Callback for resuming the pipeline flow
@@ -2199,8 +2224,10 @@ def aivision(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     # the process will "split" the workload across multiple jobs/tasks, by doing a "jump_into" process.
     # this jump into process handler is defined in the ingest endpoint in the pipeline web handler
     if model == "easyocr":
+
         # check required services (GPU boxes)
         defer, selected_box = box_required(box_type="ocr")
+        app.logger.info(defer, selected_box)
         if defer:
             if selected_box:
                 # Logic to start or wait for the box to be ready

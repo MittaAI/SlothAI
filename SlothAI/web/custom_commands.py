@@ -78,164 +78,70 @@ def create_overlapping_chunks(chunks, overlap):
 
     return overlapped_chunks
 
-"""
-@custom_commands.app_template_global()
-def chunk_with_page_filename(texts, filename, length=512, start_page=1, overlap=0, tokenizer_path='./SlothAI/static/english.pickle'):
-    if isinstance(texts, str):
-        raise TypeError("The value for 'texts' needs to be an array of strings.")
+def stitch_chunks(chunks, min_chunk_length, max_chunk_length):
+    stitched_chunks = []
+    current_chunk = []
+    original_chunk_numbers = []
 
-    if isinstance(texts, list):
-        if all(isinstance(item, str) for item in texts):
-            pass
-        elif len(texts) == 1 and isinstance(texts[0], list) and all(isinstance(item, str) for item in texts[0]):
-            texts = texts[0]
+    for i, chunk in enumerate(chunks, start=1):
+        if len(current_chunk) + len(chunk) <= max_chunk_length:
+            current_chunk.extend(chunk)
+            original_chunk_numbers.append(i)
         else:
-            raise TypeError("The value for 'texts' should be a list of strings or a list containing a single list of strings.")
+            if len(current_chunk) >= min_chunk_length:
+                stitched_chunks.append({"text": current_chunk, "original_chunks": original_chunk_numbers})
+            current_chunk = chunk
+            original_chunk_numbers = [i]
 
-    if isinstance(filename, list):
-        if len(filename) > 1:
-            raise TypeError("The value for filename can be a string, or a list with a single string in it.")
-        filename = filename[0]
+    if len(current_chunk) >= min_chunk_length:
+        stitched_chunks.append({"text": current_chunk, "original_chunks": original_chunk_numbers})
 
-    tokenizer = load_tokenizer(tokenizer_path)
-    texts_chunks = []
+    return stitched_chunks
 
-    for text in texts:
-        preprocessed_text = preprocess_text(text)
-        tokenized_text = tokenizer.tokenize(preprocessed_text)
-        chunks = create_chunks(tokenized_text, length)
-        if overlap:
-            chunks = create_overlapping_chunks(chunks, overlap)
-        texts_chunks.append(chunks)
-
-    segmented_texts = []
-    page_numbers = []
-    chunk_numbers = []
-    filenames = []
-
-    current_page_number = start_page
-    current_chunk_number = 1
-
-    for page_chunks in texts_chunks:
-        for chunk in page_chunks:
-            segmented_texts.append(' '.join(chunk))
-            page_numbers.append(current_page_number)
-            chunk_numbers.append(current_chunk_number)
-            filenames.append(filename)
-            current_chunk_number += 1
-        current_page_number += 1
-
-    return {
-        "chunks": segmented_texts,
-        "page_nums": page_numbers,
-        "chunk_nums": chunk_numbers,
-        "filenames": filenames
-    }
-
-# multi-chunker
-@custom_commands.app_template_global()
-def chunk_with_page_filename(texts, filenames, length=512, start_page=1, overlap=0, tokenizer_path='./SlothAI/static/english.pickle'):
+def chunk_with_page_filename(texts, filenames, length=512, start_page=1, overlap=0, min_chunk_length=100, max_chunk_length=512, tokenizer_path='./SlothAI/static/english.pickle'):
     if not isinstance(texts, list) or not isinstance(filenames, list):
         raise TypeError("The values for 'texts' and 'filenames' need to be lists.")
-
-    if len(texts) != len(filenames):
-        raise ValueError("The lengths of 'texts' and 'filenames' should be the same.")
-
-    tokenizer = load_tokenizer(tokenizer_path)
-    all_texts_chunks = []
-
-    for texts, filename in zip(texts, filenames):
-        if isinstance(texts, str):
-            raise TypeError("The elements in 'texts' need to be lists of strings.")
-
-        if not isinstance(texts, list) or not all(isinstance(item, str) for item in texts):
-            raise TypeError("The elements in 'texts' should be lists of strings.")
-
-        texts_chunks = []
-
-        for text in texts:
-            preprocessed_text = preprocess_text(text)
-            tokenized_text = tokenizer.tokenize(preprocessed_text)
-            chunks = create_chunks(tokenized_text, length)
-            if overlap:
-                chunks = create_overlapping_chunks(chunks, overlap)
-            texts_chunks.append(chunks)
-
-        all_texts_chunks.append(texts_chunks)
-
-    segmented_texts = []
-    page_numbers = []
-    chunk_numbers = []
-    filenames_out = []
-
-    current_page_number = start_page
-    current_chunk_number = 1
-
-    for texts_chunks, filename in zip(all_texts_chunks, filenames):
-        for page_chunks in texts_chunks:
-            for chunk in page_chunks:
-                segmented_texts.append(' '.join(chunk))
-                page_numbers.append(current_page_number)
-                chunk_numbers.append(current_chunk_number)
-                filenames_out.append(filename)
-                current_chunk_number += 1
-            current_page_number += 1
-
-    return {
-        "chunks": segmented_texts,
-        "page_nums": page_numbers,
-        "chunk_nums": chunk_numbers,
-        "filenames": filenames_out
-    }
-
-"""
-
-def chunk_with_page_filename(texts, filenames, length=512, start_page=1, overlap=0, tokenizer_path='./SlothAI/static/english.pickle'):
-    if not isinstance(texts, list) or not isinstance(filenames, list):
-        raise TypeError("The values for 'texts' and 'filenames' need to be lists.")
-
     if not all(isinstance(item, str) or isinstance(item, list) for item in texts):
         raise TypeError("The elements in 'texts' should be either strings or lists of strings.")
-
     if isinstance(texts[0], str) and len(filenames) != 1:
         raise ValueError("When 'texts' is a list of strings, 'filenames' should contain only one filename.")
-
     if isinstance(texts[0], list) and len(texts) != len(filenames):
         raise ValueError("When 'texts' is a list of lists, the outer list length should match the length of 'filenames'.")
 
     tokenizer = load_tokenizer(tokenizer_path)
-    all_texts_chunks = []
 
+    all_texts_chunks = []
     if isinstance(texts[0], str):
         texts = [texts]  # Convert to a list of lists for consistency
 
     for text_list, filename in zip(texts, filenames):
         texts_chunks = []
-
         for text in text_list:
             preprocessed_text = preprocess_text(text)
             tokenized_text = tokenizer.tokenize(preprocessed_text)
             chunks = create_chunks(tokenized_text, length)
             if overlap:
                 chunks = create_overlapping_chunks(chunks, overlap)
-            texts_chunks.extend(chunks)
-
+            stitched_chunks = stitch_chunks(chunks, min_chunk_length, max_chunk_length)
+            texts_chunks.extend(stitched_chunks)
         all_texts_chunks.append(texts_chunks)
 
     segmented_texts = []
     page_numbers = []
     chunk_numbers = []
     filenames_out = []
+    stitched_chunk_info = []
 
     current_page_number = start_page
     current_chunk_number = 1
 
     for texts_chunks, filename in zip(all_texts_chunks, filenames):
         for chunk in texts_chunks:
-            segmented_texts.append(' '.join(chunk))
+            segmented_texts.append(' '.join(chunk['text']))
             page_numbers.append(current_page_number)
             chunk_numbers.append(current_chunk_number)
             filenames_out.append(filename)
+            stitched_chunk_info.append(chunk['original_chunks'])
             current_chunk_number += 1
         current_page_number += 1
 
@@ -248,5 +154,26 @@ def chunk_with_page_filename(texts, filenames, length=512, start_page=1, overlap
         "chunks": segmented_texts,
         "page_nums": expanded_page_numbers,
         "chunk_nums": expanded_chunk_numbers,
-        "filenames": expanded_filenames
+        "filenames": expanded_filenames,
+        "stitched_chunk_info": stitched_chunk_info
     }
+
+def stitch_chunks(chunks, min_chunk_length, max_chunk_length):
+    stitched_chunks = []
+    current_chunk = []
+    original_chunk_numbers = []
+
+    for i, chunk in enumerate(chunks, start=1):
+        if len(current_chunk) + len(chunk) <= max_chunk_length:
+            current_chunk.extend(chunk)
+            original_chunk_numbers.append(i)
+        else:
+            if len(current_chunk) >= min_chunk_length:
+                stitched_chunks.append({"text": current_chunk, "original_chunks": original_chunk_numbers})
+            current_chunk = chunk
+            original_chunk_numbers = [i]
+
+    if len(current_chunk) >= min_chunk_length:
+        stitched_chunks.append({"text": current_chunk, "original_chunks": original_chunk_numbers})
+
+    return stitched_chunks

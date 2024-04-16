@@ -78,7 +78,7 @@ class TaskService:
             self.drop_task(task)
 
     def _is_retriable(self, task: Task):
-        if task.retries >= 5:
+        if task.retries >= 8:
             return False
         return True
     

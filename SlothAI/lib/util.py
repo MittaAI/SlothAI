@@ -218,17 +218,18 @@ def download_as_bytes(uid, filename):
     return content
 
 
-def split_image_by_height(image_bytesio, output_format='PNG', segment_height=8192):
+def split_image_by_height(image_bytesio, output_format='PNG', segment_height=4096, overlap_ratio=0.02):
     from PIL import Image
     from io import BytesIO
-    
+
     """
-    Splits an image stored in a BytesIO object by height into segments.
+    Splits an image stored in a BytesIO object by height into segments with slight overlap.
 
     Args:
         image_bytesio (BytesIO): BytesIO object containing the image.
         output_format (str): Output format for segmented images (e.g., 'PNG', 'JPEG').
         segment_height (int): Desired height of each segment.
+        overlap_ratio (float): Ratio of overlap between segments (default: 0.02).
 
     Returns:
         List of BytesIO objects containing segmented images.
@@ -239,16 +240,19 @@ def split_image_by_height(image_bytesio, output_format='PNG', segment_height=819
     # Get the image dimensions
     width, total_height = image.size
 
+    # Calculate the overlap in pixels based on the overlap ratio
+    overlap_pixels = int(segment_height * overlap_ratio)
+
     # Calculate the number of segments
-    num_segments = (total_height + segment_height - 1) // segment_height
+    num_segments = (total_height + segment_height - overlap_pixels - 1) // (segment_height - overlap_pixels)
 
     # Initialize a list to store segmented images
     segmented_images = []
 
     for segment_index in range(num_segments):
-        # Calculate the cropping box for the current segment
-        top = segment_index * segment_height
-        bottom = min((segment_index + 1) * segment_height, total_height)
+        # Calculate the cropping box for the current segment with overlap
+        top = max(segment_index * (segment_height - overlap_pixels), 0)
+        bottom = min((segment_index + 1) * segment_height - segment_index * overlap_pixels, total_height)
 
         # Crop the segment
         segment = image.crop((0, top, width, bottom))
