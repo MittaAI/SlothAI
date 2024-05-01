@@ -83,7 +83,7 @@ template_examples = [
     {"name": "Split a document into page numbers for split tasks", "template_name": "filename_to_splits", "processor_type": "jinja2"},
     {"name": "Convert page text into chunks", "template_name": "text_filename_to_chunks", "processor_type": "jinja2"},
     {"name": "Convert page text into chunks w/loop", "template_name": "text_filename_to_chunks_loop", "processor_type": "jinja2"},
-    {"name": "Split task", "template_name": "split_task", "processor_type": "split_task"},
+    {"name": "Split task", "template_name": "split_tasks", "processor_type": "split_task"},
     {"name": "Halt task", "template_name": "halt_task", "processor_type": "halt_task"},
     {"name": "Jump task", "template_name": "jump_task", "processor_type": "jump_task"},
     {"name": "Generate lists of keys from input", "template_name": "text_to_struct", "processor_type": "aistruct"},

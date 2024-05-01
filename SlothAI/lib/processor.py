@@ -690,12 +690,18 @@ def aigrub(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
                     request_url,
                     headers={"Content-Type": "application/json"},
                     data=json.dumps(config_data),
-                    timeout=10
+                    timeout=20
                 )
 
-                # Try to parse the JSON response
+
                 response_json = response.json()
-                
+                # Log the successful retrieval and content of the response
+                app.logger.info("Response received: %s - %s", response.status_code, json.dumps(response_json))
+
+            except json.JSONDecodeError:
+                # Log the failure to parse JSON and return the raw response instead
+                app.logger.error("Failed to parse JSON response. Status: %s, Response: %s", response.status_code, response.text)
+
                 # Check the status in the JSON response
                 if response_json.get('status') == "success":
                     statuses.append("success")
@@ -864,6 +870,7 @@ def aiffmpeg(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
 
     else:
         # we were jumped into so we now complete and move on
+        task.jump_status = -1
         return task
 
 
@@ -1037,29 +1044,38 @@ def split_task(node: Dict[str, any], task: Task, is_post_processor=False) -> Tas
         task.split_status = task_stored['split_status']
     except Exception as e:
         raise NonRetriableError(f"getting task by ID but got none: {e}")
-    # task.refresh_split_status()
     
     # all input / output fields should be lists of the same length to use split_task
     total_sizes = []
     for output in outputs:
         if output in inputs:
             field = task.document[output]
-            if not isinstance(field, list):
-                raise NonRetriableError(f"split_task processor: output fields must be list type: got {type(field)}")
-
-            # if this task was partially process, we need to truncate the data
-            # to only contain the data that hasn't been split.
-            if task.split_status != -1:
-                total_sizes.append(len(task.document[output][task.split_status:]))
-                del task.document[output][:task.split_status]
+            if isinstance(field, list):
+                if len(field) == 1 and isinstance(field[0], str):
+                    # If the field is a single string in a single list, skip appending its length to total_sizes
+                    continue
+                else:
+                    # If this task was partially processed, truncate the data to only contain the data that hasn't been split
+                    if task.split_status != -1:
+                        total_sizes.append(len(task.document[output][task.split_status:]))
+                        del task.document[output][:task.split_status]
+                    else:
+                        total_sizes.append(len(field))
             else:
-                total_sizes.append(len(field))
-
+                raise NonRetriableError(f"split_task processor: output fields must be list type: got {type(field)}")
         else:
             raise NonRetriableError(f"split_task processor: all output fields must be taken from input fields: output field {output} was not found in input fields.")
 
     if not all_equal(total_sizes):
         raise NonRetriableError("split_task processor: len of fields must be equal to re-batch a task")
+
+    # Project single string fields to match the size of other lists
+    for output in outputs:
+        if output in inputs:
+            field = task.document[output]
+            if isinstance(field, list) and len(field) == 1 and isinstance(field[0], str):
+                task.document[output] = field * max(total_sizes)
+
 
     app.logger.info(f"Split Task: Task ID: {task.id}. Task Size: {total_sizes[0]}. Batch Size: {batch_size}. Number of Batches: {math.ceil(total_sizes[0] / batch_size)}. Task split status was set to {task.split_status}.")
 
@@ -1089,7 +1105,8 @@ def split_task(node: Dict[str, any], task: Task, is_post_processor=False) -> Tas
                 retries=0,
                 error=None,
                 state=TaskState.RUNNING,
-                split_status=-1
+                split_status=-1,
+                jump_status=-1
             )
 
             # create new task and queue it      
@@ -1119,7 +1136,6 @@ def embedding(node: Dict[str, any], task: Task, is_post_processor=False) -> Task
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
 
-    # do we need this?
     extras = node.get('extras', None)
     if not extras:
         raise NonRetriableError("embedding processor: extras not found but is required")
@@ -1136,13 +1152,69 @@ def embedding(node: Dict[str, any], task: Task, is_post_processor=False) -> Task
     if not output_fields:
         output_fields = [f"{input_field.get('name')}_embedding" for input_field in input_fields]
     else:
-        # Ensure output_fields is a list of names only
         output_fields = [field['name'] for field in output_fields if 'name' in field]
 
     if len(output_fields) != len(input_fields):
         raise NonRetriableError("Input and output fields must be of the same length.")
 
-    # use batches of strings to send to embeddings endpoints
+    user = User.get_by_uid(uid=task.user_id)
+    if task.jump_status > -1:
+        app.logger.info("returning task")
+        task.jump_status = -1
+        return task
+
+    if "instructor" in model:
+        defer, selected_box = box_required(box_type="instructor")
+        if defer:
+            if selected_box:
+                raise RetriableError("Instructor box is being started to run embedding.")
+            else:
+                raise NonRetriableError("No available Instructor machine to run embeddings.")
+
+        payload_data = {}
+        for index, input_field in enumerate(input_fields):
+            input_field_name = input_field.get('name')
+            input_data = task.document.get(input_field_name)
+            if input_data is None or (isinstance(input_data, list) and not input_data):
+                payload_data[input_field_name] = []
+            else:
+                if not isinstance(input_data, list):
+                    input_data = [input_data]
+                payload_data[input_field_name] = input_data
+
+        instructor_url = f"http://instructor:{app.config['CONTROLLER_TOKEN']}@{selected_box.get('ip_address')}:9898/embed"
+
+        # Callback for resuming the pipeline flow
+        if app.config['DEV'] == "True":
+            callback_url = f"{app.config['NGROK_URL']}/pipeline/{task.pipe_id}/task/{task.id}?token={user.get('api_token')}"
+        else:
+            callback_url = f"{app.config['BRAND_SERVICE_URL']}/pipeline/{task.pipe_id}/task/{task.id}?token={user.get('api_token')}"
+
+        try:
+            payload = {
+                "data": payload_data,
+                "model": model,
+                "callback_url": callback_url,
+                "output_fields": output_fields,
+                "batch_size": 30
+            }
+
+            response = requests.post(instructor_url, json=payload, headers={"Content-Type": "application/json"}, timeout=60)
+            if response.status_code == 202:
+                # Save the meta document
+                bucket_uri = storage_pickle(user.get('uid'), task.document, task.id, task.nodes[0])
+
+                task.nodes = [task.next_node()]
+                return task
+            elif response.status_code in [500, 502]:
+                raise RetriableError(f"Instructor server is starting with status: {response.status_code}.")
+            else:
+                raise NonRetriableError(f"Unexpected status code from Instructor embedding endpoint: {response.status_code}.")
+        except requests.RequestException as e:
+            raise RetriableError(f"Failed to send data to Instructor box: {str(e)}")
+    return task
+        
+    # otherwise, use batches of strings to send to embeddings endpoints
     if task.document.get('batch_size'):
         batch_size = int(task.document.get('batch_size'))
         if batch_size < 1:
@@ -1238,53 +1310,6 @@ def embedding(node: Dict[str, any], task: Task, is_post_processor=False) -> Task
             except Exception as ex:
                 app.logger.info(f"embedding processor: {ex}")
                 raise NonRetriableError(f"Exception talking to Mistral embedding: {ex}")
-
-        elif "instructor" in model:
-            # check required services (GPU boxes)
-            defer, selected_box = box_required(box_type="instructor")
-            if defer:
-                if selected_box:
-                    # Logic to start or wait for the box to be ready
-                    # Possibly setting up the box or waiting for it to transition from halted to active
-                    raise RetriableError("Instructor box is being started to run embedding.")
-                else:
-                    # No box is available, raise a non-retriable error
-                    raise NonRetriableError("No available Instructor machine to run embeddings.")
-
-            embedding_url = f"http://instructor:{app.config['CONTROLLER_TOKEN']}@{selected_box.get('ip_address')}:9898/embed"
-
-            try:
-                # Initialize a list to store the embeddings
-                embeddings = []
-                for i in range(0, len(input_data), batch_size):
-                    batch = input_data[i:i + batch_size]
-                    # Prepare the data for the POST request
-                    embedding_data = {
-                        "text": batch,
-                        "model": model
-                    }
-                    # Send the POST request to the Instructor embedding service
-                    response = requests.post(embedding_url, json=embedding_data, headers={"Content-Type": "application/json"}, timeout=60)
-                    # Check the response and extract embeddings
-                    if response.status_code == 200:
-                        batch_embeddings = response.json().get("embeddings")
-                        embeddings.extend(batch_embeddings)
-                    elif response.status_code == 502:
-                        raise RetriableError(f"Embedding server is starting with status: {response.status_code}.")
-                    else:
-                        raise NonRetriableError(f"Unexpected status code from Instructor embedding endpoint: {response.status_code}.")
-
-                # Add the embeddings to the output field in the task document
-                task.document[output_field] = embeddings
-
-            except RetriableError as ex:
-                app.logger.info(f"embedding processor: {ex}")
-                raise  # Re-raise the RetriableError to be caught by the process function
-
-            except Exception as ex:
-                app.logger.info(f"embedding processor: {ex}")
-                raise NonRetriableError(f"Exception talking to Instructor embedding endpoint: {ex}")
-
 
     return task
 
@@ -2151,7 +2176,6 @@ def aivision(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
     template_service = app.config['template_service']
     template = template_service.get_template(template_id=node.get('template_id'))
 
-    app.logger.info("IN AI VISION")
     if not template:
         raise TemplateNotFoundError(template_id=node.get('template_id'))
 
@@ -2220,14 +2244,10 @@ def aivision(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
             raise NonRetriableError(f"Unsupported file type for {file_name}: {content_type[index]}")
 
     # EasyOCR
-    # we can use the easyocr service to handle the entire payload because it does callbacks
-    # the process will "split" the workload across multiple jobs/tasks, by doing a "jump_into" process.
-    # this jump into process handler is defined in the ingest endpoint in the pipeline web handler
     if model == "easyocr":
-
         # check required services (GPU boxes)
         defer, selected_box = box_required(box_type="ocr")
-        app.logger.info(defer, selected_box)
+        app.logger.info(f"({defer}, {selected_box})")
         if defer:
             if selected_box:
                 # Logic to start or wait for the box to be ready
@@ -2238,23 +2258,20 @@ def aivision(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
                 raise NonRetriableError("No available EasyOCR machine to run extraction.")
 
         # Build the list of mitta_uris from filenames and username, with user token added for access
-        mitta_uris = [f"https://{app.config.get('APP_DOMAIN')}/d/{user.get('name')}/{file_name}?token={user.get('api_token')}" for file_name in filename]
-
-        # Get the page numbers from task.document, or create a default list if not provided
+        mitta_uris = []
         page_nums = task.document.get('page_num') or task.document.get('page_nums')
+
         if not page_nums:
-            page_nums = [1] * len(mitta_uris)  # Create a list of 1s with the same length as mitta_uris
+            page_nums = list(range(1, len(filename) + 1))  # Generate page numbers starting from 1
         elif not isinstance(page_nums, list):
             raise NonRetriableError("Page numbers must be provided as a list.")
 
+        for file_name in filename:
+            mitta_uri = f"https://{app.config.get('APP_DOMAIN')}/d/{user.get('name')}/{file_name}?token={user.get('api_token')}"
+            mitta_uris.append(mitta_uri)
+
         # url for the ocr box
         ocr_url = f"http://ocr:{app.config['CONTROLLER_TOKEN']}@{selected_box.get('ip_address')}:9898/read"
-
-        # Callback for resuming the pipeline flow
-        if app.config['DEV'] == "True":
-            callback_url = f"{app.config['NGROK_URL']}/pipeline/{task.pipe_id}/task/{task.id}?token={user.get('api_token')}"
-        else:
-            callback_url = f"{app.config['BRAND_SERVICE_URL']}/pipeline/{task.pipe_id}/task/{task.id}?token={user.get('api_token')}"
 
         try:
             # make the call
@@ -2287,49 +2304,42 @@ def aivision(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
             app.logger.info(f"ocr processor: {ex}")
             raise  # Re-raise the RetriableError to be caught by the process function
 
-
     # loop through the detection filenames to make calls
     for index, file_name in enumerate(filename):
-
         # Google Vision OCR
         if model == "gv-ocr":
             # Now run the code for image processing
             image_uri = f"gs://{app.config['CLOUD_STORAGE_BUCKET']}/{uid}/{file_name}"
 
             # Download the file contents as bytes
-            content = download_as_bytes(uid,file_name)
-
-            # Split the image into segments by height
-            image_segments = split_image_by_height(BytesIO(content))
+            content = download_as_bytes(uid, file_name)
 
             # Initialize the Vision API client
             vision_client = vision.ImageAnnotatorClient()
 
-            _texts = [] # array by image segment (page)
+            _texts = []  # array to store the extracted text
 
             try:
-                for i, segment_bytesio in enumerate(image_segments):
-                    # Create a vision.Image object for each segment
-                    segment_image = vision.Image(content=segment_bytesio.read())
+                # Create a vision.Image object
+                image = vision.Image(content=content)
 
-                    # Detect text in the segment
-                    response = vision_client.document_text_detection(image=segment_image)
-                    app.logger.info(response)
-                    # Get text annotations for the segment
-                    texts = response.text_annotations
+                # Detect text in the image
+                response = vision_client.document_text_detection(image=image)
 
-                    # Extract only the descriptions (the actual text)
-                    for text in texts:
-                        # append it to our new array
-                        _texts.append(text.description)
-                        break
+                # Get text annotations
+                texts = response.text_annotations
+
+                # Extract only the descriptions (the actual text)
+                for text in texts:
+                    _texts.append(text.description)
+                    break
 
             except Exception as ex:
                 raise NonRetriableError(f"Something went wrong with character detection. Contact support: {ex}")
 
             if not task.document.get(output_field):
                 task.document[output_field] = []
-            task.document[output_field].append(_texts)
+            task.document[output_field].append(_texts)  # Append the list of detected text as a single item
 
         # Google Vision Objects
         elif model == "gv-objects":
@@ -2345,10 +2355,9 @@ def aivision(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
             # Get a list of detected labels (objects)
             labels = [label.description.lower() for label in response.label_annotations]
 
-            # Append the labels list to task.document[output_field]
             if not task.document.get(output_field):
                 task.document[output_field] = []
-            task.document[output_field].append(labels)
+            task.document[output_field].append(labels)  # Append the list of labels as a single item
 
         # Gemini Pro Vision Scene
         elif "gemini-pro-vision" in model:
@@ -2393,14 +2402,9 @@ def aivision(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
                         error_details = f"Error type: {type(ex).__name__}\nError message: {str(ex)}\nError traceback:\n{traceback.format_exc()}"
                         raise NonRetriableError(f"{error_message}\n\nError details:\n{error_details}")
 
-            # Create an internal list to store the content for the current file
-            file_content = [response.text]
-
-            # Append the internal list to the task.document[output_field]
             if not task.document.get(output_field):
                 task.document[output_field] = []
-
-            task.document[output_field].append(file_content)
+            task.document[output_field].append([response.text])  # Append the response text as a single-item list
 
         # GPT Scene
         elif "gpt" in model:
@@ -2455,21 +2459,20 @@ def aivision(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
             # Extract all the choices from the response
             choices = response.json().get('choices')
 
-            # Create an internal list to store the content for the current file
-            file_content = []
+            # Create a list to store the content of each choice for the current file
+            file_choices = []
 
             for choice in choices:
                 try:
                     content = choice.get('message').get('content')
-                    file_content.append(content)
+                    file_choices.append(content)
                 except:
                     raise NonRetriableError("Couldn't decode a response from the AI.")
 
-            # Append the internal list to the task.document[output_field]
+            # Append the list of choices for the current file to task.document[output_field]
             if not task.document.get(output_field):
                 task.document[output_field] = []
-
-            task.document[output_field].append(file_content)
+            task.document[output_field].append(file_choices)
 
         # Claude Scene
         elif "claude" in model:
@@ -2528,18 +2531,13 @@ def aivision(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
                 # Extract the response content
                 content_blocks = response.content
 
-                # Create an internal list to store the text content for the current file
-                file_content = []
-
-                for block in content_blocks:
-                    if block.type == 'text':
-                        file_content.append(block.text)
-
-                # Append the internal list to the task.document[output_field]
+                # Append the text content to task.document[output_field]
                 if not task.document.get(output_field):
                     task.document[output_field] = []
 
-                task.document[output_field].append(file_content)
+                for block in content_blocks:
+                    if block.type == 'text':
+                        task.document[output_field].append(block.text)
 
             except Exception as e:
                 raise NonRetriableError(f"Error in Claude API call: {str(e)}")

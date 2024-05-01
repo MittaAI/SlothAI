@@ -50,16 +50,16 @@ def preprocess_text(text):
     return text.replace("\n", " ").replace("\r", " ").replace("\t", " ") \
                .replace("\\", " ").strip()
 
-def create_chunks(tokenized_text, length):
+def create_chunks(tokenized_text, length, min_length):
     chunks = []
     current_chunk = []
 
     for token in tokenized_text:
-        if token.strip():
-            if len(' '.join(current_chunk)) + len(token) > length:
-                chunks.append(current_chunk)
-                current_chunk = []
+        if len(' '.join(current_chunk) + ' ' + token) <= length:
             current_chunk.append(token)
+        else:
+            chunks.append(current_chunk)
+            current_chunk = [token]
 
     if current_chunk:
         chunks.append(current_chunk)
@@ -78,102 +78,90 @@ def create_overlapping_chunks(chunks, overlap):
 
     return overlapped_chunks
 
-def stitch_chunks(chunks, min_chunk_length, max_chunk_length):
-    stitched_chunks = []
-    current_chunk = []
-    original_chunk_numbers = []
 
-    for i, chunk in enumerate(chunks, start=1):
-        if len(current_chunk) + len(chunk) <= max_chunk_length:
-            current_chunk.extend(chunk)
-            original_chunk_numbers.append(i)
-        else:
-            if len(current_chunk) >= min_chunk_length:
-                stitched_chunks.append({"text": current_chunk, "original_chunks": original_chunk_numbers})
-            current_chunk = chunk
-            original_chunk_numbers = [i]
-
-    if len(current_chunk) >= min_chunk_length:
-        stitched_chunks.append({"text": current_chunk, "original_chunks": original_chunk_numbers})
-
-    return stitched_chunks
-
-def chunk_with_page_filename(texts, filenames, length=512, start_page=1, overlap=0, min_chunk_length=100, max_chunk_length=512, tokenizer_path='./SlothAI/static/english.pickle'):
+def chunk_with_page_filename(texts, filenames, length=512, min_length=100, start_page=1, overlap=0, tokenizer_path='./SlothAI/static/english.pickle', flatten_output=False):
     if not isinstance(texts, list) or not isinstance(filenames, list):
-        raise TypeError("The values for 'texts' and 'filenames' need to be lists.")
+        raise TypeError("The values for 'texts' and 'filename' need to be lists.")
+
     if not all(isinstance(item, str) or isinstance(item, list) for item in texts):
         raise TypeError("The elements in 'texts' should be either strings or lists of strings.")
+
     if isinstance(texts[0], str) and len(filenames) != 1:
         raise ValueError("When 'texts' is a list of strings, 'filenames' should contain only one filename.")
+
     if isinstance(texts[0], list) and len(texts) != len(filenames):
         raise ValueError("When 'texts' is a list of lists, the outer list length should match the length of 'filenames'.")
 
     tokenizer = load_tokenizer(tokenizer_path)
-
-    all_texts_chunks = []
-    if isinstance(texts[0], str):
-        texts = [texts]  # Convert to a list of lists for consistency
+    all_texts_chunks = []  # This will be a list of lists
 
     for text_list, filename in zip(texts, filenames):
         texts_chunks = []
+        carry_forward_chunk = []
+
         for text in text_list:
             preprocessed_text = preprocess_text(text)
             tokenized_text = tokenizer.tokenize(preprocessed_text)
-            chunks = create_chunks(tokenized_text, length)
-            if overlap:
-                chunks = create_overlapping_chunks(chunks, overlap)
-            stitched_chunks = stitch_chunks(chunks, min_chunk_length, max_chunk_length)
-            texts_chunks.extend(stitched_chunks)
+            chunks = create_chunks(tokenized_text, length, min_length)
+
+            if carry_forward_chunk:
+                chunks[0] = carry_forward_chunk + chunks[0]
+                carry_forward_chunk = []
+
+            for chunk in chunks:
+                if len(' '.join(chunk)) < min_length:
+                    carry_forward_chunk.extend(chunk)
+                else:
+                    texts_chunks.append(chunk)
+
+        if carry_forward_chunk:
+            texts_chunks.append(carry_forward_chunk)
+
+        if overlap:
+            texts_chunks = create_overlapping_chunks(texts_chunks, overlap)
+
         all_texts_chunks.append(texts_chunks)
 
     segmented_texts = []
     page_numbers = []
     chunk_numbers = []
     filenames_out = []
-    stitched_chunk_info = []
 
     current_page_number = start_page
-    current_chunk_number = 1
 
     for texts_chunks, filename in zip(all_texts_chunks, filenames):
+        page_chunks = []  # List to hold chunks for the current page
+        current_chunk_number = 1
+
         for chunk in texts_chunks:
-            segmented_texts.append(' '.join(chunk['text']))
+            page_chunks.append(' '.join(chunk))
             page_numbers.append(current_page_number)
             chunk_numbers.append(current_chunk_number)
             filenames_out.append(filename)
-            stitched_chunk_info.append(chunk['original_chunks'])
             current_chunk_number += 1
+
+        segmented_texts.append(page_chunks)
         current_page_number += 1
 
-    # Expand filenames_out, page_numbers, and chunk_numbers to match the structure of segmented_texts
-    expanded_filenames = [[filename] * len(chunks) for filename, chunks in zip(filenames, all_texts_chunks)]
-    expanded_page_numbers = [[page_num] * len(chunks) for page_num, chunks in zip(range(start_page, start_page + len(all_texts_chunks)), all_texts_chunks)]
-    expanded_chunk_numbers = [list(range(1, len(chunks) + 1)) for chunks in all_texts_chunks]
+    if flatten_output:
+        segmented_texts = [chunk for page_chunks in segmented_texts for chunk in page_chunks]
+        page_numbers = [page_num for page_nums in page_numbers for page_num in [page_nums]]
+        chunk_numbers = [chunk_num for chunk_nums in chunk_numbers for chunk_num in [chunk_nums]]
+        filenames_out = [filename for filenames in filenames_out for filename in [filenames]]
+    else:
+        # Adjust the output to match the new structure
+        expanded_filenames = [[filename] * len(chunks) for filename, chunks in zip(filenames, all_texts_chunks)]
+        expanded_page_numbers = [[page_num] * len(chunks) for page_num, chunks in zip(range(start_page, start_page + len(all_texts_chunks)), all_texts_chunks)]
+        expanded_chunk_numbers = [list(range(1, len(chunks) + 1)) for chunks in all_texts_chunks]
+
+        segmented_texts = expanded_filenames
+        page_numbers = expanded_page_numbers
+        chunk_numbers = expanded_chunk_numbers
+        filenames_out = expanded_filenames
 
     return {
         "chunks": segmented_texts,
-        "page_nums": expanded_page_numbers,
-        "chunk_nums": expanded_chunk_numbers,
-        "filenames": expanded_filenames,
-        "stitched_chunk_info": stitched_chunk_info
+        "page_nums": page_numbers,
+        "chunk_nums": chunk_numbers,
+        "filenames": filenames_out
     }
-
-def stitch_chunks(chunks, min_chunk_length, max_chunk_length):
-    stitched_chunks = []
-    current_chunk = []
-    original_chunk_numbers = []
-
-    for i, chunk in enumerate(chunks, start=1):
-        if len(current_chunk) + len(chunk) <= max_chunk_length:
-            current_chunk.extend(chunk)
-            original_chunk_numbers.append(i)
-        else:
-            if len(current_chunk) >= min_chunk_length:
-                stitched_chunks.append({"text": current_chunk, "original_chunks": original_chunk_numbers})
-            current_chunk = chunk
-            original_chunk_numbers = [i]
-
-    if len(current_chunk) >= min_chunk_length:
-        stitched_chunks.append({"text": current_chunk, "original_chunks": original_chunk_numbers})
-
-    return stitched_chunks

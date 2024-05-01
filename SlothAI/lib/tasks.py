@@ -329,58 +329,12 @@ def transform_data(output_keys, data):
 
 	return out
 
-"""
-# check boxes and start if needed
-def box_required(box_type=None):
-	boxes = Box.get_boxes()  # Retrieve all boxes
 
-	if not boxes:
-		return False, None  # Indicates no box is available
-
-	active_t4s = []
-	halted_t4s = []
-
-	for box in boxes:
-		status = box.get('status')
-		box_ip = box.get('ip_address')
-		box_id = box.get('box_id')
-
-		# Check if the called type matches the box_type
-		if box_type and box_id.split("-")[0] != box_type:
-			continue
-
-		# Check for active boxes
-		if status == "RUNNING":
-			if box_ip and ping(box_ip, timeout=2.0) and check_webserver_connection(box_ip, 9898):
-				active_t4s.append(box)
-			else:
-				halted_t4s.append(box)
-
-		# Add boxes in START, PROVISIONING, STAGING to halted_t4s
-		elif status in ["START", "PROVISIONING", "STAGING", "TERMINATED"]:
-			halted_t4s.append(box)
-
-	# Return a random active box if available
-	if active_t4s:
-		return False, random.choice(active_t4s)
-
-	# No active boxes, attempt to start a halted box
-	if halted_t4s:
-		alternate_box = random.choice(halted_t4s)
-		if alternate_box.get('status') != "START":
-			print("Starting box", alternate_box.get('box_id'))
-			box_start(alternate_box.get('box_id'), alternate_box.get('zone'))
-			Box.start_box(alternate_box.get('box_id'), "START")
-		return True, alternate_box
-
-	# No boxes available to start
-	return False, None
-"""
-
-# AI improved check boxes
 def box_required(box_type=None):
     boxes = Box.get_boxes()  # Retrieve all boxes
+
     if not boxes:
+        app.logger.info("No boxes available")
         return False, None  # Indicates no box is available
 
     active_gpus = []
@@ -392,42 +346,56 @@ def box_required(box_type=None):
         box_ip = box.get('ip_address')
         box_id = box.get('box_id')
 
+        app.logger.info(f"Processing box: {box_id}, Status: {status}")
+
         # Check if the called type matches the box_type
         if box_type and box_id.split("-")[0] != box_type:
+            app.logger.info(f"Box {box_id} does not match the required box type: {box_type}")
             continue
 
         # Check for active boxes
         if status == "RUNNING":
             if box_ip and ping(box_ip, timeout=2.0) and check_webserver_connection(box_ip, 9898):
+                app.logger.info(f"Box {box_id} is active")
                 active_gpus.append(box)
             else:
+                app.logger.info(f"Box {box_id} is running but failed ping or webserver connection")
                 starting_gpus.append(box)  # Consider boxes that fail ping as starting
 
         # Add boxes in START, PROVISIONING, STAGING to starting_gpus
         elif status in ["START", "PROVISIONING", "STAGING"]:
+            app.logger.info(f"Box {box_id} is in starting state")
             starting_gpus.append(box)
 
         # Add boxes in TERMINATED to halted_gpus
-        elif status == "TERMINATED":
+        elif status in ["TERMINATED", "STOPPING"]:
+            app.logger.info(f"Box {box_id} is halted")
             halted_gpus.append(box)
 
     # Return a random active box if available
     if active_gpus:
-        return False, random.choice(active_gpus)
+        selected_box = random.choice(active_gpus)
+        app.logger.info(f"Found active box: {selected_box.get('box_id')}")
+        return False, selected_box
 
     # Check if a box is already being started or a running box is potentially starting
     if starting_gpus:
-        return True, random.choice(starting_gpus)
+        selected_box = random.choice(starting_gpus)
+        app.logger.info(f"Found starting box: {selected_box.get('box_id')}")
+        return True, selected_box
 
     # No active or starting boxes, attempt to start a halted box
     if halted_gpus:
         alternate_box = random.choice(halted_gpus)
-        app.logger.info(f"Starting box: {alternate_box.get('box_id')}")
-        box_start(alternate_box.get('box_id'), alternate_box.get('zone'))
-        Box.start_box(alternate_box.get('box_id'), "START")
+        box_id = alternate_box.get('box_id')
+        zone = alternate_box.get('zone')
+        app.logger.info(f"Starting halted box: {box_id}")
+        box_start(box_id, zone)
+        Box.start_box(box_id, "START")
         return True, alternate_box
 
     # No boxes available to start
+    app.logger.info("No boxes available to start")
     return False, None
     
 
