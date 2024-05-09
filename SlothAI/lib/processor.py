@@ -4,6 +4,7 @@ import math
 import time
 import base64
 import random
+import sys
 
 from io import BytesIO
 
@@ -442,7 +443,10 @@ def jinja2(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
                     jinja_template = env.from_string(template_text)
                     jinja_json = jinja_template.render(task.document)
                 except Exception as e:
-                    raise NonRetriableError(f"jinja processor: {e}")
+                    # Get the line number of the error
+                    _, _, tb = sys.exc_info()
+                    line_number = tb.tb_lineno
+                    raise NonRetriableError(f"jinja processor: {str(e)} (line {line_number})")
 
             # update the task.document with the rendered dict
             try:
@@ -1397,7 +1401,6 @@ def aichat(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
 
         else:               
             raise NonRetriableError(f"Tried {retries} times to get an answer from the AI, but failed.")    
-        
 
     elif "claude" in task.document.get('model'):
         model = task.document.get('model')
@@ -1405,9 +1408,10 @@ def aichat(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
             raise NonRetriableError(f"You'll need to specify an 'anthropic_token' in extras to use the {model} model.")
 
         import anthropic
-        client = anthropic.Client(api_key=task.document.get('anthropic_token'))
 
+        client = anthropic.Client(api_key=task.document.get('anthropic_token'))
         template_text = Template.remove_fields_and_extras(template.get('text'))
+
         if template_text:
             jinja_template = env.from_string(template_text)
             prompt = jinja_template.render(task.document)
@@ -1420,30 +1424,24 @@ def aichat(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
         message_history = task.document.get('message_history', [])
         role_history = task.document.get('role_history', [])
 
+        # define messages with the user input from the template as the last message
+        messages = [{"role": "user", "content": prompt}]
+
         if message_history or role_history:
             if len(message_history) != len(role_history):
                 raise NonRetriableError("'role_history' length must match 'message_history' length.")
             else:
                 message_history.reverse()
                 role_history.reverse()
-
-        messages = []
-
-        # Iterate through the user history
-        for idx, message in enumerate(message_history):
-            # Determine the role (user or assistant) based on the index
-            role = role_history[idx]
-
-            # Create a message object and append it to the messages list
-            messages.append({
-                "role": role,
-                "content": message
-            })
-
-        # add the user input from the template as the last message
-        messages.append({"role": "user", "content": prompt})
-
-        app.logger.debug(messages)
+                # Iterate through the user history
+                for idx, message in enumerate(message_history):
+                    # Determine the role (user or assistant) based on the index
+                    role = role_history[idx]
+                    # Create a message object and append it to the messages list
+                    messages.append({
+                        "role": role,
+                        "content": message
+                    })
 
         retries = 3
 
@@ -1452,11 +1450,11 @@ def aichat(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
             response = client.messages.create(
                 model=model,
                 max_tokens=1000,
-                messages=messages
+                messages=messages,
+                system=system_prompt  # Pass the system prompt here
             )
 
             content_blocks = response.content
-
             if content_blocks:
                 # Iterate over the content blocks and extract the text
                 answer = ''.join(block.text for block in content_blocks)
@@ -1472,7 +1470,6 @@ def aichat(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
                 return task
             else:
                 raise NonRetriableError(f"Tried {retries} times to get an answer from the AI, but failed.")
-    
 
     elif "gemini-pro" in task.document.get('model'):
         model = task.document.get('model')
@@ -3271,7 +3268,7 @@ def aiaudio(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
         model = task.document.get('model', "whisper-1")
         if "whisper" in model:
             # Check if the mime type is supported
-            supported_content_types = ['audio/mpeg', 'audio/mpeg3', 'audio/x-mpeg-3', 'audio/mp3', 'audio/mpeg-3', 'audio/wav', 'audio/webm', 'audio/mp4', 'audio/x-m4a', 'audio/m4a', 'audio/x-wav']
+            supported_content_types = ['audio/mpeg', 'audio/mpeg3', 'audio/x-mpeg-3', 'audio/mp3', 'audio/mpeg-3', 'audio/wav', 'audio/webm', 'video/webm', 'audio/mp4', 'audio/x-m4a', 'audio/m4a', 'audio/x-wav']
             
             for supported_type in supported_content_types:
                 if supported_type in content_type:
