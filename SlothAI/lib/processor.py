@@ -1341,7 +1341,7 @@ def aichat(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
             raise NonRetriableError(f"Input field '{field_name}' is not present in the document.")
 
     # replace single strings with lists
-    task.document = process_input_fields(task.document, input_fields)
+    # task.document = process_input_fields(task.document, input_fields)
 
     if "gpt" in task.document.get('model'):
         openai.api_key = task.document.get('openai_token')
@@ -1888,7 +1888,7 @@ def aidict(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
             ai_dicts.append(ai_dict)
 
             if err:
-                print(ai_dict)
+                app.logger.info(ai_dict)
                 raise NonRetriableError(f"{err}: {ai_dict}")
 
         if is_list_of_lists:
@@ -1911,7 +1911,7 @@ def aidict(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
                     for key, value in dictionary.items():
                         result_dict[key].append(value)
                 except:
-                    print(dictionary)
+                    app.logger.info(dictionary)
 
             for field in output_fields:
                 field_name = field['name']
@@ -2067,12 +2067,17 @@ def aistruct(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
 
 @processor
 def split_file(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
-    # Check if filename and content_type are present in the task document
-    if not task.document.get('filename') or not task.document.get('content_type'):
-        raise NonRetriableError("Document must contain 'filename' and 'content_type'.")
+    # Check if filename or filenames and content_type are present in the task document
+    if not (task.document.get('filename') or task.document.get('filenames')) or not task.document.get('content_type'):
+        raise NonRetriableError("Document must contain 'filename' or 'filenames' and 'content_type'.")
 
     filenames = task.document.get('filename')
+    if not filenames:
+        filenames = task.document.get('filenames')
+
     content_types = task.document.get('content_type')
+    if not content_types:
+        content_types = task.document.get('content_types')
 
     # Ensure filenames and content_types are lists
     if not isinstance(filenames, list):
@@ -2325,6 +2330,8 @@ def aivision(node: Dict[str, any], task: Task, is_post_processor=False) -> Task:
 
                 # Get text annotations
                 texts = response.text_annotations
+
+                app.logger.info("response texts")
 
                 # Extract only the descriptions (the actual text)
                 for text in texts:

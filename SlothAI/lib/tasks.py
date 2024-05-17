@@ -111,6 +111,7 @@ class Task:
 	def next_node(self):
 		if len(self.nodes) == 0:
 			return None
+		
 		return self.nodes[0]
 
 	def jump_node(self, jump_id=None):
