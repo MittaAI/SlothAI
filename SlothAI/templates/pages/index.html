@@ -12,12 +12,22 @@
 
 <div class="container-fluid hero">
   <div class="row">
-    <div class="col col-lg-12">
-      <h1>Build <strong class="gradient-text">Strong</strong> AI</h1>
-      <p class="blurb mb-4">We create custom AI document transforming pipelines and UIs to enhance business innovation & efficency.</p>
-
-      <button id="money" type="button" class="btn btn-secondary mr-2">Get in Touch</button>
-      <a href="https://github.com/MittaAI/SlothAI" class="btn btn-outline-light" type="button"><i class="fab fa-github"></i> Code</a>
+    <div class="col-lg-12">
+      <h1>Mitta provides <strong class="gradient-text">artificially intelligent</strong> software APIs for modern web apps.</h1>
+      <ul class="feature-list mb-4">
+        <li>AI-powered Web Crawler</li>
+        <li>Smart Media File Conversions</li>
+        <li>Image to Text, Objects, Scene</li>
+        <li>Intelligent Text Chunking</li>
+        <li>Vector Embeddings</li>
+        <li>Generative Templates</li>
+        <li>Fast Asyncronous Workflows</li>
+      </ul>
+      <p class="pricing-info mb-4">
+        Accounts start at $10/month.
+      </p>
+      <button id="get-started" type="button" class="btn btn-outline-success btn-lg mr-3">Get Started</button>
+      <a href="https://github.com/MittaAI/mitta-community" class="btn btn-outline-light btn-lg" type="button"><i class="fab fa-github"></i> Code</a>
     </div>
   </div>  
 </div>
@@ -25,13 +35,14 @@
 <div class="container-fluid demos">
   <div class="row">
     <div class="col-lg-9">
-      <h2>Try A Pipeline</h2>
-      <p>Explore our free pipeline demos to discover the diverse applications that can be created.</p>
+      <h2>Sample Applications</h2>
+      <p>Explore our free demos to see the power and versatility of our intelligent software APIs.</p>
     </div>
+  </div>
+  <div class="row">
     <div class="col-lg-9">
       <h3 class="gradient-text">Transform an Image in Under 30 Seconds</h3>
-      <p>This pipeline transforms any media file smaller than 32MB into another format with conversational language.</p>
-      <img src="/images/ffmpeg_pipe_1.png"/>
+      <p>Transforms any media file smaller than 32MB into another format with conversational language.</p>
       <div class="input-group mb-3">
         <input id="ffmpeg_instructions" type="text" class="form-control" value="Convert to a 640 wide black and white gif" aria-label="ffmpeg_instructions" aria-describedby="convert">
         <div class="input-group-append">
@@ -45,9 +56,8 @@
 
   <div class="row">
     <div class="col-lg-9">
-      <h3 class="gradient-text">Grab a New Hacker News Post About AI</h3>
+      <h3 class="gradient-text">Crawl a Hacker News Post About AI</h3>
       <p>Visits a recent post to Hacker News about AI. Provides page summary, screenshot, and links.</p>
-      <img src="/images/hn_pipe_1.png"/>
       <div class="input-group mb-3">
         <input id="crawl_instructions" type="text" class="form-control" value="I want the latest stories about AI" placeholder="Take me to a new story about AI." aria-label="crawl_instructions" aria-describedby="news">
         <div class="input-group-append">
@@ -63,7 +73,6 @@
     <div class="col-lg-9">
       <h3 class="gradient-text">Generate a Pirate's Dream</h3>
       <p>Shiver me timbers, lads! Me keen eye spies a treasure chest, gleamin' like the sun on the horizon!</p>
-      <img src="/images/pirate_pipe_1.png"/>
       <div class="input-group mb-3">
         <input id="dream_instructions" type="text" class="form-control" placeholder="Show me a pirate digging up treasure." value="Blimy! There be gold coins in the sand." aria-label="dream_instructions" aria-describedby="dream">
         <div class="input-group-append">
@@ -91,29 +100,6 @@
     </div>
   </div>
   -->
-</div>
-
-<div class="container-fluid offering">
-  <div class="row">
-    <div class="col-lg-9">
-      <h2 class="headings"><strong class="gradient-text">Transform Your Business:</strong></h2>
-      <p>At MittaAI, we specialize in developing AI-powered UI interfaces for businesses backed by <span class="gradient-text">Strong AI pipelines</span> which run on an Open Source platform we call <a href="https://github.com/MittaAI/SlothAI">SlothAI</a>. Whether it's enhancing websites, customer portals, employee tools, or marketing tools, our ultimate strength is in creating intelligent, user-friendly solutions for you.</p>
-      <p>Our framework, pioneered by a founder of <a href="https://loggly.com">Loggly</a>, is at the cutting edge of AI application development. It's designed to streamline your projects from conception through to production, making your applications smarter and more efficient.</p>
-      <p>With MittaAI, you're not just building an application; you're revolutionizing how your business interacts with technology. Start reimagining your digital landscape today. Get started by <a href="/pro">reaching out to us</a>.</p>
-    </div>
-  </div>
-  <div class="row">
-    <div class="col-lg-9">
-      <h3>Support and Learning</h3>
-      <p>Are you a do-it-yourself type of person? Login to our <a href="/login">serverless cloud</a> and get started right now. If you need help or have questions about our framework, our community is here to assist. <a href="https://github.com/MittaAI/SlothAI/issues">Open a ticket</a> or join our <a href="{{brand.get('slack_url')}}">Slack</a> for more information.</p>
-      <p>The SlothAI framework is capable of talking to over 25 different models. Document support handles large PDFs, text files, CSV files, audio, images, video and more. Task queues can call processors for file transforms, text, object and scene extraction, embeddings from multiple models, prompts for LLMs, structured output from unstructured input, speech generation and recognition, AI driven web crawling, calls to external services, and more. SlothAI also provides built in storage using Google Cloud, and supports transparent database storage using SQL. And, it's crazy fast.</p>
-      <p>If SlothAI can't do something you need it to do, or it needs to run on-prem, it's open source!</p>
-      <p>Get started now with our <a href="/cookbooks">tutorial cookbooks</a>.</p>
-      <div class="video video-responsive">
-        <iframe width="530" height="315" src="https://www.youtube.com/embed/wglj1U-UUEs?si=_I1MIiAmOEQJkQCG" title="YouTube video player" frameborder="1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-      </div>
-    </div>
-  </div>
 </div>
 
 {% endblock %}

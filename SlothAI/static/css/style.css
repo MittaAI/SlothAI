@@ -36,43 +36,41 @@ html, body {
 h1,h2,h3 {
   opacity: 90%;
   font-family: 'Orbitron Bold';
-  text-transform: uppercase;
 }
 
 h4,h5 {
   opacity: 90%;
   font-family: 'Silka Regular', Roboto;
-  text-transform: uppercase;
 }
 
 h1 {
   font-weight: 700;
-  font-size: 64px; 
+  font-size: 59px; 
 }
 
 h2 {
   font-weight: 600;
-  font-size: 48px;
+  font-size: 44px;
 }
 
 h3 {
   font-weight: 500;
-  font-size: 36px;
+  font-size: 33px;
 }
 
 h4 {
   font-weight: 400;
-  font-size: 24px;
+  font-size: 22px;
 }
 
 h5 {
   font-weight: 400;
-  font-size: 18px;
+  font-size: 17px;
 }
 
 h6 {
   font-weight: 400;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 footer h5 {
@@ -274,7 +272,6 @@ button.navbar-toggler {
   outline: 0;
 }
 
-/* Editor styles */
 #editor {
   height: 50vw;
   font-size: 13px;
@@ -329,17 +326,59 @@ button.navbar-toggler {
 }
 
 .hero {
+  background-color: #2b3137;
   background-size: cover;
-  color: #f4f4f4;
-  font-color: #eee;
-  padding-top: 193px;
-  padding-bottom: 135px;
-  text-align: center;
-  border-bottom: 2px dashed #222222; 
+  color: #fefefe;
+  padding-top: 137px;
+  padding-bottom: 80px;
+  padding-left: 10%;
+  padding-right: 10%;
+  text-align: left;
+  border-bottom: 2px dashed #222222;
 }
 
-.hero, .offering{
-  background: radial-gradient(circle at center center, rgba(128, 128, 128, 0.3) 0%, rgba(128, 128, 128, 0) 500px);
+.blurb {
+  width: 100%; /* Changed from 73% to 100% */
+  margin: 0; /* Remove auto margin */
+  display: block;
+}
+
+/* Add padding to the hero content for better alignment */
+.hero .row {
+  padding-left: 15px; /* Adjust as needed */
+}
+
+/* Adjust button alignment */
+.hero .btn {
+  font-size: 1.25rem;
+  padding: 0.75rem 1.5rem;
+  margin-right: 1rem;
+  margin-bottom: 1rem;
+  transition: all 0.3s ease;
+}
+
+.hero .btn-outline-success {
+  color: #ffffff;
+  border-color: #28a745;
+}
+
+.hero .btn-outline-success:hover {
+  color: #fff;
+  background-color: #28a745;
+  border-color: #28a745;
+}
+
+.hero .btn-outline-light:hover {
+  color: #1a1a1a;
+  background-color: #f8f9fa;
+  border-color: #f8f9fa;
+}
+
+@media (max-width: 768px) {
+  .hero .btn {
+    font-size: 1.1rem;
+    padding: 0.6rem 1.2rem;
+  }
 }
 
 .auth, .about, .pricing, .legal, .cookbooks {
@@ -356,8 +395,8 @@ button.navbar-toggler {
 }
 
 .blurb {
-  width: 73%;
-  margin: 0 auto;
+  width: 100%; /* Changed from 73% to 100% */
+  margin: 0; /* Remove auto margin */
   display: block;
 }
 
@@ -854,5 +893,93 @@ div.form-group.email, div.form-group.token {
   }
   .hide-on-medium {
     display: none;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .hero {
+    padding-top: 100px; /* Reduce top padding on smaller screens */
+    padding-bottom: 70px; /* Reduce bottom padding on smaller screens */
+  }
+
+  .hero h1 {
+    font-size: 48px; /* Reduce font size on smaller screens */
+  }
+
+  .blurb {
+    font-size: 16px; /* Adjust font size for better readability on small screens */
+  }
+}
+
+.hero .row {
+  margin-left: 0; /* Remove left margin if it exists */
+  margin-right: 0; /* Remove right margin if it exists */
+}
+
+.hero h1 {
+  text-align: left; /* Ensure header is left-aligned */
+  margin-bottom: 20px; /* Add some space below the header */
+}
+
+.blurb {
+  text-align: left; /* Ensure blurb is left-aligned */
+  max-width: 600px; /* Limit the width for better readability on larger screens */
+  margin-bottom: 30px; /* Add some space below the blurb */
+}
+
+.hero .btn {
+  margin-right: 15px; /* Slightly increase space between buttons */
+  margin-bottom: 10px; /* Add space below buttons for better stacking on small screens */
+}
+
+@media (max-width: 768px) {
+  .hero {
+    padding-left: 15px; /* Reduce left padding on smaller screens */
+    padding-right: 15px; /* Reduce right padding on smaller screens */
+  }
+
+  .blurb {
+    max-width: 100%; /* Allow full width on smaller screens */
+  }
+}
+
+/* Pricing Section Styles */
+.pricing .btn-lg {
+  font-size: 1.25rem;
+  padding: 0.75rem 1.5rem;
+  margin-top: 1rem;
+  transition: all 0.3s ease;
+}
+
+.pricing .btn-primary {
+  color: #fff;
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+.pricing .btn-primary:hover {
+  color: #fff;
+  background-color: #0056b3;
+  border-color: #0056b3;
+}
+
+.pricing .btn-secondary {
+  color: #fff;
+  background-color: #6c757d;
+  border-color: #6c757d;
+}
+
+.pricing .btn-secondary:hover {
+  color: #fff;
+  background-color: #545b62;
+  border-color: #545b62;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .pricing .btn-lg {
+    font-size: 1.1rem;
+    padding: 0.6rem 1.2rem;
   }
 }

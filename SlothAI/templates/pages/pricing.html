@@ -1,8 +1,8 @@
 {% extends "pages/base.html" %}
 
 {% block title %}
-<title>Pricing</title>
-<meta property='og:title' content='Mitta Pricing'/>
+<title>Pricing | Mitta AI APIs</title>
+<meta property='og:title' content='Mitta AI API Pricing'/>
 {% endblock %}
 
 {% block content %}
@@ -10,44 +10,21 @@
   <div class="row">
     <div class="col col-lg-10">
       <h2>Pricing</h2>
-      <p>Mitta is a serverless, AI document pipeline system designed to be crazy fast. ❤️ it, or your money back.</p>
+      <p>Mitta provides powerful AI APIs for modern web applications. Choose the plan that fits your needs.</p>
       
       <div class="card-deck mb-3 text-center">
         <div class="card mb-4 box-shadow">
           <div class="card-header">
-            <h2>Bas</h2>
+            <h2>Standard</h2>
           </div>
           <div class="card-body">
-            <h3 class="card-title gradient-text">$29/MO</h3>
+            <h3 class="card-title gradient-text">$10/mo</h3>
             <ul class="list-unstyled mt-3 mb-4">
-              <li>Stock AI Processors</li>
-              <li>5 Pipelines</li>
-              <li>Free Embeddings</li>
-              <li>Basic Vector Storage</li>
-              <li>Foundation Models</li>
-              <li>2 Day File Storage</li>
-              <li>Slack Support</li>
+              <li>Access to Core AI APIs</li>
+              <li>5,000 API calls/month</li>
+              <li>Standard Support</li>
             </ul>
-            <a href="/login" id="login" type="button" class="btn btn-link">Get It Free</a>
-          </div>
-        </div>
-
-        <div class="card mb-4 box-shadow">
-          <div class="card-header">
-            <h2><span class="greater-than">&gt;</span> Dev</h2>
-          </div>
-          <div class="card-body">
-            <h3 class="card-title gradient-text">$159/mo</h3>
-            <ul class="list-unstyled mt-3 mb-4">
-              <li>Custom AI Processors</li>
-              <li>Unlimited Pipelines</li>
-              <li>Free Embeddings</li>
-              <li>Remote Vector Storage</li>
-              <li>Foundation Models</li>
-              <li>3 Month File Storage</li>
-              <li>Email Support</li>
-            </ul>
-            <button id="upgrade" type="button" class="btn btn-dark">Upgrade Coming Soon</button>
+            <button id="standard-signup" type="button" class="btn btn-primary btn-lg">Get Started</button>
           </div>
         </div>
 
@@ -56,34 +33,33 @@
             <h2>Pro</h2>
           </div>
           <div class="card-body">
-            <h3 class="card-title gradient-text">$795+/mo</h3>
+            <h3 class="card-title gradient-text">$99/mo</h3>
             <ul class="list-unstyled mt-3 mb-4">
-              <li>On-Premise AI Processing</li>
-              <li>Unlimited Pipelines</li>
-              <li>Custom Embeddings</li>
-              <li>Unlimited Vector Storage</li>
-              <li>Custom Models</li>
-              <li>Your Storage</li>
-              <li>Priority Email Support</li>
+              <li>Access to All AI APIs</li>
+              <li>50,000 API calls/month</li>
+              <li>Priority Support</li>
             </ul>
-            <button id="money" type="button" class="btn btn-secondary">Contact Us</button>
+            <button id="pro-signup" type="button" class="btn btn-secondary btn-lg">Upgrade to Pro</button>
           </div>
         </div>
       </div>
 
-      <p>Mitta is currently in open beta. Please see Mitta's <a href="/legal">terms of use</a> for more information.</p>
+      <p>For enterprise solutions or custom pricing, please <a href="/contact">contact us</a>.</p>
+      <p>By using Mitta's AI APIs, you agree to our <a href="/legal">terms of service</a>.</p>
 
     </div>
   </div>
 </div>
-
 {% endblock %}
 
 {% block javascript %}
 <script type="text/javascript">
 $(document).ready(function() {
-  $('#money').click(function() {
-    window.location.href = '/pro';
+  $('#standard-signup').click(function() {
+    window.location.href = '/signup?plan=standard';
+  });
+  $('#pro-signup').click(function() {
+    window.location.href = '/signup?plan=pro';
   });
 });
 </script>
